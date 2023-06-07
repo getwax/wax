@@ -1,0 +1,3 @@
+[submodule "compression/lib/forge-std"]
+	path = compression/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
