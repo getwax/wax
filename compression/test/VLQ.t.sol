@@ -6,15 +6,15 @@ import {VLQ} from "../src/VLQ.sol";
 
 contract VLQTest is Test {
     function test_0x00_is_0() public {
-        check(hex"00", 0);
+        checkEqual(0, hex"00");
     }
 
     function test_0x8203_is_259() public {
-        check(hex"8203", 259);
+        checkEqual(259, hex"8203");
     }
 
     function test_0x828003_is_32771() public {
-        check(hex"828003", 32_771);
+        checkEqual(32_771, hex"828003");
     }
 
     function test_leftover_bytes() public {
@@ -25,38 +25,38 @@ contract VLQTest is Test {
     }
 
     function test_variety() public {
-        check(hex"01", 1);
-        check(hex"21", 33);
-        check(hex"812d", 173);
-        check(hex"830b", 395);
-        check(hex"9b77", 3575);
-        check(hex"828c38", 34360);
-        check(hex"8ba97d", 185597);
-        check(hex"a6b733", 629683);
-        check(hex"8289cd75", 4351733);
-        check(hex"8a8adc18", 21147160);
-        check(hex"c0e9c01c", 135946268);
-        check(hex"898b81f649", 2439019337);
-        check(hex"9fbdb29c75", 8450248309);
-        check(hex"81bdaeaa9c26", 50831461926);
-        check(hex"8881ccb59157", 275306596567);
-        check(hex"f38fe8c9ed29", 3955615757993);
-        check(hex"8899b5a9cca66f", 36057679860591);
-        check(hex"ad83bdebf7d646", 198031773133638);
-        check(hex"82d8c794f3abd718", 1515373151841176);
+        checkEqual(1, hex"01");
+        checkEqual(33, hex"21");
+        checkEqual(173, hex"812d");
+        checkEqual(395, hex"830b");
+        checkEqual(3575, hex"9b77");
+        checkEqual(34360, hex"828c38");
+        checkEqual(185597, hex"8ba97d");
+        checkEqual(629683, hex"a6b733");
+        checkEqual(4351733, hex"8289cd75");
+        checkEqual(21147160, hex"8a8adc18");
+        checkEqual(135946268, hex"c0e9c01c");
+        checkEqual(2439019337, hex"898b81f649");
+        checkEqual(8450248309, hex"9fbdb29c75");
+        checkEqual(50831461926, hex"81bdaeaa9c26");
+        checkEqual(275306596567, hex"8881ccb59157");
+        checkEqual(3955615757993, hex"f38fe8c9ed29");
+        checkEqual(36057679860591, hex"8899b5a9cca66f");
+        checkEqual(198031773133638, hex"ad83bdebf7d646");
+        checkEqual(1515373151841176, hex"82d8c794f3abd718");
     }
 
-    function check(bytes memory input, uint256 output) internal {
-        (uint256 value, bytes memory stream) = this.decode(input);
+    function checkEqual(uint256 value, bytes memory encoded) internal {
+        (uint256 decodedValue, bytes memory stream) = this.decode(encoded);
 
-        assertEq(value, output);
+        assertEq(decodedValue, value);
         assertEq(stream.length, 0);
 
-        bytes memory encoded = VLQ.encode(output);
-        assertEq(encoded.length, input.length);
+        bytes memory encodedValue = VLQ.encode(value);
+        assertEq(encodedValue.length, encoded.length);
 
-        for (uint256 i = 0; i < encoded.length; i++) {
-            assertEq(encoded[i], input[i]);
+        for (uint256 i = 0; i < encodedValue.length; i++) {
+            assertEq(encodedValue[i], encoded[i]);
         }
     }
 
