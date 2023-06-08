@@ -2,7 +2,7 @@
 pragma solidity ^0.8.13;
 
 import "forge-std/Test.sol";
-import "../src/VLQ.sol";
+import {VLQ} from "../src/VLQ.sol";
 
 contract VLQTest is Test {
     function test_0x00_is_0() public {
@@ -51,6 +51,13 @@ contract VLQTest is Test {
 
         assertEq(value, output);
         assertEq(stream.length, 0);
+
+        bytes memory encoded = VLQ.encode(output);
+        assertEq(encoded.length, input.length);
+
+        for (uint256 i = 0; i < encoded.length; i++) {
+            assertEq(encoded[i], input[i]);
+        }
     }
 
     /**

@@ -49,20 +49,35 @@ library VLQ {
         return (value, stream[bytesRead:]);
     }
 
-    /**
-     * Same as decode, but public.
-     * 
-     * This is here because when a library function that is not internal
-     * requires linking when used in other contracts. This avoids including a
-     * copy of that function in the contract but it's complexity that we don't
-     * want right now.
-     * 
-     * What we do want though, is a public version so that we can call it
-     * statically for testing.
-     */
-    function decodePublic(
-        bytes calldata stream
-    ) public pure returns (uint256, bytes calldata) {
-        return decode(stream);
+    function encode(
+        uint256 value
+    ) internal pure returns (bytes memory) {
+        if (value == 0) {
+            return hex"00";
+        }
+
+        uint256 valueParam = value;
+        uint256 bytesNeeded = 0;
+
+        while (value > 0) {
+            value >>= 7;
+            bytesNeeded++;
+        }
+
+        bytes memory res = new bytes(bytesNeeded);
+
+        uint256 pos = bytesNeeded - 1;
+        value = valueParam;
+
+        res[pos] = bytes1(uint8(value & 0x7f));
+        value >>= 7;
+
+        while (pos > 0) {
+            pos--;
+            res[pos] = bytes1(uint8(0x80 + (value & 0x7f)));
+            value >>= 7;
+        }
+
+        return res;
     }
 }
