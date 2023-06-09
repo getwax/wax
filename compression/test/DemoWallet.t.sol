@@ -6,7 +6,7 @@ import "openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 
 import {SimpleERC20} from "./helpers/SimpleERC20.sol";
 import {DemoWallet} from "../src/DemoWallet.sol";
-import {WaxLib as WL} from "../src/WaxLib.sol";
+import {WaxLib as W} from "../src/WaxLib.sol";
 import {EchoDecompressor} from "../src/decompressors/EchoDecompressor.sol";
 import {DeployTester} from "./helpers/DeployTester.sol";
 
@@ -22,9 +22,9 @@ contract DemoWalletTest is Test {
         DemoWallet w = new DemoWallet(address(this));
         vm.deal(address(w), 100 ether);
 
-        WL.Action[] memory actions = new WL.Action[](1);
+        W.Action[] memory actions = new W.Action[](1);
 
-        actions[0] = WL.Action({
+        actions[0] = W.Action({
             to: address(0),
             value: 1 ether,
             data: ""
@@ -40,9 +40,9 @@ contract DemoWalletTest is Test {
         DemoWallet w = new DemoWallet(address(this));
         token.transfer(address(w), 100e18);
 
-        WL.Action[] memory actions = new WL.Action[](1);
+        W.Action[] memory actions = new W.Action[](1);
 
-        actions[0] = WL.Action({
+        actions[0] = W.Action({
             to: address(token),
             value: 0,
             data: abi.encodeWithSignature(
@@ -62,10 +62,10 @@ contract DemoWalletTest is Test {
         DemoWallet w = new DemoWallet(address(this));
         vm.deal(address(w), 100 ether);
 
-        WL.Action[] memory actions = new WL.Action[](1);
+        W.Action[] memory actions = new W.Action[](1);
 
-        actions[0] = WL.Action({
-            to: WL.contractCreationAddress,
+        actions[0] = W.Action({
+            to: W.contractCreationAddress,
             value: 1 ether,
             data: abi.encodePacked(
                 type(DeployTester).creationCode,
@@ -87,9 +87,9 @@ contract DemoWalletTest is Test {
 
         vm.deal(address(w), 100 ether);
 
-        WL.Action[] memory actions = new WL.Action[](1);
+        W.Action[] memory actions = new W.Action[](1);
 
-        actions[0] = WL.Action({
+        actions[0] = W.Action({
             to: address(w),
             value: 0,
             data: abi.encodeCall(w.setDecompressor, ed)
@@ -99,7 +99,7 @@ contract DemoWalletTest is Test {
 
         assertEq(address(w.decompressor()), address(ed));
 
-        actions[0] = WL.Action({
+        actions[0] = W.Action({
             to: address(0),
             value: 1 ether,
             data: ""

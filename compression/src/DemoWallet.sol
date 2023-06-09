@@ -4,7 +4,7 @@ pragma abicoder v2;
 
 import "forge-std/console.sol";
 
-import {WaxLib as WL} from "./WaxLib.sol";
+import {WaxLib as W} from "./WaxLib.sol";
 import {IDecompressor} from "./decompressors/IDecompressor.sol";
 
 contract DemoWallet {
@@ -16,19 +16,19 @@ contract DemoWallet {
     }
 
     function perform(
-        WL.Action[] memory actions
+        W.Action[] memory actions
     ) public isTrusted returns (bytes[] memory) {
         bytes[] memory results = new bytes[](actions.length);
 
         for (uint256 i = 0; i < actions.length; i++) {
-            WL.Action memory a = actions[i];
+            W.Action memory a = actions[i];
 
-            if (a.to != WL.contractCreationAddress) {
+            if (a.to != W.contractCreationAddress) {
                 (bool success, bytes memory result) = payable(a.to)
                     .call{value: a.value}(a.data);
 
                 if (!success) {
-                    revert WL.ActionError(i, result);
+                    revert W.ActionError(i, result);
                 }
 
                 results[i] = result;
@@ -65,7 +65,7 @@ contract DemoWallet {
     function decompressAndPerform(
         bytes calldata stream
     ) public isTrusted returns (bytes[] memory) {
-        WL.Action[] memory actions = decompressor.decompress(stream);
+        W.Action[] memory actions = decompressor.decompress(stream);
         return perform(actions);
     }
 
