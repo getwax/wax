@@ -67,6 +67,25 @@ contract DemoWallet {
         return perform(actions);
     }
 
+    /**
+     * This is the normal way to pass calldata.
+     *
+     * Using `decompressAndPerform` directly costs about 51.5 bytes more
+     * because the solidity ABI encodes a call with bytes as:
+     * - 4 byte function signature
+     * - 32 bytes for a uint256 field indicating the byte length
+     * - The actual bytes
+     * - Padding bytes (zeros) to ensure a multiple of 32 (+15.5 on average)
+     *
+     * Having the fallback function allows us to just pass the actual bytes
+     * most of the time. However, wallets need to ensure they don't
+     * accidentally encode one of the other methods. When they hit this case,
+     * they need to encode a call to `decompressAndPerform` instead.
+     */
+    fallback(bytes calldata stream) external isTrusted returns (bytes memory) {
+        return abi.encode(decompressAndPerform(stream));
+    }
+
     modifier isTrusted() {
         require(
             msg.sender == owner ||

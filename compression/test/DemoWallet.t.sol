@@ -109,5 +109,14 @@ contract DemoWalletTest is Test {
 
         assertEq(address(w).balance, 99 ether);
         assertEq(address(0).balance, 1 ether);
+
+        // Much more efficient version of the above, but it only works if we
+        // successfully hit the fallback function. Wallets need to check they
+        // don't accidentally encode a method call (very rare, but possible).
+        (bool success,) = address(w).call(abi.encode(actions));
+        assertEq(success, true);
+
+        assertEq(address(w).balance, 98 ether);
+        assertEq(address(0).balance, 2 ether);
     }
 }
