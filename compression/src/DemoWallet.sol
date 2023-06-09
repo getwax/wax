@@ -5,8 +5,6 @@ pragma abicoder v2;
 import {WaxLib as WL} from "./WaxLib.sol";
 
 contract DemoWallet {
-    error ActionError(uint256 i, bytes result);
-
     address public owner;
 
     constructor(address ownerParam) {
@@ -26,7 +24,7 @@ contract DemoWallet {
                     .call{value: a.value}(a.data);
 
                 if (!success) {
-                    revert ActionError(i, result);
+                    revert WL.ActionError(i, result);
                 }
 
                 results[i] = result;

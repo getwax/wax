@@ -9,6 +9,8 @@ library WaxLib {
         bytes data;
     }
 
+    error ActionError(uint256 i, bytes result);
+
     address constant contractCreationAddress = address(bytes20(
         keccak256("Placeholder address to signal contract creation.")
     ));
