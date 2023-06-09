@@ -2,8 +2,6 @@
 pragma solidity >=0.7.0 <0.9.0;
 pragma abicoder v2;
 
-import "forge-std/console.sol";
-
 import {WaxLib as W} from "./WaxLib.sol";
 import {IDecompressor} from "./decompressors/IDecompressor.sol";
 

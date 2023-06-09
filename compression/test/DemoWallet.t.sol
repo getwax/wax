@@ -8,6 +8,8 @@ import {SimpleERC20} from "./helpers/SimpleERC20.sol";
 import {DemoWallet} from "../src/DemoWallet.sol";
 import {WaxLib as W} from "../src/WaxLib.sol";
 import {EchoDecompressor} from "../src/decompressors/EchoDecompressor.sol";
+import {SimpleDecompressor} from "../src/decompressors/SimpleDecompressor.sol";
+import {PseudoFloat} from "../src/PseudoFloat.sol";
 import {DeployTester} from "./helpers/DeployTester.sol";
 
 contract DemoWalletTest is Test {
@@ -129,5 +131,53 @@ contract DemoWalletTest is Test {
         assertEq(success, true);
         assertEq(address(this).balance, 99 ether);
         assertEq(address(w).balance, 1 ether);
+    }
+
+    function test_simple_decompressor() public {
+        DemoWallet w = new DemoWallet(address(this));
+        SimpleDecompressor sd = new SimpleDecompressor();
+
+        vm.deal(address(w), 100 ether);
+
+        W.Action[] memory actions = new W.Action[](1);
+
+        actions[0] = W.Action({
+            to: address(w),
+            value: 0,
+            data: abi.encodeCall(w.setDecompressor, sd)
+        });
+
+        w.perform(actions);
+
+        assertEq(address(w.decompressor()), address(sd));
+
+        actions[0] = W.Action({
+            to: address(0),
+            value: 1 ether,
+            data: ""
+        });
+
+        (bool success,) = address(w).call(
+            hex"03" // 3 actions
+
+            hex"0000000000000000000000000000000000000000"
+            hex"9900" // 1 ETH
+            hex"00"   // Zero bytes of data
+
+            hex"0000000000000000000000000000000000000001"
+            hex"9900" // 1 ETH
+            hex"00"   // Zero bytes of data
+
+            hex"0000000000000000000000000000000000000002"
+            hex"9900" // 1 ETH
+            hex"00"   // Zero bytes of data
+        );
+
+        assertEq(success, true);
+
+        assertEq(address(w).balance, 97 ether);
+        assertEq(address(0).balance, 1 ether);
+        assertEq(address(1).balance, 1 ether);
+        assertEq(address(2).balance, 1 ether);
     }
 }
