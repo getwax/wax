@@ -4,10 +4,10 @@ pragma solidity ^0.8.20;
 import "forge-std/Test.sol";
 import "openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 
-import {SimpleERC20} from "../src/SimpleERC20.sol";
+import {SimpleERC20} from "./helpers/SimpleERC20.sol";
 import {DemoWallet} from "../src/DemoWallet.sol";
 import {WaxLib as WL} from "../src/WaxLib.sol";
-import {DeployTester} from "../src/DeployTester.sol";
+import {DeployTester} from "./helpers/DeployTester.sol";
 
 contract DemoWalletTest is Test {
     SimpleERC20 token = new SimpleERC20(
