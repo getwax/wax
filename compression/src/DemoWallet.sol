@@ -2,7 +2,7 @@
 pragma solidity >=0.7.0 <0.9.0;
 pragma abicoder v2;
 
-import {DemoLib as DL} from "./DemoLib.sol";
+import {WaxLib as WL} from "./WaxLib.sol";
 
 contract DemoWallet {
     error ActionError(uint256 i, bytes result);
@@ -14,14 +14,14 @@ contract DemoWallet {
     }
 
     function perform(
-        DL.Action[] calldata actions
+        WL.Action[] calldata actions
     ) public isTrusted returns (bytes[] memory) {
         bytes[] memory results = new bytes[](actions.length);
 
         for (uint256 i = 0; i < actions.length; i++) {
-            DL.Action calldata a = actions[i];
+            WL.Action calldata a = actions[i];
 
-            if (a.to != DL.contractCreationAddress) {
+            if (a.to != WL.contractCreationAddress) {
                 (bool success, bytes memory result) = payable(a.to)
                     .call{value: a.value}(a.data);
 

@@ -6,7 +6,7 @@ import "openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 
 import {SimpleERC20} from "../src/SimpleERC20.sol";
 import {DemoWallet} from "../src/DemoWallet.sol";
-import {DemoLib as DL} from "../src/DemoLib.sol";
+import {WaxLib as WL} from "../src/WaxLib.sol";
 import {DeployTester} from "../src/DeployTester.sol";
 
 contract DemoWalletTest is Test {
@@ -21,9 +21,9 @@ contract DemoWalletTest is Test {
         DemoWallet w = new DemoWallet(address(this));
         vm.deal(address(w), 100 ether);
 
-        DL.Action[] memory actions = new DL.Action[](1);
+        WL.Action[] memory actions = new WL.Action[](1);
 
-        actions[0] = DL.Action({
+        actions[0] = WL.Action({
             to: address(0),
             value: 1 ether,
             data: new bytes(0)
@@ -39,9 +39,9 @@ contract DemoWalletTest is Test {
         DemoWallet w = new DemoWallet(address(this));
         token.transfer(address(w), 100e18);
 
-        DL.Action[] memory actions = new DL.Action[](1);
+        WL.Action[] memory actions = new WL.Action[](1);
 
-        actions[0] = DL.Action({
+        actions[0] = WL.Action({
             to: address(token),
             value: 0,
             data: abi.encodeWithSignature(
@@ -61,10 +61,10 @@ contract DemoWalletTest is Test {
         DemoWallet w = new DemoWallet(address(this));
         vm.deal(address(w), 100 ether);
 
-        DL.Action[] memory actions = new DL.Action[](1);
+        WL.Action[] memory actions = new WL.Action[](1);
 
-        actions[0] = DL.Action({
-            to: DL.contractCreationAddress,
+        actions[0] = WL.Action({
+            to: WL.contractCreationAddress,
             value: 1 ether,
             data: abi.encodePacked(
                 type(DeployTester).creationCode,
