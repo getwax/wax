@@ -439,4 +439,3 @@ contract PseudoFloatTest is Test {
         return PseudoFloat.decode(stream);
     }
 }
-
