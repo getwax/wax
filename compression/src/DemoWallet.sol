@@ -2,6 +2,8 @@
 pragma solidity >=0.7.0 <0.9.0;
 pragma abicoder v2;
 
+import "forge-std/console.sol";
+
 import {WaxLib as WL} from "./WaxLib.sol";
 import {IDecompressor} from "./decompressors/IDecompressor.sol";
 
@@ -85,6 +87,8 @@ contract DemoWallet {
     fallback(bytes calldata stream) external isTrusted returns (bytes memory) {
         return abi.encode(decompressAndPerform(stream));
     }
+
+    receive() external payable {}
 
     modifier isTrusted() {
         require(

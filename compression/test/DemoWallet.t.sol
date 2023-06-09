@@ -119,4 +119,15 @@ contract DemoWalletTest is Test {
         assertEq(address(w).balance, 98 ether);
         assertEq(address(0).balance, 2 ether);
     }
+
+    function test_receive() public {
+        DemoWallet w = new DemoWallet(address(this));
+
+        vm.deal(address(this), 100 ether);
+        (bool success,) = address(w).call{value: 1 ether}("");
+
+        assertEq(success, true);
+        assertEq(address(this).balance, 99 ether);
+        assertEq(address(w).balance, 1 ether);
+    }
 }
