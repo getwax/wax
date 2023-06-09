@@ -3,21 +3,23 @@ pragma solidity >=0.7.0 <0.9.0;
 pragma abicoder v2;
 
 import {WaxLib as WL} from "./WaxLib.sol";
+import {IDecompressor} from "./decompressors/IDecompressor.sol";
 
 contract DemoWallet {
     address public owner;
+    IDecompressor public decompressor = IDecompressor(address(0));
 
     constructor(address ownerParam) {
         owner = ownerParam;
     }
 
     function perform(
-        WL.Action[] calldata actions
+        WL.Action[] memory actions
     ) public isTrusted returns (bytes[] memory) {
         bytes[] memory results = new bytes[](actions.length);
 
         for (uint256 i = 0; i < actions.length; i++) {
-            WL.Action calldata a = actions[i];
+            WL.Action memory a = actions[i];
 
             if (a.to != WL.contractCreationAddress) {
                 (bool success, bytes memory result) = payable(a.to)
@@ -52,8 +54,24 @@ contract DemoWallet {
         return results;
     }
 
+    function setDecompressor(
+        IDecompressor decompressorParam
+    ) public isTrusted {
+        decompressor = decompressorParam;
+    }
+
+    function decompressAndPerform(
+        bytes calldata stream
+    ) public isTrusted returns (bytes[] memory) {
+        WL.Action[] memory actions = decompressor.decompress(stream);
+        return perform(actions);
+    }
+
     modifier isTrusted() {
-        require(msg.sender == owner);
+        require(
+            msg.sender == owner ||
+            msg.sender == address(this)
+        );
         _;
     }
 }

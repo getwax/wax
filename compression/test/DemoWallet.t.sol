@@ -7,6 +7,7 @@ import "openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 import {SimpleERC20} from "./helpers/SimpleERC20.sol";
 import {DemoWallet} from "../src/DemoWallet.sol";
 import {WaxLib as WL} from "../src/WaxLib.sol";
+import {EchoDecompressor} from "../src/decompressors/EchoDecompressor.sol";
 import {DeployTester} from "./helpers/DeployTester.sol";
 
 contract DemoWalletTest is Test {
@@ -26,7 +27,7 @@ contract DemoWalletTest is Test {
         actions[0] = WL.Action({
             to: address(0),
             value: 1 ether,
-            data: new bytes(0)
+            data: ""
         });
 
         w.perform(actions);
@@ -78,5 +79,35 @@ contract DemoWalletTest is Test {
         assertEq(address(dt).balance, 1 ether);
         assertEq(dt.x(), 123);
         assertEq(dt.addr(), address(456));
+    }
+
+    function test_echo_decompressor() public {
+        DemoWallet w = new DemoWallet(address(this));
+        EchoDecompressor ed = new EchoDecompressor();
+
+        vm.deal(address(w), 100 ether);
+
+        WL.Action[] memory actions = new WL.Action[](1);
+
+        actions[0] = WL.Action({
+            to: address(w),
+            value: 0,
+            data: abi.encodeCall(w.setDecompressor, ed)
+        });
+
+        w.perform(actions);
+
+        assertEq(address(w.decompressor()), address(ed));
+
+        actions[0] = WL.Action({
+            to: address(0),
+            value: 1 ether,
+            data: ""
+        });
+
+        w.decompressAndPerform(abi.encode(actions));
+
+        assertEq(address(w).balance, 99 ether);
+        assertEq(address(0).balance, 1 ether);
     }
 }
