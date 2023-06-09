@@ -107,15 +107,9 @@ library PseudoFloat {
         uint8 firstByte = uint8(((exponent + 1) << 3) + (value & 0x07));
         value >>= 3;
 
-        bytes memory vlqBytes = VLQ.encode(value);
-        bytes memory res = new bytes(1 + vlqBytes.length);
-
-        res[0] = bytes1(firstByte);
-
-        for (uint256 i = 0; i < vlqBytes.length; i++) {
-            res[1 + i] = vlqBytes[i];
-        }
-
-        return res;
+        return bytes.concat(
+            bytes1(firstByte),
+            VLQ.encode(value)
+        );
     }
 }

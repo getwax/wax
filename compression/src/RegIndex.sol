@@ -39,20 +39,9 @@ library RegIndex {
     }
 
     function encode(uint256 value) internal pure returns (bytes memory) {
-        uint256 vlqValue = value >> 16;
-        uint256 remainder = value & 0xffff;
-
-        bytes memory vlqBytes = VLQ.encode(vlqValue);
-
-        bytes memory res = new bytes(vlqBytes.length + 2);
-
-        for (uint256 i = 0; i < vlqBytes.length; i++) {
-            res[i] = vlqBytes[i];
-        }
-
-        res[res.length - 2] = bytes1(uint8(remainder >> 8));
-        res[res.length - 1] = bytes1(uint8(remainder & 0xff));
-
-        return res;
+        return bytes.concat(
+            VLQ.encode(value >> 16),
+            bytes2(uint16(value & 0xffff))
+        );
     }
 }
