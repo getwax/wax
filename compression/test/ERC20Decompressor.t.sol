@@ -14,6 +14,7 @@ contract ERC20DecompressorTest is Test {
     uint256 constant oneToken = 1e18;
 
     AddressRegistry registry;
+
     ERC20Decompressor d;
 
     SimpleERC20 token = new SimpleERC20(
@@ -32,14 +33,32 @@ contract ERC20DecompressorTest is Test {
         registry.register(address(0xdead));
         registry.register(address(0xdead));
 
-        registry.register(address(token)); // 4
-        registry.register(address(0xa));   // 5
-        registry.register(address(0xb));   // 6
-        registry.register(address(0xc));   // 7
+        registry.register(address(token));
+        registry.register(address(0xa));
+        registry.register(address(0xb));
+        registry.register(address(0xc));
+    }
+
+    function registeredAddresses()
+        internal view returns (AddressRegistry.Entry[] memory)
+    {
+        AddressRegistry.Entry[] memory res = new AddressRegistry.Entry[](4);
+
+        res[0] = AddressRegistry.Entry({ id: 4, addr: address(token) });
+        res[1] = AddressRegistry.Entry({ id: 5, addr: address(0xa) });
+        res[2] = AddressRegistry.Entry({ id: 6, addr: address(0xb) });
+        res[3] = AddressRegistry.Entry({ id: 7, addr: address(0xc) });
+
+        return res;
     }
 
     function test_transfer() public {
-        bytes memory compressedActions = (
+        check(
+            W.oneAction(
+                address(token),
+                0,
+                abi.encodeCall(IERC20.transfer, (address(0xa), oneToken))
+            ),
             hex"01"     // 1 action
 
             hex"03"     // Bit stream: 3 = 11 in binary
@@ -51,22 +70,19 @@ contract ERC20DecompressorTest is Test {
             hex"000005" // RegIndex for 0xa
             hex"9900"   // 1 token
         );
-
-        (W.Action[] memory actions,) = d.decompress(compressedActions);
-
-        assertEq(actions.length, 1);
-
-        assertEq(actions[0].to, address(token));
-        assertEq(actions[0].value, 0);
-
-        assertEq(
-            actions[0].data,
-            abi.encodeCall(IERC20.transfer, (address(0xa), oneToken))
-        );
     }
 
     function test_transferFrom() public {
-        bytes memory compressedActions = (
+        check(
+            W.oneAction(
+                address(token),
+                0,
+                abi.encodeCall(IERC20.transferFrom, (
+                    address(0xa),
+                    address(0xb),
+                    oneToken
+                ))
+            ),
             hex"01"     // 1 action
 
             hex"07"     // Bit stream: 7 = 111 in binary
@@ -80,26 +96,18 @@ contract ERC20DecompressorTest is Test {
             hex"000006" // RegIndex for 0xb
             hex"9900"   // 1 token
         );
-
-        (W.Action[] memory actions,) = d.decompress(compressedActions);
-
-        assertEq(actions.length, 1);
-
-        assertEq(actions[0].to, address(token));
-        assertEq(actions[0].value, 0);
-
-        assertEq(
-            actions[0].data,
-            abi.encodeCall(IERC20.transferFrom, (
-                address(0xa),
-                address(0xb),
-                oneToken
-            ))
-        );
     }
 
     function test_approve() public {
-        bytes memory compressedActions = (
+        check(
+            W.oneAction(
+                address(token),
+                0,
+                abi.encodeCall(IERC20.approve, (
+                    address(0xa),
+                    oneToken
+                ))
+            ),
             hex"01"     // 1 action
 
             hex"03"     // Bit stream: 3 = 11 in binary
@@ -111,25 +119,18 @@ contract ERC20DecompressorTest is Test {
             hex"000005" // RegIndex for 0xa
             hex"9900"   // 1 token
         );
-
-        (W.Action[] memory actions,) = d.decompress(compressedActions);
-
-        assertEq(actions.length, 1);
-
-        assertEq(actions[0].to, address(token));
-        assertEq(actions[0].value, 0);
-
-        assertEq(
-            actions[0].data,
-            abi.encodeCall(IERC20.approve, (
-                address(0xa),
-                oneToken
-            ))
-        );
     }
 
     function test_approveMax() public {
-        bytes memory compressedActions = (
+        check(
+            W.oneAction(
+                address(token),
+                0,
+                abi.encodeCall(IERC20.approve, (
+                    address(0xa),
+                    type(uint256).max
+                ))
+            ),
             hex"01"     // 1 action
 
             hex"03"     // Bit stream: 3 = 11 in binary
@@ -140,25 +141,19 @@ contract ERC20DecompressorTest is Test {
             hex"03"     // approveMax
             hex"000005" // RegIndex for 0xa
         );
-
-        (W.Action[] memory actions,) = d.decompress(compressedActions);
-
-        assertEq(actions.length, 1);
-
-        assertEq(actions[0].to, address(token));
-        assertEq(actions[0].value, 0);
-
-        assertEq(
-            actions[0].data,
-            abi.encodeCall(IERC20.approve, (
-                address(0xa),
-                type(uint256).max
-            ))
-        );
     }
 
     function test_mint() public {
-        bytes memory compressedActions = (
+        check(
+            W.oneAction(
+                address(token),
+                0,
+                abi.encodeWithSignature(
+                    "mint(address,uint256)",
+                    address(0xa),
+                    oneToken
+                )
+            ),
             hex"01"     // 1 action
 
             hex"03"     // Bit stream: 3 = 11 in binary
@@ -170,21 +165,23 @@ contract ERC20DecompressorTest is Test {
             hex"000005" // RegIndex for 0xa
             hex"9900"   // 1 token
         );
+    }
 
-        (W.Action[] memory actions,) = d.decompress(compressedActions);
+    function check(
+        W.Action[] memory actions,
+        bytes memory compressedActions
+    ) internal {
+        assertEq(
+            d.compress(actions, registeredAddresses()),
+            compressedActions
+        );
 
-        assertEq(actions.length, 1);
-
-        assertEq(actions[0].to, address(token));
-        assertEq(actions[0].value, 0);
+        (W.Action[] memory decompressedActions,) =
+            d.decompress(compressedActions);
 
         assertEq(
-            actions[0].data,
-            abi.encodeWithSignature(
-                "mint(address,uint256)",
-                address(0xa),
-                oneToken
-            )
+            abi.encode(decompressedActions),
+            abi.encode(actions)
         );
     }
 }

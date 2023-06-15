@@ -28,15 +28,7 @@ contract DemoWalletTest is Test {
         DemoWallet w = new DemoWallet(address(this));
         vm.deal(address(w), 100 ether);
 
-        W.Action[] memory actions = new W.Action[](1);
-
-        actions[0] = W.Action({
-            to: address(0),
-            value: 1 ether,
-            data: ""
-        });
-
-        w.perform(actions);
+        w.perform(W.oneAction(address(0), 1 ether, ""));
 
         assertEq(address(w).balance, 99 ether);
         assertEq(address(0).balance, 1 ether);
@@ -46,19 +38,15 @@ contract DemoWalletTest is Test {
         DemoWallet w = new DemoWallet(address(this));
         token.transfer(address(w), 100e18);
 
-        W.Action[] memory actions = new W.Action[](1);
-
-        actions[0] = W.Action({
-            to: address(token),
-            value: 0,
-            data: abi.encodeWithSignature(
+        w.perform(W.oneAction(
+            address(token),
+            0,
+            abi.encodeWithSignature(
                 "transfer(address,uint256)",
                 address(1),
                 1e18
             )
-        });
-
-        w.perform(actions);
+        ));
 
         assertEq(token.balanceOf(address(w)), 99e18);
         assertEq(token.balanceOf(address(1)), 1e18);
@@ -68,18 +56,15 @@ contract DemoWalletTest is Test {
         DemoWallet w = new DemoWallet(address(this));
         vm.deal(address(w), 100 ether);
 
-        W.Action[] memory actions = new W.Action[](1);
-
-        actions[0] = W.Action({
-            to: W.contractCreationAddress,
-            value: 1 ether,
-            data: abi.encodePacked(
+        bytes[] memory results = w.perform(W.oneAction(
+            W.contractCreationAddress,
+            1 ether,
+            abi.encodePacked(
                 type(DeployTester).creationCode,
                 abi.encode(123, address(456))
             )
-        });
+        ));
 
-        bytes[] memory results = w.perform(actions);
         DeployTester dt = abi.decode(results[0], (DeployTester));
 
         assertEq(address(dt).balance, 1 ether);
@@ -93,25 +78,21 @@ contract DemoWalletTest is Test {
 
         vm.deal(address(w), 100 ether);
 
-        W.Action[] memory actions = new W.Action[](1);
-
-        actions[0] = W.Action({
-            to: address(w),
-            value: 0,
-            data: abi.encodeCall(w.setDecompressor, ed)
-        });
-
-        w.perform(actions);
+        w.perform(W.oneAction(
+            address(w),
+            0,
+            abi.encodeCall(w.setDecompressor, ed)
+        ));
 
         assertEq(address(w.decompressor()), address(ed));
 
-        actions[0] = W.Action({
-            to: address(0),
-            value: 1 ether,
-            data: ""
-        });
+        bytes memory abiEncodedActions = abi.encode(W.oneAction(
+            address(0),
+            1 ether,
+            ""
+        ));
 
-        w.decompressAndPerform(abi.encode(actions));
+        w.decompressAndPerform(abiEncodedActions);
 
         assertEq(address(w).balance, 99 ether);
         assertEq(address(0).balance, 1 ether);
@@ -119,7 +100,7 @@ contract DemoWalletTest is Test {
         // Much more efficient version of the above, but it only works if we
         // successfully hit the fallback function. Wallets need to check they
         // don't accidentally encode a method call (very rare, but possible).
-        (bool success,) = address(w).call(abi.encode(actions));
+        (bool success,) = address(w).call(abiEncodedActions);
         assertEq(success, true);
 
         assertEq(address(w).balance, 98 ether);
@@ -212,15 +193,11 @@ contract DemoWalletTest is Test {
 
         vm.deal(address(w), 100 ether);
 
-        W.Action[] memory actions = new W.Action[](1);
-
-        actions[0] = W.Action({
-            to: address(w),
-            value: 0,
-            data: abi.encodeCall(w.setDecompressor, sd)
-        });
-
-        w.perform(actions);
+        w.perform(W.oneAction(
+            address(w),
+            0,
+            abi.encodeCall(w.setDecompressor, sd)
+        ));
 
         assertEq(address(w.decompressor()), address(sd));
 
@@ -235,6 +212,8 @@ contract DemoWalletTest is Test {
         // 1 -> 0xb is excluded to demonstrate that addresses can also be
         // directly encoded
         entries[1] = AddressRegistry.Entry({ id: 2, addr: address(0xc) });
+
+        W.Action[] memory actions = new W.Action[](3);
 
         actions = new W.Action[](3);
 

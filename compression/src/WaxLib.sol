@@ -14,4 +14,15 @@ library WaxLib {
     address constant contractCreationAddress = address(bytes20(
         keccak256("Placeholder address to signal contract creation.")
     ));
+
+    function oneAction(
+        address to,
+        uint256 value,
+        bytes memory data
+    ) internal pure returns (Action[] memory) {
+        Action[] memory actions = new Action[](1);
+        actions[0] = Action({ to: to, value: value, data: data });
+
+        return actions;
+    }
 }
