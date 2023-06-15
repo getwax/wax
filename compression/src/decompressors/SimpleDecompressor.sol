@@ -36,4 +36,22 @@ contract SimpleDecompressor is IDecompressor {
 
         return (actions, originalStreamLen - stream.length);
     }
+
+    function compress(W.Action[] calldata actions) external pure returns (bytes memory) {
+        bytes memory res = VLQ.encode(actions.length);
+
+        for (uint256 i = 0; i < actions.length; i++) {
+            W.Action memory action = actions[i];
+
+            res = bytes.concat(
+                res,
+                bytes20(action.to),
+                PseudoFloat.encode(action.value),
+                VLQ.encode(action.data.length),
+                action.data
+            );
+        }
+
+        return res;
+    }
 }

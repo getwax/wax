@@ -58,7 +58,66 @@ contract FallbackDecompressor is IDecompressor {
         return (actions, originalStreamLen - stream.length);
     }
 
+    function compress(
+        W.Action[] calldata actions,
+
+        // These need to be passed in because the reverse mapping is not stored
+        // on-chain. Instead, wallets should use the AddressRegistered events
+        // and do an off-chain lookup to figure out which registered addresses
+        // will be relevant for this call.
+        AddressRegistryEntry[] calldata registeredAddresses
+    ) external pure returns (bytes memory) {
+        bytes memory res = "";
+        uint256 bitStream = 0;
+
+        for (uint256 i = 0; i < actions.length; i++) {
+            W.Action memory action = actions[i];
+
+            bool isAddressRegistered = false;
+            uint256 addressIndex = 0;
+
+            for (uint256 j = 0; j < registeredAddresses.length; j++) {
+                if (registeredAddresses[j].addr == action.to) {
+                    isAddressRegistered = true;
+                    addressIndex = registeredAddresses[j].index;
+                    break;
+                }
+            }
+
+            bitStream <<= 1;
+            bytes memory toBytes;
+
+            if (isAddressRegistered) {
+                bitStream += 1;
+                toBytes = RegIndex.encode(addressIndex);
+            } else {
+                toBytes = bytes.concat(bytes20(action.to));
+            }
+
+            res = bytes.concat(
+                res,
+                toBytes,
+                PseudoFloat.encode(action.value),
+                VLQ.encode(action.data.length),
+                action.data
+            );
+        }
+
+        res = bytes.concat(
+            VLQ.encode(actions.length),
+            VLQ.encode(bitStream),
+            res
+        );
+
+        return res;
+    }
+
     function decodeBit(uint256 bitStream) internal pure returns (bool, uint256) {
         return ((bitStream & 1) == 1, bitStream >> 1);
     }
+}
+
+struct AddressRegistryEntry {
+    uint256 index;
+    address addr;
 }

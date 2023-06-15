@@ -48,6 +48,16 @@ contract SwitchDecompressor is IDecompressor {
         return (actions, originalStreamLen - stream.length);
     }
 
+    function compress(
+        uint256 decompressorIndex,
+        bytes calldata bytesForDecompressor
+    ) external pure returns (bytes memory) {
+        return bytes.concat(
+            VLQ.encode(decompressorIndex),
+            bytesForDecompressor
+        );
+    }
+
     modifier onlyOwner() {
         require(msg.sender == owner, "Failed onlyOwner");
         _;

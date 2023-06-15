@@ -10,7 +10,7 @@ import {WaxLib as W} from "../src/WaxLib.sol";
 import {EchoDecompressor} from "../src/decompressors/EchoDecompressor.sol";
 import {SimpleDecompressor} from "../src/decompressors/SimpleDecompressor.sol";
 import {SwitchDecompressor} from "../src/decompressors/SwitchDecompressor.sol";
-import {FallbackDecompressor} from "../src/decompressors/FallbackDecompressor.sol";
+import {FallbackDecompressor, AddressRegistryEntry} from "../src/decompressors/FallbackDecompressor.sol";
 import {PseudoFloat} from "../src/PseudoFloat.sol";
 import {AddressRegistry} from "../src/AddressRegistry.sol";
 
@@ -155,7 +155,27 @@ contract DemoWalletTest is Test {
 
         assertEq(address(w.decompressor()), address(sd));
 
-        (bool success,) = address(w).call(
+        actions = new W.Action[](3);
+
+        actions[0] = W.Action({
+            to: address(0),
+            value: 1 ether,
+            data: ""
+        });
+
+        actions[1] = W.Action({
+            to: address(1),
+            value: 1 ether,
+            data: ""
+        });
+
+        actions[2] = W.Action({
+            to: address(2),
+            value: 1 ether,
+            data: ""
+        });
+
+        bytes memory compressedActions = (
             hex"03" // 3 actions
 
             hex"0000000000000000000000000000000000000000"
@@ -171,6 +191,10 @@ contract DemoWalletTest is Test {
             hex"00"   // Zero bytes of data
         );
 
+        assertEq(sd.compress(actions), compressedActions);
+
+        (bool success,) = address(w).call(compressedActions);
+
         assertEq(success, true);
 
         assertEq(address(w).balance, 97 ether);
@@ -183,7 +207,8 @@ contract DemoWalletTest is Test {
         DemoWallet w = new DemoWallet(address(this));
         SwitchDecompressor sd = new SwitchDecompressor();
         AddressRegistry registry = new AddressRegistry();
-        sd.register(new FallbackDecompressor(registry));
+        FallbackDecompressor fd = new FallbackDecompressor(registry);
+        sd.register(fd);
 
         vm.deal(address(w), 100 ether);
 
@@ -203,7 +228,33 @@ contract DemoWalletTest is Test {
         registry.register(address(0xb));
         registry.register(address(0xc));
 
-        (bool success,) = address(w).call(
+        AddressRegistryEntry[] memory entries = new AddressRegistryEntry[](2);
+        entries[0] = AddressRegistryEntry({ index: 0, addr: address(0xa) });
+        // 1 -> 0xb is excluded to demonstrate that addresses can also be
+        // directly encoded
+        entries[1] = AddressRegistryEntry({ index: 2, addr: address(0xc) });
+
+        actions = new W.Action[](3);
+
+        actions[0] = W.Action({
+            to: address(0xa),
+            value: 1 ether,
+            data: ""
+        });
+
+        actions[1] = W.Action({
+            to: address(0xb),
+            value: 1 ether,
+            data: ""
+        });
+
+        actions[2] = W.Action({
+            to: address(0xc),
+            value: 1 ether,
+            data: ""
+        });
+
+        bytes memory compressedActions = (
             hex"00" // Use FallbackDecompressor
 
             hex"03" // 3 actions
@@ -225,6 +276,13 @@ contract DemoWalletTest is Test {
             hex"9900"   // 1 ETH
             hex"00"     // Zero bytes of data
         );
+
+        assertEq(
+            sd.compress(0, fd.compress(actions, entries)),
+            compressedActions
+        );
+
+        (bool success,) = address(w).call(compressedActions);
 
         assertEq(success, true);
 
