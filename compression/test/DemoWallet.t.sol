@@ -10,7 +10,7 @@ import {WaxLib as W} from "../src/WaxLib.sol";
 import {EchoDecompressor} from "../src/decompressors/EchoDecompressor.sol";
 import {SimpleDecompressor} from "../src/decompressors/SimpleDecompressor.sol";
 import {SwitchDecompressor} from "../src/decompressors/SwitchDecompressor.sol";
-import {FallbackDecompressor, AddressRegistryEntry} from "../src/decompressors/FallbackDecompressor.sol";
+import {FallbackDecompressor} from "../src/decompressors/FallbackDecompressor.sol";
 import {PseudoFloat} from "../src/PseudoFloat.sol";
 import {AddressRegistry} from "../src/AddressRegistry.sol";
 
@@ -228,11 +228,13 @@ contract DemoWalletTest is Test {
         registry.register(address(0xb));
         registry.register(address(0xc));
 
-        AddressRegistryEntry[] memory entries = new AddressRegistryEntry[](2);
-        entries[0] = AddressRegistryEntry({ index: 0, addr: address(0xa) });
+        AddressRegistry.Entry[] memory entries =
+            new AddressRegistry.Entry[](2);
+
+        entries[0] = AddressRegistry.Entry({ id: 0, addr: address(0xa) });
         // 1 -> 0xb is excluded to demonstrate that addresses can also be
         // directly encoded
-        entries[1] = AddressRegistryEntry({ index: 2, addr: address(0xc) });
+        entries[1] = AddressRegistry.Entry({ id: 2, addr: address(0xc) });
 
         actions = new W.Action[](3);
 

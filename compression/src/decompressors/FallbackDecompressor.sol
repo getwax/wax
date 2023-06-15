@@ -65,7 +65,7 @@ contract FallbackDecompressor is IDecompressor {
         // on-chain. Instead, wallets should use the AddressRegistered events
         // and do an off-chain lookup to figure out which registered addresses
         // will be relevant for this call.
-        AddressRegistryEntry[] calldata registeredAddresses
+        AddressRegistry.Entry[] calldata registeredAddresses
     ) external pure returns (bytes memory) {
         bytes memory res = "";
         uint256 bitStream = 0;
@@ -79,7 +79,7 @@ contract FallbackDecompressor is IDecompressor {
             for (uint256 j = 0; j < registeredAddresses.length; j++) {
                 if (registeredAddresses[j].addr == action.to) {
                     isAddressRegistered = true;
-                    addressIndex = registeredAddresses[j].index;
+                    addressIndex = registeredAddresses[j].id;
                     break;
                 }
             }
@@ -115,9 +115,4 @@ contract FallbackDecompressor is IDecompressor {
     function decodeBit(uint256 bitStream) internal pure returns (bool, uint256) {
         return ((bitStream & 1) == 1, bitStream >> 1);
     }
-}
-
-struct AddressRegistryEntry {
-    uint256 index;
-    address addr;
 }

@@ -8,6 +8,11 @@ contract AddressRegistry {
 
     event AddressRegistered(uint256 id, address indexed addr);
 
+    struct Entry {
+        uint256 id;
+        address addr;
+    }
+
     function register(address addr) external {
         uint256 id = nextId;
         nextId += 1;
