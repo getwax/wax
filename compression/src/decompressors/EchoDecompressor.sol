@@ -8,7 +8,9 @@ import {IDecompressor} from "./IDecompressor.sol";
 contract EchoDecompressor is IDecompressor {
     function decompress(
         bytes calldata stream
-    ) external pure returns (W.Action[] memory) {
-        return abi.decode(stream, (W.Action[]));
+    ) external pure returns (W.Action[] memory, uint256) {
+        W.Action[] memory actions = abi.decode(stream, (W.Action[]));
+
+        return (actions, stream.length);
     }
 }

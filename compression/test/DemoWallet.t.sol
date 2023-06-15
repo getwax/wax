@@ -9,7 +9,11 @@ import {DemoWallet} from "../src/DemoWallet.sol";
 import {WaxLib as W} from "../src/WaxLib.sol";
 import {EchoDecompressor} from "../src/decompressors/EchoDecompressor.sol";
 import {SimpleDecompressor} from "../src/decompressors/SimpleDecompressor.sol";
+import {SwitchDecompressor} from "../src/decompressors/SwitchDecompressor.sol";
+import {FallbackDecompressor} from "../src/decompressors/FallbackDecompressor.sol";
 import {PseudoFloat} from "../src/PseudoFloat.sol";
+import {AddressRegistry} from "../src/AddressRegistry.sol";
+
 import {DeployTester} from "./helpers/DeployTester.sol";
 
 contract DemoWalletTest is Test {
@@ -151,12 +155,6 @@ contract DemoWalletTest is Test {
 
         assertEq(address(w.decompressor()), address(sd));
 
-        actions[0] = W.Action({
-            to: address(0),
-            value: 1 ether,
-            data: ""
-        });
-
         (bool success,) = address(w).call(
             hex"03" // 3 actions
 
@@ -179,5 +177,60 @@ contract DemoWalletTest is Test {
         assertEq(address(0).balance, 1 ether);
         assertEq(address(1).balance, 1 ether);
         assertEq(address(2).balance, 1 ether);
+    }
+
+    function test_switch_decompressor() public {
+        DemoWallet w = new DemoWallet(address(this));
+        SwitchDecompressor sd = new SwitchDecompressor();
+        AddressRegistry registry = new AddressRegistry();
+        sd.register(new FallbackDecompressor(registry));
+
+        vm.deal(address(w), 100 ether);
+
+        W.Action[] memory actions = new W.Action[](1);
+
+        actions[0] = W.Action({
+            to: address(w),
+            value: 0,
+            data: abi.encodeCall(w.setDecompressor, sd)
+        });
+
+        w.perform(actions);
+
+        assertEq(address(w.decompressor()), address(sd));
+
+        registry.register(address(0xa));
+        registry.register(address(0xb));
+        registry.register(address(0xc));
+
+        (bool success,) = address(w).call(
+            hex"00" // Use FallbackDecompressor
+
+            hex"03" // 3 actions
+
+            hex"05" // Bit stream: 5 = 101 (in binary)
+                    // - 1: Use registry for first action
+                    // - 0: Don't use registry for second action
+                    // - 1: Use registry for third action
+
+            hex"000000" // Registry index of 0xa
+            hex"9900"   // 1 ETH
+            hex"00"     // Zero bytes of data
+
+            hex"000000000000000000000000000000000000000b"
+            hex"9900"   // 1 ETH
+            hex"00"     // Zero bytes of data
+
+            hex"000002" // Registry index of 0xc
+            hex"9900"   // 1 ETH
+            hex"00"     // Zero bytes of data
+        );
+
+        assertEq(success, true);
+
+        assertEq(address(w).balance, 97 ether);
+        assertEq(address(0xa).balance, 1 ether);
+        assertEq(address(0xb).balance, 1 ether);
+        assertEq(address(0xc).balance, 1 ether);
     }
 }

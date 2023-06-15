@@ -7,5 +7,5 @@ import {WaxLib as W} from "../WaxLib.sol";
 interface IDecompressor {
     function decompress(
         bytes calldata stream
-    ) external returns (W.Action[] memory);
+    ) external view returns (W.Action[] memory, uint256);
 }

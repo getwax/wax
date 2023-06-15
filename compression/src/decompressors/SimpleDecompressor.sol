@@ -10,8 +10,9 @@ import {PseudoFloat} from "../PseudoFloat.sol";
 contract SimpleDecompressor is IDecompressor {
     function decompress(
         bytes calldata stream
-    ) external pure returns (W.Action[] memory) {
+    ) external pure returns (W.Action[] memory, uint256) {
         uint256 actionLen;
+        uint256 originalStreamLen = stream.length;
         (actionLen, stream) = VLQ.decode(stream);
 
         W.Action[] memory actions = new W.Action[](actionLen);
@@ -33,6 +34,6 @@ contract SimpleDecompressor is IDecompressor {
             actions[i] = action;
         }
 
-        return actions;
+        return (actions, originalStreamLen - stream.length);
     }
 }

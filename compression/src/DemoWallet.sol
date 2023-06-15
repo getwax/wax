@@ -63,7 +63,7 @@ contract DemoWallet {
     function decompressAndPerform(
         bytes calldata stream
     ) public isTrusted returns (bytes[] memory) {
-        W.Action[] memory actions = decompressor.decompress(stream);
+        (W.Action[] memory actions,) = decompressor.decompress(stream);
         return perform(actions);
     }
 
