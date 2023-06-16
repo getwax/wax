@@ -240,10 +240,11 @@ contract DemoWalletTest is Test {
 
             hex"03" // 3 actions
 
-            hex"05" // Bit stream: 5 = 101 (in binary)
+            hex"0d" // Bit stream: d = 1101 (in binary)
                     // - 1: Use registry for first action
                     // - 0: Don't use registry for second action
                     // - 1: Use registry for third action
+                    // - 1: End of stack
 
             hex"000000" // Registry index of 0xa
             hex"9900"   // 1 ETH

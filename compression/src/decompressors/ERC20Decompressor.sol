@@ -10,6 +10,7 @@ import {VLQ} from "../VLQ.sol";
 import {PseudoFloat} from "../PseudoFloat.sol";
 import {AddressRegistry} from "../AddressRegistry.sol";
 import {RegIndex} from "../RegIndex.sol";
+import {BitStack} from "../BitStack.sol";
 
 contract ERC20Decompressor is IDecompressor {
     AddressRegistry public addressRegistry;
@@ -28,41 +29,35 @@ contract ERC20Decompressor is IDecompressor {
 
         W.Action[] memory actions = new W.Action[](actionLen);
 
-        uint256 bitStream;
-        (bitStream, stream) = VLQ.decode(stream);
+        uint256 bitStack;
+        (bitStack, stream) = VLQ.decode(stream);
 
         for (uint256 i = 0; i < actionLen; i++) {
             (
                 actions[i].to,
                 stream,
-                bitStream
+                bitStack
             ) = decodeAddress(
                 stream,
-                bitStream
+                bitStack
             );
 
             (
                 actions[i].data,
                 stream,
-                bitStream
+                bitStack
             ) = decodeData(
                 stream,
-                bitStream
+                bitStack
             );
         }
 
         return (actions, originalStreamLen - stream.length);
     }
 
-    function decodeBit(
-        uint256 bitStream
-    ) internal pure returns (bool, uint256) {
-        return ((bitStream & 1) == 1, bitStream >> 1);
-    }
-
     function decodeData(
         bytes calldata stream,
-        uint256 bitStream
+        uint256 bitStack
     ) internal view returns (
         bytes memory,
         bytes calldata,
@@ -72,25 +67,25 @@ contract ERC20Decompressor is IDecompressor {
         (methodIndex, stream) = VLQ.decode(stream);
 
         if (methodIndex == 0) {
-            return decodeTransfer(stream, bitStream);
+            return decodeTransfer(stream, bitStack);
         }
 
         if (methodIndex == 1) {
-            return decodeTransferFrom(stream, bitStream);
+            return decodeTransferFrom(stream, bitStack);
         }
 
         if (methodIndex == 2) {
-            return decodeApprove(stream, bitStream);
+            return decodeApprove(stream, bitStack);
         }
 
         if (methodIndex == 3) {
             // Not a real method, but uint256Max is common for approve, and is
             // not represented efficiently by PseudoFloat.
-            return decodeApproveMax(stream, bitStream);
+            return decodeApproveMax(stream, bitStack);
         }
 
         if (methodIndex == 4) {
-            return decodeMint(stream, bitStream);
+            return decodeMint(stream, bitStack);
         }
 
         revert("Unrecognized ERC20 method index");
@@ -98,14 +93,14 @@ contract ERC20Decompressor is IDecompressor {
 
     function decodeTransfer(
         bytes calldata stream,
-        uint256 bitStream
+        uint256 bitStack
     ) internal view returns (
         bytes memory,
         bytes calldata,
         uint256
     ) {
         address to;
-        (to, stream, bitStream) = decodeAddress(stream, bitStream);
+        (to, stream, bitStack) = decodeAddress(stream, bitStack);
 
         uint256 value;
         (value, stream) = PseudoFloat.decode(stream);
@@ -113,23 +108,23 @@ contract ERC20Decompressor is IDecompressor {
         return (
             abi.encodeCall(IERC20.transfer, (to, value)),
             stream,
-            bitStream
+            bitStack
         );
     }
     
     function decodeTransferFrom(
         bytes calldata stream,
-        uint256 bitStream
+        uint256 bitStack
     ) internal view returns (
         bytes memory,
         bytes calldata,
         uint256
     ) {
         address from;
-        (from, stream, bitStream) = decodeAddress(stream, bitStream);
+        (from, stream, bitStack) = decodeAddress(stream, bitStack);
 
         address to;
-        (to, stream, bitStream) = decodeAddress(stream, bitStream);
+        (to, stream, bitStack) = decodeAddress(stream, bitStack);
 
         uint256 value;
         (value, stream) = PseudoFloat.decode(stream);
@@ -137,20 +132,20 @@ contract ERC20Decompressor is IDecompressor {
         return (
             abi.encodeCall(IERC20.transferFrom, (from, to, value)),
             stream,
-            bitStream
+            bitStack
         );
     }
     
     function decodeApprove(
         bytes calldata stream,
-        uint256 bitStream
+        uint256 bitStack
     ) internal view returns (
         bytes memory,
         bytes calldata,
         uint256
     ) {
         address spender;
-        (spender, stream, bitStream) = decodeAddress(stream, bitStream);
+        (spender, stream, bitStack) = decodeAddress(stream, bitStack);
 
         uint256 value;
         (value, stream) = PseudoFloat.decode(stream);
@@ -158,38 +153,38 @@ contract ERC20Decompressor is IDecompressor {
         return (
             abi.encodeCall(IERC20.approve, (spender, value)),
             stream,
-            bitStream
+            bitStack
         );
     }
     
     function decodeApproveMax(
         bytes calldata stream,
-        uint256 bitStream
+        uint256 bitStack
     ) internal view returns (
         bytes memory,
         bytes calldata,
         uint256
     ) {
         address spender;
-        (spender, stream, bitStream) = decodeAddress(stream, bitStream);
+        (spender, stream, bitStack) = decodeAddress(stream, bitStack);
 
         return (
             abi.encodeCall(IERC20.approve, (spender, type(uint256).max)),
             stream,
-            bitStream
+            bitStack
         );
     }
 
     function decodeMint(
         bytes calldata stream,
-        uint256 bitStream
+        uint256 bitStack
     ) internal view returns (
         bytes memory,
         bytes calldata,
         uint256
     ) {
         address to;
-        (to, stream, bitStream) = decodeAddress(stream, bitStream);
+        (to, stream, bitStack) = decodeAddress(stream, bitStack);
 
         uint256 value;
         (value, stream) = PseudoFloat.decode(stream);
@@ -197,13 +192,13 @@ contract ERC20Decompressor is IDecompressor {
         return (
             abi.encodeWithSignature("mint(address,uint256)", to, value),
             stream,
-            bitStream
+            bitStack
         );
     }
 
     function decodeAddress(
         bytes calldata stream,
-        uint256 bitStream
+        uint256 bitStack
     ) internal view returns (
         address,
         bytes calldata,
@@ -212,14 +207,14 @@ contract ERC20Decompressor is IDecompressor {
         uint256 decodedValue;
         bool decodedBit;
 
-        (decodedBit, bitStream) = decodeBit(bitStream);
+        (decodedBit, bitStack) = BitStack.pop(bitStack);
 
         if (decodedBit) {
             (decodedValue, stream) = RegIndex.decode(stream);
-            return (addressRegistry.lookup(decodedValue), stream, bitStream);
+            return (addressRegistry.lookup(decodedValue), stream, bitStack);
         }
 
-        return (address(bytes20(stream[:20])), stream[20:], bitStream);
+        return (address(bytes20(stream[:20])), stream[20:], bitStack);
     }
 
     function compress(
@@ -232,18 +227,15 @@ contract ERC20Decompressor is IDecompressor {
         AddressRegistry.Entry[] calldata registeredAddresses
     ) external pure returns (bytes memory) {
         bytes memory res = "";
-
-        // See WaxLib.calculateOrderedBitStream for an explanation of
-        // reversing.
-        uint256 reverseBitStream = 1;
+        uint256 bitStack = BitStack.empty;
 
         for (uint256 i = 0; i < actions.length; i++) {
             W.Action calldata action = actions[i];
 
             bytes memory tokenAddressBytes;
-            (tokenAddressBytes, reverseBitStream) = encodeAddress(
+            (tokenAddressBytes, bitStack) = encodeAddress(
                 action.to,
-                reverseBitStream,
+                bitStack,
                 registeredAddresses
             );
 
@@ -253,29 +245,29 @@ contract ERC20Decompressor is IDecompressor {
             bytes4 selector = bytes4(action.data);
 
             if (selector == IERC20.transfer.selector) {
-                (dataBytes, reverseBitStream) = encodeTransfer(
+                (dataBytes, bitStack) = encodeTransfer(
                     action.data,
-                    reverseBitStream,
+                    bitStack,
                     registeredAddresses
                 );
             } else if (selector == IERC20.transferFrom.selector) {
-                (dataBytes, reverseBitStream) = encodeTransferFrom(
+                (dataBytes, bitStack) = encodeTransferFrom(
                     action.data,
-                    reverseBitStream,
+                    bitStack,
                     registeredAddresses
                 );
             } else if (selector == IERC20.approve.selector) {
-                (dataBytes, reverseBitStream) = encodeApprove(
+                (dataBytes, bitStack) = encodeApprove(
                     action.data,
-                    reverseBitStream,
+                    bitStack,
                     registeredAddresses
                 );
             } else if (
                 selector == bytes4(keccak256("mint(address,uint256)"))
             ) {
-                (dataBytes, reverseBitStream) = encodeMint(
+                (dataBytes, bitStack) = encodeMint(
                     action.data,
-                    reverseBitStream,
+                    bitStack,
                     registeredAddresses
                 );
             }
@@ -287,11 +279,13 @@ contract ERC20Decompressor is IDecompressor {
             );
         }
 
-        uint256 bitStream = W.calculateOrderedBitStream(reverseBitStream);
+        // So that the decompressor can pop the bits in the order we pushed
+        // them.
+        bitStack = BitStack.reverse(bitStack);
 
         res = bytes.concat(
             VLQ.encode(actions.length),
-            VLQ.encode(bitStream),
+            VLQ.encode(bitStack),
             res
         );
 
@@ -300,28 +294,27 @@ contract ERC20Decompressor is IDecompressor {
 
     function encodeAddress(
         address addr,
-        uint256 reverseBitStream,
+        uint256 bitStack,
         AddressRegistry.Entry[] calldata registeredAddresses
     ) internal pure returns (bytes memory, uint256) {
-        reverseBitStream <<= 1;
-
         for (uint256 i = 0; i < registeredAddresses.length; i++) {
             if (registeredAddresses[i].addr == addr) {
-                reverseBitStream += 1;
-
                 return (
                     RegIndex.encode(registeredAddresses[i].id),
-                    reverseBitStream
+                    BitStack.push(bitStack, true)
                 );
             }
         }
 
-        return (bytes.concat(bytes20(addr)), reverseBitStream);
+        return (
+            bytes.concat(bytes20(addr)),
+            BitStack.push(bitStack, false)
+        );
     }
 
     function encodeTransfer(
         bytes calldata data,
-        uint256 reverseBitStream,
+        uint256 bitStack,
         AddressRegistry.Entry[] calldata registeredAddresses
     ) internal pure returns (bytes memory, uint256) {
         (address to, uint256 amount) = abi.decode(
@@ -330,9 +323,9 @@ contract ERC20Decompressor is IDecompressor {
         );
 
         bytes memory toAddressBytes;
-        (toAddressBytes, reverseBitStream) = encodeAddress(
+        (toAddressBytes, bitStack) = encodeAddress(
             to,
-            reverseBitStream,
+            bitStack,
             registeredAddresses
         );
 
@@ -342,12 +335,12 @@ contract ERC20Decompressor is IDecompressor {
             PseudoFloat.encode(amount)
         );
 
-        return (dataBytes, reverseBitStream);
+        return (dataBytes, bitStack);
     }
 
     function encodeTransferFrom(
         bytes calldata data,
-        uint256 reverseBitStream,
+        uint256 bitStack,
         AddressRegistry.Entry[] calldata registeredAddresses
     ) internal pure returns (bytes memory, uint256) {
         (address from, address to, uint256 amount) = abi.decode(
@@ -356,16 +349,16 @@ contract ERC20Decompressor is IDecompressor {
         );
 
         bytes memory fromAddressBytes;
-        (fromAddressBytes, reverseBitStream) = encodeAddress(
+        (fromAddressBytes, bitStack) = encodeAddress(
             from,
-            reverseBitStream,
+            bitStack,
             registeredAddresses
         );
 
         bytes memory toAddressBytes;
-        (toAddressBytes, reverseBitStream) = encodeAddress(
+        (toAddressBytes, bitStack) = encodeAddress(
             to,
-            reverseBitStream,
+            bitStack,
             registeredAddresses
         );
 
@@ -376,12 +369,12 @@ contract ERC20Decompressor is IDecompressor {
             PseudoFloat.encode(amount)
         );
 
-        return (dataBytes, reverseBitStream);
+        return (dataBytes, bitStack);
     }
 
     function encodeApprove(
         bytes calldata data,
-        uint256 reverseBitStream,
+        uint256 bitStack,
         AddressRegistry.Entry[] calldata registeredAddresses
     ) internal pure returns (bytes memory, uint256) {
         (address spender, uint256 amount) = abi.decode(
@@ -390,9 +383,9 @@ contract ERC20Decompressor is IDecompressor {
         );
 
         bytes memory spenderAddressBytes;
-        (spenderAddressBytes, reverseBitStream) = encodeAddress(
+        (spenderAddressBytes, bitStack) = encodeAddress(
             spender,
-            reverseBitStream,
+            bitStack,
             registeredAddresses
         );
 
@@ -411,12 +404,12 @@ contract ERC20Decompressor is IDecompressor {
             );
         }
 
-        return (dataBytes, reverseBitStream);
+        return (dataBytes, bitStack);
     }
 
     function encodeMint(
         bytes calldata data,
-        uint256 reverseBitStream,
+        uint256 bitStack,
         AddressRegistry.Entry[] calldata registeredAddresses
     ) internal pure returns (bytes memory, uint256) {
         (address to, uint256 amount) = abi.decode(
@@ -425,9 +418,9 @@ contract ERC20Decompressor is IDecompressor {
         );
 
         bytes memory toAddressBytes;
-        (toAddressBytes, reverseBitStream) = encodeAddress(
+        (toAddressBytes, bitStack) = encodeAddress(
             to,
-            reverseBitStream,
+            bitStack,
             registeredAddresses
         );
 
@@ -437,6 +430,6 @@ contract ERC20Decompressor is IDecompressor {
             PseudoFloat.encode(amount)
         );
 
-        return (dataBytes, reverseBitStream);
+        return (dataBytes, bitStack);
     }
 }

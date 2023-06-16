@@ -61,9 +61,10 @@ contract ERC20DecompressorTest is Test {
             ),
             hex"01"     // 1 action
 
-            hex"03"     // Bit stream: 3 = 11 in binary
+            hex"07"     // Bit stack: 7 = 111 in binary
                         // - 1: Use registry for token
                         // - 1: Use registry for recipient
+                        // - 1: End of stack
 
             hex"000004" // RegIndex for token's address
             hex"00"     // transfer
@@ -85,10 +86,11 @@ contract ERC20DecompressorTest is Test {
             ),
             hex"01"     // 1 action
 
-            hex"07"     // Bit stream: 7 = 111 in binary
+            hex"0f"     // Bit stream: f = 1111 in binary
                         // - 1: Use registry for token
                         // - 1: Use registry for sender
                         // - 1: Use registry for recipient
+                        // - 1: End of stack
 
             hex"000004" // RegIndex for token's address
             hex"01"     // transferFrom
@@ -110,9 +112,10 @@ contract ERC20DecompressorTest is Test {
             ),
             hex"01"     // 1 action
 
-            hex"03"     // Bit stream: 3 = 11 in binary
+            hex"07"     // Bit stack: 7 = 111 in binary
                         // - 1: Use registry for token
                         // - 1: Use registry for sender
+                        // - 1: End of stack
 
             hex"000004" // RegIndex for token's address
             hex"02"     // approve
@@ -133,9 +136,10 @@ contract ERC20DecompressorTest is Test {
             ),
             hex"01"     // 1 action
 
-            hex"03"     // Bit stream: 3 = 11 in binary
+            hex"07"     // Bit stack: 7 = 111 in binary
                         // - 1: Use registry for token
                         // - 1: Use registry for sender
+                        // - 1: End of stack
 
             hex"000004" // RegIndex for token's address
             hex"03"     // approveMax
@@ -156,9 +160,10 @@ contract ERC20DecompressorTest is Test {
             ),
             hex"01"     // 1 action
 
-            hex"03"     // Bit stream: 3 = 11 in binary
+            hex"07"     // Bit stack: 7 = 111 in binary
                         // - 1: Use registry for token
                         // - 1: Use registry for recipient
+                        // - 1: End of stack
 
             hex"000004" // RegIndex for token's address
             hex"04"     // mint
@@ -202,7 +207,7 @@ contract ERC20DecompressorTest is Test {
             actions,
             hex"03"     // 3 actions
 
-            hex"2f"     // Bit stream: 2f = 101111 in binary
+            hex"6f"     // Bit stream: 2f = 1101111 in binary
                         // Read lowest bit first
                         // - 1: Use registry for token
                         // - 1: Use registry for recipient
@@ -210,6 +215,7 @@ contract ERC20DecompressorTest is Test {
                         // - 1: Use registry for spender
                         // - 0: Don't use registry for 0xabcd (alt token)
                         // - 1: Use registry for recipient
+                        // - 1: End of stack
 
             hex"000004" // RegIndex for token's address
             hex"00"     // transfer

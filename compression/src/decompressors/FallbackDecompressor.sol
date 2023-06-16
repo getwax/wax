@@ -8,6 +8,7 @@ import {VLQ} from "../VLQ.sol";
 import {PseudoFloat} from "../PseudoFloat.sol";
 import {AddressRegistry} from "../AddressRegistry.sol";
 import {RegIndex} from "../RegIndex.sol";
+import {BitStack} from "../BitStack.sol";
 
 contract FallbackDecompressor is IDecompressor {
     AddressRegistry public addressRegistry;
@@ -26,14 +27,14 @@ contract FallbackDecompressor is IDecompressor {
 
         W.Action[] memory actions = new W.Action[](actionLen);
 
-        uint256 bitStream;
-        (bitStream, stream) = VLQ.decode(stream);
+        uint256 bitStack;
+        (bitStack, stream) = VLQ.decode(stream);
 
         for (uint256 i = 0; i < actionLen; i++) {
             W.Action memory action;
 
             bool useRegistry;
-            (useRegistry, bitStream) = decodeBit(bitStream);
+            (useRegistry, bitStack) = BitStack.pop(bitStack);
 
             if (useRegistry) {
                 uint256 addressIndex;
@@ -68,10 +69,7 @@ contract FallbackDecompressor is IDecompressor {
         AddressRegistry.Entry[] calldata registeredAddresses
     ) external pure returns (bytes memory) {
         bytes memory res = "";
-
-        // See WaxLib.calculateOrderedBitStream for an explanation of
-        // reversing.
-        uint256 reverseBitStream = 0;
+        uint256 bitStack = BitStack.empty;
 
         for (uint256 i = 0; i < actions.length; i++) {
             W.Action memory action = actions[i];
@@ -87,11 +85,11 @@ contract FallbackDecompressor is IDecompressor {
                 }
             }
 
-            reverseBitStream <<= 1;
+            bitStack = BitStack.push(bitStack, isAddressRegistered);
+
             bytes memory toBytes;
 
             if (isAddressRegistered) {
-                reverseBitStream += 1;
                 toBytes = RegIndex.encode(addressIndex);
             } else {
                 toBytes = bytes.concat(bytes20(action.to));
@@ -106,18 +104,14 @@ contract FallbackDecompressor is IDecompressor {
             );
         }
 
-        uint256 bitStream = W.calculateOrderedBitStream(reverseBitStream);
+        bitStack = BitStack.reverse(bitStack);
 
         res = bytes.concat(
             VLQ.encode(actions.length),
-            VLQ.encode(bitStream),
+            VLQ.encode(bitStack),
             res
         );
 
         return res;
-    }
-
-    function decodeBit(uint256 bitStream) internal pure returns (bool, uint256) {
-        return ((bitStream & 1) == 1, bitStream >> 1);
     }
 }
