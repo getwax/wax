@@ -68,7 +68,10 @@ contract FallbackDecompressor is IDecompressor {
         AddressRegistry.Entry[] calldata registeredAddresses
     ) external pure returns (bytes memory) {
         bytes memory res = "";
-        uint256 bitStream = 0;
+
+        // See WaxLib.calculateOrderedBitStream for an explanation of
+        // reversing.
+        uint256 reverseBitStream = 0;
 
         for (uint256 i = 0; i < actions.length; i++) {
             W.Action memory action = actions[i];
@@ -84,11 +87,11 @@ contract FallbackDecompressor is IDecompressor {
                 }
             }
 
-            bitStream <<= 1;
+            reverseBitStream <<= 1;
             bytes memory toBytes;
 
             if (isAddressRegistered) {
-                bitStream += 1;
+                reverseBitStream += 1;
                 toBytes = RegIndex.encode(addressIndex);
             } else {
                 toBytes = bytes.concat(bytes20(action.to));
@@ -102,6 +105,8 @@ contract FallbackDecompressor is IDecompressor {
                 action.data
             );
         }
+
+        uint256 bitStream = W.calculateOrderedBitStream(reverseBitStream);
 
         res = bytes.concat(
             VLQ.encode(actions.length),
