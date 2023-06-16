@@ -167,6 +167,67 @@ contract ERC20DecompressorTest is Test {
         );
     }
 
+    function test_multi() public {
+        W.Action[] memory actions = new W.Action[](3);
+
+        actions[0] = W.Action({
+            to: address(token),
+            value: 0,
+            data: abi.encodeCall(IERC20.transfer, (
+                address(0xa),
+                oneToken / 100
+            ))
+        });
+
+        actions[1] = W.Action({
+            to: address(token),
+            value: 0,
+            data: abi.encodeCall(IERC20.approve, (
+                address(0xa),
+                type(uint256).max
+            ))
+        });
+
+        actions[2] = W.Action({
+            to: address(0xabcd),
+            value: 0,
+            data: abi.encodeWithSignature(
+                "mint(address,uint256)",
+                address(0xb),
+                oneToken
+            )
+        });
+
+        check(
+            actions,
+            hex"03"     // 3 actions
+
+            hex"2f"     // Bit stream: 2f = 101111 in binary
+                        // Read lowest bit first
+                        // - 1: Use registry for token
+                        // - 1: Use registry for recipient
+                        // - 1: Use registry for token
+                        // - 1: Use registry for spender
+                        // - 0: Don't use registry for 0xabcd (alt token)
+                        // - 1: Use registry for recipient
+
+            hex"000004" // RegIndex for token's address
+            hex"00"     // transfer
+            hex"000005" // RegIndex for 0xa
+            hex"8900"   // 0.01 tokens
+
+            hex"000004" // RegIndex for token's address
+            hex"03"     // approveMax
+            hex"000005" // RegIndex for 0xa
+
+            // Address 0xabcd (alt token)
+            hex"000000000000000000000000000000000000abcd"
+            hex"04"     // mint
+            hex"000006" // RegIndex for 0xb
+            hex"9900"   // 1 token
+        );
+    }
+
     function check(
         W.Action[] memory actions,
         bytes memory compressedActions
