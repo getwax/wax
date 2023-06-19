@@ -43,7 +43,7 @@ cover the following numbers of bytes:
   (or something better) (including the off-chain compression needed to call it
   correctly)
 - The account (aka SCW) needs to decompress its `userOp.calldata` field similar
-  to [`DemoWallet`](./src/DemoWallet.sol) (see `fallback`)
+  to [`DemoAccount`](./src/DemoAccount.sol) (see `fallback`)
 - Your 4337 wallet (end-user software) needs to correctly compress
   `userOp.calldata` off-chain
 - Your 4337 wallet should round up these `userOp` fields to 3 significant

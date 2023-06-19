@@ -5,7 +5,7 @@ import "forge-std/Test.sol";
 import "openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 
 import {SimpleERC20} from "./helpers/SimpleERC20.sol";
-import {DemoWallet} from "../src/DemoWallet.sol";
+import {DemoAccount} from "../src/DemoAccount.sol";
 import {WaxLib as W} from "../src/WaxLib.sol";
 import {EchoDecompressor} from "../src/decompressors/EchoDecompressor.sol";
 import {SimpleDecompressor} from "../src/decompressors/SimpleDecompressor.sol";
@@ -16,7 +16,7 @@ import {AddressRegistry} from "../src/AddressRegistry.sol";
 
 import {DeployTester} from "./helpers/DeployTester.sol";
 
-contract DemoWalletTest is Test {
+contract DemoAccountTest is Test {
     SimpleERC20 token = new SimpleERC20(
         "Token",
         "TOK",
@@ -25,20 +25,20 @@ contract DemoWalletTest is Test {
     );
 
     function test_send_eth() public {
-        DemoWallet w = new DemoWallet(address(this));
-        vm.deal(address(w), 100 ether);
+        DemoAccount acc = new DemoAccount(address(this));
+        vm.deal(address(acc), 100 ether);
 
-        w.perform(W.oneAction(address(0), 1 ether, ""));
+        acc.perform(W.oneAction(address(0), 1 ether, ""));
 
-        assertEq(address(w).balance, 99 ether);
+        assertEq(address(acc).balance, 99 ether);
         assertEq(address(0).balance, 1 ether);
     }
 
     function test_call() public {
-        DemoWallet w = new DemoWallet(address(this));
-        token.transfer(address(w), 100e18);
+        DemoAccount acc = new DemoAccount(address(this));
+        token.transfer(address(acc), 100e18);
 
-        w.perform(W.oneAction(
+        acc.perform(W.oneAction(
             address(token),
             0,
             abi.encodeWithSignature(
@@ -48,15 +48,15 @@ contract DemoWalletTest is Test {
             )
         ));
 
-        assertEq(token.balanceOf(address(w)), 99e18);
+        assertEq(token.balanceOf(address(acc)), 99e18);
         assertEq(token.balanceOf(address(1)), 1e18);
     }
 
     function test_deploy() public {
-        DemoWallet w = new DemoWallet(address(this));
-        vm.deal(address(w), 100 ether);
+        DemoAccount acc = new DemoAccount(address(this));
+        vm.deal(address(acc), 100 ether);
 
-        bytes[] memory results = w.perform(W.oneAction(
+        bytes[] memory results = acc.perform(W.oneAction(
             W.contractCreationAddress,
             1 ether,
             abi.encodePacked(
@@ -73,18 +73,18 @@ contract DemoWalletTest is Test {
     }
 
     function test_echo_decompressor() public {
-        DemoWallet w = new DemoWallet(address(this));
+        DemoAccount acc = new DemoAccount(address(this));
         EchoDecompressor ed = new EchoDecompressor();
 
-        vm.deal(address(w), 100 ether);
+        vm.deal(address(acc), 100 ether);
 
-        w.perform(W.oneAction(
-            address(w),
+        acc.perform(W.oneAction(
+            address(acc),
             0,
-            abi.encodeCall(w.setDecompressor, ed)
+            abi.encodeCall(acc.setDecompressor, ed)
         ));
 
-        assertEq(address(w.decompressor()), address(ed));
+        assertEq(address(acc.decompressor()), address(ed));
 
         bytes memory abiEncodedActions = abi.encode(W.oneAction(
             address(0),
@@ -92,49 +92,49 @@ contract DemoWalletTest is Test {
             ""
         ));
 
-        w.decompressAndPerform(abiEncodedActions);
+        acc.decompressAndPerform(abiEncodedActions);
 
-        assertEq(address(w).balance, 99 ether);
+        assertEq(address(acc).balance, 99 ether);
         assertEq(address(0).balance, 1 ether);
 
         // Much more efficient version of the above, but it only works if we
         // successfully hit the fallback function. Wallets need to check they
         // don't accidentally encode a method call (very rare, but possible).
-        (bool success,) = address(w).call(abiEncodedActions);
+        (bool success,) = address(acc).call(abiEncodedActions);
         assertEq(success, true);
 
-        assertEq(address(w).balance, 98 ether);
+        assertEq(address(acc).balance, 98 ether);
         assertEq(address(0).balance, 2 ether);
     }
 
     function test_receive() public {
-        DemoWallet w = new DemoWallet(address(this));
+        DemoAccount acc = new DemoAccount(address(this));
 
         vm.deal(address(this), 100 ether);
-        (bool success,) = address(w).call{value: 1 ether}("");
+        (bool success,) = address(acc).call{value: 1 ether}("");
 
         assertEq(success, true);
         assertEq(address(this).balance, 99 ether);
-        assertEq(address(w).balance, 1 ether);
+        assertEq(address(acc).balance, 1 ether);
     }
 
     function test_simple_decompressor() public {
-        DemoWallet w = new DemoWallet(address(this));
+        DemoAccount acc = new DemoAccount(address(this));
         SimpleDecompressor sd = new SimpleDecompressor();
 
-        vm.deal(address(w), 100 ether);
+        vm.deal(address(acc), 100 ether);
 
         W.Action[] memory actions = new W.Action[](1);
 
         actions[0] = W.Action({
-            to: address(w),
+            to: address(acc),
             value: 0,
-            data: abi.encodeCall(w.setDecompressor, sd)
+            data: abi.encodeCall(acc.setDecompressor, sd)
         });
 
-        w.perform(actions);
+        acc.perform(actions);
 
-        assertEq(address(w.decompressor()), address(sd));
+        assertEq(address(acc.decompressor()), address(sd));
 
         actions = new W.Action[](3);
 
@@ -174,32 +174,32 @@ contract DemoWalletTest is Test {
 
         assertEq(sd.compress(actions), compressedActions);
 
-        (bool success,) = address(w).call(compressedActions);
+        (bool success,) = address(acc).call(compressedActions);
 
         assertEq(success, true);
 
-        assertEq(address(w).balance, 97 ether);
+        assertEq(address(acc).balance, 97 ether);
         assertEq(address(0).balance, 1 ether);
         assertEq(address(1).balance, 1 ether);
         assertEq(address(2).balance, 1 ether);
     }
 
     function test_switch_decompressor() public {
-        DemoWallet w = new DemoWallet(address(this));
+        DemoAccount acc = new DemoAccount(address(this));
         SwitchDecompressor sd = new SwitchDecompressor();
         AddressRegistry registry = new AddressRegistry();
         FallbackDecompressor fd = new FallbackDecompressor(registry);
         sd.register(fd);
 
-        vm.deal(address(w), 100 ether);
+        vm.deal(address(acc), 100 ether);
 
-        w.perform(W.oneAction(
-            address(w),
+        acc.perform(W.oneAction(
+            address(acc),
             0,
-            abi.encodeCall(w.setDecompressor, sd)
+            abi.encodeCall(acc.setDecompressor, sd)
         ));
 
-        assertEq(address(w.decompressor()), address(sd));
+        assertEq(address(acc.decompressor()), address(sd));
 
         registry.register(address(0xa));
         registry.register(address(0xb));
@@ -264,11 +264,11 @@ contract DemoWalletTest is Test {
             compressedActions
         );
 
-        (bool success,) = address(w).call(compressedActions);
+        (bool success,) = address(acc).call(compressedActions);
 
         assertEq(success, true);
 
-        assertEq(address(w).balance, 97 ether);
+        assertEq(address(acc).balance, 97 ether);
         assertEq(address(0xa).balance, 1 ether);
         assertEq(address(0xb).balance, 1 ether);
         assertEq(address(0xc).balance, 1 ether);

@@ -5,7 +5,7 @@ pragma abicoder v2;
 import {WaxLib as W} from "./WaxLib.sol";
 import {IDecompressor} from "./decompressors/IDecompressor.sol";
 
-contract DemoWallet {
+contract DemoAccount {
     address public owner;
     IDecompressor public decompressor = IDecompressor(address(0));
 
