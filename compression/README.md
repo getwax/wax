@@ -37,6 +37,11 @@ cover the following numbers of bytes:
 |          20 |    36 |
 |         100 |    29 |
 
+The L2 gas overhead for doing the decompression to make this possible is about
+57,000. This means compression should break even on chains where L2 gas is
+about 15x cheaper than L1 gas, and provide savings thereafter. (TODO: Do this
+paragraph more thoroughly and document it.)
+
 ## Requirements
 
 - The bundler needs to use [`EntryPointCaller`](./src/EntryPointCaller.sol)
