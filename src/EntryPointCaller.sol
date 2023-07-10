@@ -5,7 +5,8 @@ pragma abicoder v2;
 import {
     IEntryPoint,
     IAggregator,
-    UserOpsPerAggregator,
+    ISimplifiedEntryPoint,
+    ISimplifiedAggregator,
     UserOperation
 } from "./I4337.sol";
 import {VLQ} from "./VLQ.sol";
@@ -15,16 +16,16 @@ import {RegIndex} from "./RegIndex.sol";
 import {PseudoFloat} from "./PseudoFloat.sol";
 
 contract EntryPointCaller {
-    IEntryPoint entryPoint;
+    ISimplifiedEntryPoint entryPoint;
     address payable beneficiary;
-    IAggregator aggregator;
+    ISimplifiedAggregator aggregator;
 
     AddressRegistry registry;
 
     constructor(
-        IEntryPoint entryPointParam,
+        ISimplifiedEntryPoint entryPointParam,
         address payable beneficiaryParam,
-        IAggregator aggregatorParam,
+        ISimplifiedAggregator aggregatorParam,
         AddressRegistry registryParam
     ) {
         entryPoint = entryPointParam;
@@ -77,11 +78,11 @@ contract EntryPointCaller {
             // op.signature is left empty because we're using aggregation
         }
 
-        UserOpsPerAggregator[] memory bundle = new UserOpsPerAggregator[](1);
+        IEntryPoint.UserOpsPerAggregator[] memory bundle = new IEntryPoint.UserOpsPerAggregator[](1);
 
-        bundle[0] = UserOpsPerAggregator({
+        bundle[0] = IEntryPoint.UserOpsPerAggregator({
             userOps: ops,
-            aggregator: aggregator,
+            aggregator: IAggregator(address(aggregator)),
             signature: stream // signature is just the remaining bytes
         });
 

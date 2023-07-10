@@ -4,13 +4,13 @@ pragma abicoder v2;
 
 import "forge-std/Test.sol";
 
-import {IEntryPoint, UserOpsPerAggregator} from "../../src/I4337.sol";
+import {IEntryPoint, ISimplifiedEntryPoint} from "../../src/I4337.sol";
 
-contract MockEntryPoint is IEntryPoint {
+contract MockEntryPoint is ISimplifiedEntryPoint {
     bytes public params;
 
     function handleAggregatedOps(
-        UserOpsPerAggregator[] calldata opsPerAggregator,
+        IEntryPoint.UserOpsPerAggregator[] calldata opsPerAggregator,
         address payable beneficiary
     ) external {
         params = abi.encode(opsPerAggregator, beneficiary);

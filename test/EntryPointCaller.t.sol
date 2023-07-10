@@ -5,7 +5,7 @@ import "forge-std/Test.sol";
 
 import {EntryPointCaller} from "../src/EntryPointCaller.sol";
 import {AddressRegistry} from "../src/AddressRegistry.sol";
-import {UserOperation, UserOpsPerAggregator} from "../src/I4337.sol";
+import {IEntryPoint, IAggregator, UserOperation} from "../src/I4337.sol";
 
 import {MockEntryPoint} from "./helpers/MockEntryPoint.sol";
 import {MockAggregator} from "./helpers/MockAggregator.sol";
@@ -89,11 +89,11 @@ contract EntryPointCallerTest is Test {
             signature: hex""
         });
 
-        UserOpsPerAggregator[] memory bundle = new UserOpsPerAggregator[](1);
+        IEntryPoint.UserOpsPerAggregator[] memory bundle = new IEntryPoint.UserOpsPerAggregator[](1);
 
-        bundle[0] = UserOpsPerAggregator({
+        bundle[0] = IEntryPoint.UserOpsPerAggregator({
             userOps: ops,
-            aggregator: aggregator,
+            aggregator: IAggregator(address(aggregator)),
             signature: signature
         });
 
