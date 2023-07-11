@@ -2,9 +2,9 @@
 pragma solidity >=0.7.0 <0.9.0;
 pragma abicoder v2;
 
-import {IEntryPoint} from "@account-abstraction/interfaces/IEntryPoint.sol";
-import {IAggregator} from "@account-abstraction/interfaces/IAggregator.sol";
-import {UserOperation} from "@account-abstraction/interfaces/UserOperation.sol";
+import {IEntryPoint} from "@account-abstraction/contracts/interfaces/IEntryPoint.sol";
+import {IAggregator} from "@account-abstraction/contracts/interfaces/IAggregator.sol";
+import {UserOperation} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
 
 interface ISimplifiedEntryPoint {
     function handleAggregatedOps(
