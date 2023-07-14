@@ -10,3 +10,6 @@
 [submodule "webauthn/lib/account-abstraction"]
 	path = webauthn/lib/account-abstraction
 	url = https://github.com/eth-infinitism/account-abstraction
+[submodule "webauthn/lib/openzeppelin-contracts"]
+	path = webauthn/lib/openzeppelin-contracts
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts
