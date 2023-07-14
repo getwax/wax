@@ -1,0 +1,3 @@
+[submodule "webauthn/lib/forge-std"]
+	path = webauthn/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
