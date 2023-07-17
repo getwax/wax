@@ -1,6 +1,3 @@
-export { default as hello } from './hello';
-export { default as mul } from './stuff/index';
+import WaxInPage from './WaxInPage';
 
-export function add(x: number, y: number) {
-  return x + y;
-}
+export default WaxInPage;

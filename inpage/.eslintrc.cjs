@@ -59,5 +59,8 @@ module.exports = {
     'react/jsx-indent': 'off',
     'react/jsx-one-expression-per-line': 'off',
     'import/no-absolute-path': 'off',
+    'no-useless-constructor': 'off',
+    '@typescript-eslint/no-useless-constructor': 'error',
+    'no-empty-function': 'off',
   },
 };
