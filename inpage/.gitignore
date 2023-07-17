@@ -10,6 +10,7 @@ lerna-debug.log*
 node_modules
 dist
 demo-dist
+globalScript-dist
 dist-ssr
 *.local
 

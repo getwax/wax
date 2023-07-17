@@ -5,7 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "rm -rf dist && tsc -p tsconfig.lib.json && tsc --noEmit && vite build",
+    "check-ts": "tsc --noEmit",
+    "build": "yarn check-ts && yarn build:lib && yarn build:demo && yarn build:globalScript",
+    "build:lib": "rm -rf dist && tsc -p tsconfig.lib.json",
+    "build:demo": "rm -rf demo-dist && vite build",
+    "build:globalScript": "rm -rf globalScript-dist && BUILD_GLOBAL_SCRIPT=true vite build",
     "lint": "eslint . --ext js,jsx,ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview"
   },
