@@ -16,5 +16,6 @@
     /* Linting */
     "strict": true,
     "noFallthroughCasesInSwitch": true
-  }
+  },
+  "include": ["*.*", "./**/*"]
 }

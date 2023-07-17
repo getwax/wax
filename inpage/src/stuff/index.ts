@@ -1,3 +1,3 @@
-export function mul(a: number, b: number) {
+export default function mul(a: number, b: number) {
   return a * b;
 }

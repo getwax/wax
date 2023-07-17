@@ -17,12 +17,7 @@ module.exports = {
     project: true,
     tsconfigRootDir: __dirname,
   },
-  plugins: [
-    'react-refresh',
-    'prettier',
-    '@typescript-eslint',
-    'import',
-  ],
+  plugins: ['react-refresh', 'prettier', '@typescript-eslint', 'import'],
   rules: {
     'react-refresh/only-export-components': [
       'error',
@@ -55,5 +50,14 @@ module.exports = {
     ],
     'import/extensions': 'off',
     'import/no-unresolved': 'off',
+    'import/no-extraneous-dependencies': [
+      'error',
+      { devDependencies: ['demo/**/*.ts', 'vite.config.ts'] },
+    ],
+    'react/react-in-jsx-scope': 'off',
+    'react/jsx-filename-extension': 'off',
+    'react/jsx-indent': 'off',
+    'react/jsx-one-expression-per-line': 'off',
+    'import/no-absolute-path': 'off',
   },
-}
+};
