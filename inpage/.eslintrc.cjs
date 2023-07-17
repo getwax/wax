@@ -8,6 +8,7 @@ module.exports = {
     'plugin:@typescript-eslint/recommended',
     'plugin:@typescript-eslint/recommended-requiring-type-checking',
     'plugin:react-hooks/recommended',
+    'airbnb',
   ],
   parser: '@typescript-eslint/parser',
   parserOptions: {
@@ -16,12 +17,43 @@ module.exports = {
     project: true,
     tsconfigRootDir: __dirname,
   },
-  plugins: ['react-refresh'],
+  plugins: [
+    'react-refresh',
+    'prettier',
+    '@typescript-eslint',
+    'import',
+  ],
   rules: {
     'react-refresh/only-export-components': [
-      'warn',
+      'error',
       { allowConstantExport: true },
     ],
     '@typescript-eslint/no-non-null-assertion': 'off',
+    'prettier/prettier': [
+      'error',
+      {
+        bracketSpacing: true,
+        bracketSameLine: false,
+        printWidth: 80,
+        semi: true,
+        singleQuote: true,
+        tabWidth: 2,
+        trailingComma: 'all',
+        useTabs: false,
+        proseWrap: 'always',
+      },
+    ],
+    'no-unused-vars': 'off',
+    '@typescript-eslint/no-unused-vars': [
+      'error',
+      {
+        varsIgnorePattern: '^_',
+        argsIgnorePattern: '^_',
+        destructuredArrayIgnorePattern: '^_',
+        caughtErrorsIgnorePattern: '^_',
+      },
+    ],
+    'import/extensions': 'off',
+    'import/no-unresolved': 'off',
   },
 }
