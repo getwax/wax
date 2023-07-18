@@ -4,6 +4,8 @@ import React from 'react';
 import EthereumApi from './EthereumApi';
 import assert from './helpers/assert';
 import popupUrl from './popupUrl';
+import SamplePopup from './SamplePopup';
+import sheetsRegistry from './sheetsRegistry';
 
 export default class WaxInPage {
   private constructor(public ethereum: EthereumApi) {}
@@ -47,8 +49,15 @@ export default class WaxInPage {
       popup.addEventListener('load', resolve);
     });
 
+    const style = document.createElement('style');
+    style.textContent = sheetsRegistry.toString();
+
+    popup.document.head.append(style);
+
     ReactDOM.createRoot(popup.document.getElementById('root')!).render(
-      <React.StrictMode>Popup content.</React.StrictMode>,
+      <React.StrictMode>
+        <SamplePopup />
+      </React.StrictMode>,
     );
   }
 }
