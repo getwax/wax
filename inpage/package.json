@@ -16,6 +16,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@types/color": "^3.0.3",
+    "color": "^4.2.3",
     "jss": "^10.10.0",
     "jss-preset-default": "^10.10.0",
     "react": "^18.2.0",

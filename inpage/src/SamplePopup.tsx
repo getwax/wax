@@ -17,6 +17,7 @@ const sheet = jss.createStyleSheet({
 
     '& > *': {
       flexGrow: '1',
+      flexBasis: '0',
     },
   },
 });
@@ -34,7 +35,9 @@ const SamplePopup = ({ respond }: { respond: (response: string) => void }) => (
       at eros lacinia consequat.
     </div>
     <div className={sheet.classes.ButtonRow}>
-      <Button onClick={() => respond('deny')}>Deny</Button>
+      <Button danger onClick={() => respond('deny')}>
+        Deny
+      </Button>
       <Button onClick={() => respond('approve')}>Approve</Button>
     </div>
   </div>
