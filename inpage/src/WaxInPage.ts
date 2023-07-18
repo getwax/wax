@@ -1,19 +1,5 @@
 import EthereumApi from './EthereumApi';
-
-const popupHtml = `
-<!DOCTYPE html>
-<html>
-<head>
-</head>
-<body>
-  <h1>I'm a popup.</h1>
-</body>
-</html>
-`.trim();
-
-const popupUrl = URL.createObjectURL(
-  new Blob([popupHtml], { type: 'text/html' }),
-);
+import popupUrl from './popupUrl';
 
 export default class WaxInPage {
   private constructor(public ethereum: EthereumApi) {}
