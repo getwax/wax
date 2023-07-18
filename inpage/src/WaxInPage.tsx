@@ -1,4 +1,8 @@
+import ReactDOM from 'react-dom/client';
+import React from 'react';
+
 import EthereumApi from './EthereumApi';
+import assert from './helpers/assert';
 import popupUrl from './popupUrl';
 
 export default class WaxInPage {
@@ -17,7 +21,7 @@ export default class WaxInPage {
     global.ethereum = waxInPage.ethereum;
   }
 
-  popup() {
+  async popup() {
     // eslint-disable-next-line no-unused-expressions
     this;
 
@@ -29,12 +33,22 @@ export default class WaxInPage {
       top: window.screenTop + 60,
     };
 
-    window.open(
+    const popup = window.open(
       popupUrl,
       undefined,
       Object.entries(opt)
         .map(([k, v]) => `${k}=${v.toString()}`)
         .join(', '),
+    );
+
+    assert(popup !== null);
+
+    await new Promise((resolve) => {
+      popup.addEventListener('load', resolve);
+    });
+
+    ReactDOM.createRoot(popup.document.getElementById('root')!).render(
+      <React.StrictMode>Popup content.</React.StrictMode>,
     );
   }
 }
