@@ -7,8 +7,9 @@
   "scripts": {
     "dev": "vite",
     "check-ts": "tsc --noEmit",
-    "build": "yarn check-ts && rm -rf build && yarn build:lib && yarn build:demo && yarn build:globalScript",
+    "build": "yarn check-ts && rm -rf build && yarn build:lib && yarn build:demo && yarn build:globalScript && yarn build:packed-lib",
     "build:lib": "tsc -p tsconfig.lib.json",
+    "build:packed-lib": "npm pack --pack-destination build/.",
     "build:demo": "vite build",
     "build:globalScript": "BUILD_GLOBAL_SCRIPT=true vite build",
     "lint": "eslint . --ext js,jsx,ts,tsx --report-unused-disable-directives --max-warnings 0",

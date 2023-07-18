@@ -6,3 +6,80 @@ This is an in-page wallet for demonstrating WAX modules.
   - implements `window.ethereum`
   - backed by a smart account with WAX features
 - `demo` defines a website that uses the library
+
+## See the Demo
+
+(TBA: Public URL.)
+
+```sh
+yarn
+yarn dev
+```
+
+## Use the Library (as an Npm Module)
+
+```sh
+# In this repo
+yarn
+yarn build
+
+# In your repo
+yarn add path/to/wax/inpage/build/getwax-inpage-0.1.0.tgz
+```
+
+(Note: This should just be `npm install @getwax/inpage`, but it's not published
+yet.)
+
+Then:
+
+```ts
+import WaxInPage from '@getwax/wax';
+
+const wax = WaxInPage.create();
+
+console.log(await wax.ethereum.request({
+  method: 'eth_requestAccounts',
+}));
+
+// Alternatively...
+
+WaxInPage.global();
+
+console.log(await ethereum.request({
+  method: 'eth_requestAccounts',
+}));
+```
+
+## Use the Libary (as a Script)
+
+In this repo:
+
+```sh
+yarn
+yarn build
+
+# Now waxInPage.iife.js is in build/globalScript
+```
+
+Copy `waxInPage.iife.js` to your `public/ext` directory.
+
+Add this script to your html:
+
+```html
+<script src="/ext/waxInPage.iife.js"></script>
+```
+
+(Note: This should just be `https://getwax.org/lib/inpage@0.1.0`, but it's not
+published yet.)
+
+Now you can use `window.ethereum` and `window.waxInPage`, eg:
+
+```ts
+(async () => {
+
+  console.log(await ethereum.request({
+    method: 'eth_requestAccounts',
+  }));
+
+})();
+```
