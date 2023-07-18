@@ -37,8 +37,10 @@ export default class WaxInPage {
 
     const opt = {
       popup: true,
-      width: 100,
-      height: 100,
+      width: 400,
+      height: 600,
+      left: window.screenLeft + window.innerWidth - 410,
+      top: window.screenTop + 60,
     };
 
     window.open(
