@@ -1,5 +1,4 @@
 import jss from 'jss';
-import type React from 'react';
 import sheetsRegistry from './sheetsRegistry';
 
 const sheet = jss.createStyleSheet({
@@ -10,7 +9,7 @@ const sheet = jss.createStyleSheet({
 
 sheetsRegistry.add(sheet);
 
-const SamplePopup: React.FC = () => (
+const SamplePopup = ({ respond }: { respond: (response: string) => void }) => (
   <div className={sheet.classes.SamplePopup}>
     <h1>Sample Popup</h1>
     <p>
@@ -20,6 +19,14 @@ const SamplePopup: React.FC = () => (
       metus volutpat, ornare odio commodo, pharetra sapien. Nam sit amet lectus
       at eros lacinia consequat.
     </p>
+    <div>
+      <button type="button" onClick={() => respond('deny')}>
+        Deny
+      </button>
+      <button type="button" onClick={() => respond('approve')}>
+        Approve
+      </button>
+    </div>
   </div>
 );
 

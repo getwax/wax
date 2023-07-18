@@ -54,10 +54,18 @@ export default class WaxInPage {
 
     popup.document.head.append(style);
 
-    ReactDOM.createRoot(popup.document.getElementById('root')!).render(
-      <React.StrictMode>
-        <SamplePopup />
-      </React.StrictMode>,
-    );
+    const response = await new Promise<string>((resolve) => {
+      ReactDOM.createRoot(popup.document.getElementById('root')!).render(
+        <React.StrictMode>
+          <SamplePopup respond={resolve} />
+        </React.StrictMode>,
+      );
+
+      popup.addEventListener('close', () => resolve('deny'));
+    });
+
+    popup.close();
+
+    return response;
   }
 }
