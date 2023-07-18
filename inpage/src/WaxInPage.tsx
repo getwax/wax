@@ -23,6 +23,14 @@ export default class WaxInPage {
     global.ethereum = waxInPage.ethereum;
   }
 
+  static addStylesheet() {
+    queueMicrotask(() => {
+      const style = document.createElement('style');
+      style.textContent = sheetsRegistry.toString();
+      document.head.append(style);
+    });
+  }
+
   async popup() {
     // eslint-disable-next-line no-unused-expressions
     this;
