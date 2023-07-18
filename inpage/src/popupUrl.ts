@@ -1,3 +1,5 @@
+import { bgColor, fgColor } from './styleConstants';
+
 const popupHtml = `
 <!DOCTYPE html>
 <html lang="en">
@@ -13,8 +15,8 @@ const popupHtml = `
       font-weight: 400;
     
       color-scheme: light dark;
-      color: rgba(255, 255, 255, 0.87);
-      background-color: #242424;
+      color: ${fgColor};
+      background-color: ${bgColor};
     
       font-synthesis: none;
       text-rendering: optimizeLegibility;
