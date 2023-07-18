@@ -18,7 +18,7 @@ export default defineConfig(() => {
           name: 'WaxInPage',
           fileName: 'waxInPage',
         },
-        outDir: 'globalScript-dist',
+        outDir: 'build/globalScript',
       },
     };
   }
@@ -26,7 +26,7 @@ export default defineConfig(() => {
   return {
     plugins: [react()],
     build: {
-      outDir: 'demo-dist',
+      outDir: 'build/demo',
     },
   };
 });

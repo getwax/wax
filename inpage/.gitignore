@@ -8,9 +8,7 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
-dist
-demo-dist
-globalScript-dist
+build
 dist-ssr
 *.local
 
