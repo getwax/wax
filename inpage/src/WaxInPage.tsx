@@ -69,7 +69,7 @@ export default class WaxInPage {
         </React.StrictMode>,
       );
 
-      popup.addEventListener('close', () => resolve('deny'));
+      popup.addEventListener('unload', () => resolve('deny'));
     });
 
     popup.close();
