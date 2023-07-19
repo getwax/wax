@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom/client';
 import App from './App.tsx';
 import WaxInPage from '../src';
 import './index.css';
-import DemoContext from './DemoContext.tsx';
+import DemoContext from './DemoContext.ts';
 
 WaxInPage.addStylesheet();
 

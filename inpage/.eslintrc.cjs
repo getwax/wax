@@ -53,7 +53,12 @@ module.exports = {
     'import/no-extraneous-dependencies': [
       'error',
       {
-        devDependencies: ['demo/**/*.ts', 'vite.config.ts', 'hardhat/**/*.ts'],
+        devDependencies: [
+          'demo/**/*.ts',
+          'demo/**/*.tsx',
+          'vite.config.ts',
+          'hardhat/**/*.ts',
+        ],
       },
     ],
     'react/react-in-jsx-scope': 'off',
