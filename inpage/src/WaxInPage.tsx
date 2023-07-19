@@ -15,12 +15,14 @@ export default class WaxInPage {
   }
 
   static global() {
-    const waxInPage = new WaxInPage(new EthereumApi());
+    new WaxInPage(new EthereumApi()).attachGlobals();
+  }
 
+  attachGlobals() {
     const global = globalThis as Record<string, unknown>;
 
-    global.waxInPage = waxInPage;
-    global.ethereum = waxInPage.ethereum;
+    global.waxInPage = this;
+    global.ethereum = this.ethereum;
   }
 
   static addStylesheet() {

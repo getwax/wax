@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import type WaxInPage from '../src';
 import './App.css';
 import Button from '../src/Button';
-
-declare const waxInPage: WaxInPage;
+import DemoContext from './DemoContext';
 
 const App = () => {
+  const demo = DemoContext.use();
+
   const [response, setResponse] = useState('pending');
 
   return (
@@ -17,7 +17,7 @@ const App = () => {
         type="button"
         // eslint-disable-next-line @typescript-eslint/no-misused-promises
         onClick={async () => {
-          setResponse(await waxInPage.popup());
+          setResponse(await demo.waxInPage.popup());
         }}
       >
         Popup
