@@ -3,6 +3,12 @@ import randomId from './helpers/randomId';
 
 export default class EthereumApi {
   #networkUrl = 'http://127.0.0.1:8545';
+  #testAddress = '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266';
+  #requestPermission: (message: string) => Promise<boolean>;
+
+  constructor(requestPermission: (message: string) => Promise<boolean>) {
+    this.#requestPermission = requestPermission;
+  }
 
   async request({
     method,
@@ -11,9 +17,26 @@ export default class EthereumApi {
     method: string;
     params?: unknown[];
   }) {
-    // TODO: Implement things like eth_requestAccounts here.
+    if (method === 'eth_requestAccounts') {
+      return await this.#requestAccounts();
+    }
 
     return await this.#networkRequest({ method, params });
+  }
+
+  async #requestAccounts() {
+    const granted = await this.#requestPermission(
+      'Allow this page to see your account address?',
+    );
+
+    if (!granted) {
+      throw new JsonRpcError({
+        code: 4001,
+        message: 'User rejected request',
+      });
+    }
+
+    return this.#testAddress;
   }
 
   async #networkRequest({

@@ -4,18 +4,22 @@ import React from 'react';
 import EthereumApi from './EthereumApi';
 import assert from './helpers/assert';
 import popupUrl from './popupUrl';
-import SamplePopup from './SamplePopup';
+import PermissionPopup from './PermissionPopup';
 import sheetsRegistry from './sheetsRegistry';
 
 export default class WaxInPage {
   private constructor(public ethereum: EthereumApi) {}
 
   static create(): WaxInPage {
-    return new WaxInPage(new EthereumApi());
+    const wax: WaxInPage = new WaxInPage(
+      new EthereumApi((message) => wax.requestPermission(message)),
+    );
+
+    return wax;
   }
 
   static global() {
-    new WaxInPage(new EthereumApi()).attachGlobals();
+    WaxInPage.create().attachGlobals();
   }
 
   attachGlobals() {
@@ -33,7 +37,7 @@ export default class WaxInPage {
     });
   }
 
-  async popup() {
+  async requestPermission(message: string) {
     // eslint-disable-next-line no-unused-expressions
     this;
 
@@ -64,14 +68,14 @@ export default class WaxInPage {
 
     popup.document.head.append(style);
 
-    const response = await new Promise<string>((resolve) => {
+    const response = await new Promise<boolean>((resolve) => {
       ReactDOM.createRoot(popup.document.getElementById('root')!).render(
         <React.StrictMode>
-          <SamplePopup respond={resolve} />
+          <PermissionPopup message={message} respond={resolve} />
         </React.StrictMode>,
       );
 
-      popup.addEventListener('unload', () => resolve('deny'));
+      popup.addEventListener('unload', () => resolve(false));
     });
 
     popup.close();
