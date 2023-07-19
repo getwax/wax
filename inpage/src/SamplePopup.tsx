@@ -35,7 +35,7 @@ const SamplePopup = ({ respond }: { respond: (response: string) => void }) => (
       at eros lacinia consequat.
     </div>
     <div className={sheet.classes.ButtonRow}>
-      <Button danger onClick={() => respond('deny')}>
+      <Button secondary onClick={() => respond('deny')}>
         Deny
       </Button>
       <Button onClick={() => respond('approve')}>Approve</Button>
