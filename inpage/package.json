@@ -5,7 +5,7 @@
   "type": "module",
   "types": "build/lib/index.d.ts",
   "scripts": {
-    "dev": "vite",
+    "dev": "concurrently --kill-others vite \"yarn --cwd hardhat hardhat node\"",
     "check-ts": "tsc --noEmit",
     "build": "yarn check-ts && rm -rf build && yarn build:lib && yarn build:demo && yarn build:globalScript && yarn build:packed-lib",
     "build:lib": "tsc -p tsconfig.lib.json",
@@ -30,6 +30,7 @@
     "@typescript-eslint/eslint-plugin": "^5.61.0",
     "@typescript-eslint/parser": "^5.61.0",
     "@vitejs/plugin-react-swc": "^3.3.2",
+    "concurrently": "^8.2.0",
     "eslint": "^8.44.0",
     "eslint-config-airbnb": "^19.0.4",
     "eslint-config-prettier": "^8.8.0",
