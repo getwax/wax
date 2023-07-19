@@ -7,7 +7,15 @@ import popupUrl from './popupUrl';
 import PermissionPopup from './PermissionPopup';
 import sheetsRegistry from './sheetsRegistry';
 
+const defaultConfig = {
+  requirePermission: true,
+};
+
+type Config = typeof defaultConfig;
+
 export default class WaxInPage {
+  #config = defaultConfig;
+
   private constructor(public ethereum: EthereumApi) {}
 
   static create(): WaxInPage {
@@ -22,13 +30,6 @@ export default class WaxInPage {
     WaxInPage.create().attachGlobals();
   }
 
-  attachGlobals() {
-    const global = globalThis as Record<string, unknown>;
-
-    global.waxInPage = this;
-    global.ethereum = this.ethereum;
-  }
-
   static addStylesheet() {
     queueMicrotask(() => {
       const style = document.createElement('style');
@@ -37,9 +38,24 @@ export default class WaxInPage {
     });
   }
 
+  attachGlobals() {
+    const global = globalThis as Record<string, unknown>;
+
+    global.waxInPage = this;
+    global.ethereum = this.ethereum;
+  }
+
+  setConfig(newConfig: Partial<Config>) {
+    this.#config = {
+      ...this.#config,
+      ...newConfig,
+    };
+  }
+
   async requestPermission(message: string) {
-    // eslint-disable-next-line no-unused-expressions
-    this;
+    if (this.#config.requirePermission === false) {
+      return true;
+    }
 
     const opt = {
       popup: true,
