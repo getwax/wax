@@ -74,5 +74,15 @@ module.exports = {
     'react/require-default-props': 'off',
     'react/jsx-props-no-spreading': 'off',
     'object-curly-newline': 'off',
+    'no-return-await': 'off',
+    'max-classes-per-file': 'off',
+    'lines-between-class-members': [
+      'error',
+      'always',
+      {
+        exceptAfterSingleLine: true,
+      },
+    ],
+    'no-use-before-define': 'off',
   },
 };
