@@ -61,7 +61,8 @@ export default class WaxInPage {
       popup: true,
       width: 400,
       height: 600,
-      left: window.screenLeft + window.innerWidth - 410,
+      left:
+        window.screenLeft + window.innerWidth * window.devicePixelRatio - 410,
       top: window.screenTop + 60,
     };
 
