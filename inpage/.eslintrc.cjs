@@ -2,7 +2,7 @@
 
 module.exports = {
   root: true,
-  env: { browser: true, es2020: true },
+  env: { browser: true, es2020: true, mocha: true },
   extends: [
     'eslint:recommended',
     'plugin:@typescript-eslint/recommended',
@@ -52,7 +52,9 @@ module.exports = {
     'import/no-unresolved': 'off',
     'import/no-extraneous-dependencies': [
       'error',
-      { devDependencies: ['demo/**/*.ts', 'vite.config.ts'] },
+      {
+        devDependencies: ['demo/**/*.ts', 'vite.config.ts', 'hardhat/**/*.ts'],
+      },
     ],
     'react/react-in-jsx-scope': 'off',
     'react/jsx-filename-extension': 'off',
@@ -71,5 +73,6 @@ module.exports = {
     ],
     'react/require-default-props': 'off',
     'react/jsx-props-no-spreading': 'off',
+    'object-curly-newline': 'off',
   },
 };
