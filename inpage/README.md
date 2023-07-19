@@ -12,7 +12,7 @@ This is an in-page wallet for demonstrating WAX modules.
 (TBA: Public URL.)
 
 ```sh
-yarn
+yarn setup
 yarn dev
 ```
 
@@ -20,7 +20,7 @@ yarn dev
 
 ```sh
 # In this repo
-yarn
+yarn setup
 yarn build
 
 # In your repo
@@ -55,7 +55,7 @@ console.log(await ethereum.request({
 In this repo:
 
 ```sh
-yarn
+yarn setup
 yarn build
 
 # Now waxInPage.iife.js is in build/globalScript

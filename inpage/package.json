@@ -5,6 +5,7 @@
   "type": "module",
   "types": "build/lib/index.d.ts",
   "scripts": {
+    "setup": "yarn && yarn --cwd hardhat && yarn --cwd hardhat hardhat compile",
     "dev": "concurrently --kill-others vite \"yarn --cwd hardhat hardhat node\"",
     "check-ts": "tsc --noEmit",
     "build": "yarn check-ts && rm -rf build && yarn build:lib && yarn build:demo && yarn build:globalScript && yarn build:packed-lib",
