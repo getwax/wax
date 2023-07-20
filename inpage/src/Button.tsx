@@ -44,6 +44,7 @@ const sheet = jss.createStyleSheet({
   },
   ButtonDisabled: {
     filter: 'brightness(50%)',
+    cursor: 'initial',
   },
 });
 
