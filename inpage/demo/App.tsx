@@ -91,6 +91,16 @@ const App = () => {
       >
         window.signer
       </Button>
+      <Button
+        // eslint-disable-next-line @typescript-eslint/no-misused-promises
+        onClick={async () => {
+          await demo.waxInPage.storage.clear();
+          setAddress(undefined);
+          setBalance(undefined);
+        }}
+      >
+        Clear
+      </Button>
     </>
   );
 };
