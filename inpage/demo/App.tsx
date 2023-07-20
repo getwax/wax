@@ -17,6 +17,18 @@ const App = () => {
   useEffect(() => {
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
     (async () => {
+      if (!address) {
+        const accounts = z.array(z.string()).parse(
+          await demo.ethereum.request({
+            method: 'eth_accounts',
+          }),
+        );
+
+        if (accounts.length > 0) {
+          setAddress(accounts[0]);
+        }
+      }
+
       if (address) {
         setBalance(await demo.provider.getBalance(address));
       }
