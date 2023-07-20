@@ -68,9 +68,10 @@ const App = () => {
               });
 
               // TODO: Better type information for EthereumApi
-              assert(typeof response === 'string');
+              assert(Array.isArray(response));
+              assert(typeof response[0] === 'string');
 
-              setAddress(response);
+              setAddress(response[0]);
             }}
           >
             Connect

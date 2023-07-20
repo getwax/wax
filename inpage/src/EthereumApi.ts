@@ -36,7 +36,7 @@ export default class EthereumApi {
       });
     }
 
-    return this.#testAddress;
+    return [this.#testAddress];
   }
 
   async #networkRequest({
