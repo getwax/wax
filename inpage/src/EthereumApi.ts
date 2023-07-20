@@ -6,6 +6,8 @@ export default class EthereumApi {
   #testAddress = '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266';
   #requestPermission: (message: string) => Promise<boolean>;
 
+  #connectedAccounts: string[] = [];
+
   constructor(requestPermission: (message: string) => Promise<boolean>) {
     this.#requestPermission = requestPermission;
   }
@@ -21,10 +23,18 @@ export default class EthereumApi {
       return await this.#requestAccounts();
     }
 
+    if (method === 'eth_accounts') {
+      return await this.#accounts();
+    }
+
     return await this.#networkRequest({ method, params });
   }
 
   async #requestAccounts() {
+    if (this.#connectedAccounts.length > 0) {
+      return structuredClone(this.#connectedAccounts);
+    }
+
     const granted = await this.#requestPermission(
       'Allow this page to see your account address?',
     );
@@ -36,7 +46,14 @@ export default class EthereumApi {
       });
     }
 
-    return [this.#testAddress];
+    this.#connectedAccounts = [this.#testAddress];
+
+    return await this.#accounts();
+  }
+
+  // eslint-disable-next-line @typescript-eslint/require-await
+  async #accounts() {
+    return structuredClone(this.#connectedAccounts);
   }
 
   async #networkRequest({

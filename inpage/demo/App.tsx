@@ -6,6 +6,8 @@ import DemoContext from './DemoContext';
 import Heading from '../src/Heading';
 import assert from '../src/helpers/assert';
 
+const globalRecord = globalThis as Record<string, unknown>;
+
 const App = () => {
   const demo = DemoContext.use();
 
@@ -78,6 +80,15 @@ const App = () => {
           </Button>
         </div>
       )}
+      <Button
+        // eslint-disable-next-line @typescript-eslint/no-misused-promises
+        onClick={async () => {
+          const signer = await demo.provider.getSigner();
+          globalRecord.signer = signer;
+        }}
+      >
+        window.signer
+      </Button>
     </>
   );
 };
