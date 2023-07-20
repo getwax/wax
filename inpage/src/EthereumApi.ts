@@ -3,16 +3,21 @@ import z from 'zod';
 import JsonRpcError from './JsonRpcError';
 import assert from './helpers/assert';
 import randomId from './helpers/randomId';
+import { WaxStorage } from './WaxStorage';
 
 export default class EthereumApi {
+  #storage: WaxStorage;
+
   #networkUrl = 'http://127.0.0.1:8545';
   #testAddress = '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266';
   #requestPermission: (message: string) => Promise<boolean>;
 
-  #connectedAccounts: string[] = [];
-
-  constructor(requestPermission: (message: string) => Promise<boolean>) {
+  constructor(
+    requestPermission: (message: string) => Promise<boolean>,
+    storage: WaxStorage,
+  ) {
     this.#requestPermission = requestPermission;
+    this.#storage = storage;
   }
 
   async request({
@@ -34,8 +39,10 @@ export default class EthereumApi {
   }
 
   async #requestAccounts() {
-    if (this.#connectedAccounts.length > 0) {
-      return structuredClone(this.#connectedAccounts);
+    let connectedAccounts = await this.#storage.connectedAccounts.get();
+
+    if (connectedAccounts.length > 0) {
+      return connectedAccounts;
     }
 
     const granted = await this.#requestPermission(
@@ -49,14 +56,15 @@ export default class EthereumApi {
       });
     }
 
-    this.#connectedAccounts = [this.#testAddress];
+    connectedAccounts = [this.#testAddress];
 
-    return await this.#accounts();
+    await this.#storage.connectedAccounts.set(connectedAccounts);
+
+    return connectedAccounts;
   }
 
-  // eslint-disable-next-line @typescript-eslint/require-await
   async #accounts() {
-    return structuredClone(this.#connectedAccounts);
+    return await this.#storage.connectedAccounts.get();
   }
 
   async #networkRequest({

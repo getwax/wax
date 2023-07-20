@@ -17,6 +17,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@s-libs/micro-dash": "^16.0.0",
     "@types/color": "^3.0.3",
     "color": "^4.2.3",
     "jss": "^10.10.0",

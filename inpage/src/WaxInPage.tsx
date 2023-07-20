@@ -6,6 +6,7 @@ import assert from './helpers/assert';
 import popupUrl from './popupUrl';
 import PermissionPopup from './PermissionPopup';
 import sheetsRegistry from './sheetsRegistry';
+import makeLocalWaxStorage, { WaxStorage } from './WaxStorage';
 
 const defaultConfig = {
   requirePermission: true,
@@ -16,11 +17,17 @@ type Config = typeof defaultConfig;
 export default class WaxInPage {
   #config = defaultConfig;
 
-  private constructor(public ethereum: EthereumApi) {}
+  private constructor(
+    public ethereum: EthereumApi,
+    public storage: WaxStorage,
+  ) {}
 
   static create(): WaxInPage {
+    const storage = makeLocalWaxStorage();
+
     const wax: WaxInPage = new WaxInPage(
-      new EthereumApi((message) => wax.requestPermission(message)),
+      new EthereumApi((message) => wax.requestPermission(message), storage),
+      storage,
     );
 
     return wax;
