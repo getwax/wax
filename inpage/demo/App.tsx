@@ -63,8 +63,7 @@ const App = () => {
           <Button
             style={{ display: 'inline-block' }}
             type="button"
-            // eslint-disable-next-line @typescript-eslint/no-misused-promises
-            onClick={async () => {
+            onPress={async () => {
               // TODO: Better type information for EthereumApi
               const response = z
                 .array(z.string())
@@ -83,8 +82,8 @@ const App = () => {
         </div>
       )}
       <Button
-        // eslint-disable-next-line @typescript-eslint/no-misused-promises
-        onClick={async () => {
+        secondary
+        onPress={async () => {
           const signer = await demo.provider.getSigner();
           globalRecord.signer = signer;
         }}
@@ -92,8 +91,8 @@ const App = () => {
         window.signer
       </Button>
       <Button
-        // eslint-disable-next-line @typescript-eslint/no-misused-promises
-        onClick={async () => {
+        secondary
+        onPress={async () => {
           await demo.waxInPage.storage.clear();
           setAddress(undefined);
           setBalance(undefined);

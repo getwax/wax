@@ -35,10 +35,10 @@ const PermissionPopup = ({
     <Heading>Permission Request</Heading>
     <div>{message}</div>
     <div className={sheet.classes.ButtonRow}>
-      <Button secondary onClick={() => respond(false)}>
+      <Button secondary onPress={() => respond(false)}>
         Deny
       </Button>
-      <Button onClick={() => respond(true)}>Approve</Button>
+      <Button onPress={() => respond(true)}>Approve</Button>
     </div>
   </div>
 );

@@ -92,5 +92,6 @@ module.exports = {
     'no-redeclare': 'off',
     'brace-style': 'off',
     'no-restricted-syntax': 'off',
+    'operator-linebreak': 'off',
   },
 };
