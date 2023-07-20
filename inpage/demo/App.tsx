@@ -1,10 +1,10 @@
+import z from 'zod';
 import { ethers } from 'ethers';
 import { useEffect, useState } from 'react';
 import './App.css';
 import Button from '../src/Button';
 import DemoContext from './DemoContext';
 import Heading from '../src/Heading';
-import assert from '../src/helpers/assert';
 
 const globalRecord = globalThis as Record<string, unknown>;
 
@@ -65,13 +65,15 @@ const App = () => {
             type="button"
             // eslint-disable-next-line @typescript-eslint/no-misused-promises
             onClick={async () => {
-              const response = await demo.ethereum.request({
-                method: 'eth_requestAccounts',
-              });
-
               // TODO: Better type information for EthereumApi
-              assert(Array.isArray(response));
-              assert(typeof response[0] === 'string');
+              const response = z
+                .array(z.string())
+                .min(1)
+                .parse(
+                  await demo.ethereum.request({
+                    method: 'eth_requestAccounts',
+                  }),
+                );
 
               setAddress(response[0]);
             }}
