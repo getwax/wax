@@ -1,16 +1,8 @@
 import z from 'zod';
 
+import JsonRpcError from './JsonRpcError';
 import assert from './helpers/assert';
 import randomId from './helpers/randomId';
-
-// TODO: Separate file
-const RawJsonRpcError = z.object({
-  code: z.number().int(),
-  data: z.unknown(),
-  message: z.string(),
-});
-
-type RawJsonRpcError = z.infer<typeof RawJsonRpcError>;
 
 export default class EthereumApi {
   #networkUrl = 'http://127.0.0.1:8545';
@@ -87,27 +79,18 @@ export default class EthereumApi {
       }),
     });
 
-    const json: unknown = await res.json();
-    assert(typeof json === 'object' && json !== null);
+    const json = z
+      .union([
+        z.object({ result: z.unknown() }),
+        z.object({ error: z.unknown() }),
+      ])
+      .parse(await res.json());
 
     if ('result' in json) {
       return json.result;
     }
 
     assert('error' in json);
-
-    throw new JsonRpcError(RawJsonRpcError.parse(json.error));
-  }
-}
-
-class JsonRpcError extends Error {
-  code: number;
-  data: unknown;
-
-  constructor({ code, data, message }: RawJsonRpcError) {
-    super(message);
-
-    this.code = code;
-    this.data = data;
+    throw JsonRpcError.parse(json.error);
   }
 }
