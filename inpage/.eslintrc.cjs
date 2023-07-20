@@ -93,5 +93,10 @@ module.exports = {
     'brace-style': 'off',
     'no-restricted-syntax': 'off',
     'operator-linebreak': 'off',
+
+    // Found false positive with these. Maybe the typescript used for linting is
+    // out of date.
+    '@typescript-eslint/no-unsafe-call': 'off',
+    '@typescript-eslint/no-unsafe-member-access': 'off',
   },
 };
