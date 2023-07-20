@@ -75,15 +75,9 @@ const App = () => {
           style={{ display: 'inline-block' }}
           type="button"
           onPress={async () => {
-            // TODO: Better type information for EthereumApi
-            const response = z
-              .array(z.string())
-              .min(1)
-              .parse(
-                await demo.ethereum.request({
-                  method: 'eth_requestAccounts',
-                }),
-              );
+            const response = await demo.ethereum.request({
+              method: 'eth_requestAccounts',
+            });
 
             setAddress(response[0]);
           }}
