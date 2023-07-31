@@ -98,5 +98,8 @@ module.exports = {
     // out of date.
     '@typescript-eslint/no-unsafe-call': 'off',
     '@typescript-eslint/no-unsafe-member-access': 'off',
+
+    'no-shadow': 'off',
+    '@typescript-eslint/no-shadow': 'error',
   },
 };

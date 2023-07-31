@@ -1,5 +1,5 @@
-import { ethers } from "ethers";
+import { ethers } from 'ethers';
 
-type SignerOrProvider = ethers.Signer | ethers.providers.Provider;
+type SignerOrProvider = ethers.Signer | ethers.Provider;
 
 export default SignerOrProvider;
