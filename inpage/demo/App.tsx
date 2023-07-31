@@ -1,10 +1,12 @@
+import z from 'zod';
 import { ethers } from 'ethers';
 import { useEffect, useState } from 'react';
 import './App.css';
 import Button from '../src/Button';
 import DemoContext from './DemoContext';
 import Heading from '../src/Heading';
-import assert from '../src/helpers/assert';
+
+const globalRecord = globalThis as Record<string, unknown>;
 
 const App = () => {
   const demo = DemoContext.use();
@@ -15,6 +17,18 @@ const App = () => {
   useEffect(() => {
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
     (async () => {
+      if (!address) {
+        const accounts = z.array(z.string()).parse(
+          await demo.ethereum.request({
+            method: 'eth_accounts',
+          }),
+        );
+
+        if (accounts.length > 0) {
+          setAddress(accounts[0]);
+        }
+      }
+
       if (address) {
         setBalance(await demo.provider.getBalance(address));
       }
@@ -57,26 +71,39 @@ const App = () => {
         </div>
       )}
       {address === undefined && (
-        <div>
-          <Button
-            style={{ display: 'inline-block' }}
-            type="button"
-            // eslint-disable-next-line @typescript-eslint/no-misused-promises
-            onClick={async () => {
-              const response = await demo.ethereum.request({
-                method: 'eth_requestAccounts',
-              });
+        <Button
+          style={{ display: 'inline-block' }}
+          type="button"
+          onPress={async () => {
+            const response = await demo.ethereum.request({
+              method: 'eth_requestAccounts',
+            });
 
-              // TODO: Better type information for EthereumApi
-              assert(typeof response === 'string');
-
-              setAddress(response);
-            }}
-          >
-            Connect
-          </Button>
-        </div>
+            setAddress(response[0]);
+          }}
+        >
+          Connect
+        </Button>
       )}
+      <Button
+        secondary
+        onPress={async () => {
+          const signer = await demo.provider.getSigner();
+          globalRecord.signer = signer;
+        }}
+      >
+        window.signer
+      </Button>
+      <Button
+        secondary
+        onPress={async () => {
+          await demo.waxInPage.storage.clear();
+          setAddress(undefined);
+          setBalance(undefined);
+        }}
+      >
+        Clear
+      </Button>
     </>
   );
 };

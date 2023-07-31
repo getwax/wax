@@ -89,5 +89,9 @@ module.exports = {
       },
     ],
     'no-use-before-define': 'off',
+    'no-redeclare': 'off',
+    'brace-style': 'off',
+    'no-restricted-syntax': 'off',
+    'operator-linebreak': 'off',
   },
 };
