@@ -1,0 +1,49 @@
+{
+  "name": "@getwax/inpage",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "types": "build/lib/index.d.ts",
+  "scripts": {
+    "setup": "yarn && yarn --cwd hardhat && yarn --cwd hardhat hardhat compile",
+    "dev": "concurrently --kill-others vite \"yarn --cwd hardhat hardhat node\"",
+    "check-ts": "tsc --noEmit",
+    "build": "yarn check-ts && rm -rf build && yarn build:lib && yarn build:demo && yarn build:globalScript && yarn build:packed-lib",
+    "build:lib": "tsc -p tsconfig.lib.json",
+    "build:packed-lib": "npm pack --pack-destination build/.",
+    "build:demo": "vite build",
+    "build:globalScript": "BUILD_GLOBAL_SCRIPT=true vite build",
+    "lint": "eslint . --ext js,jsx,ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@types/color": "^3.0.3",
+    "color": "^4.2.3",
+    "jss": "^10.10.0",
+    "jss-preset-default": "^10.10.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.4.2",
+    "@types/react": "^18.2.14",
+    "@types/react-dom": "^18.2.6",
+    "@typescript-eslint/eslint-plugin": "^5.61.0",
+    "@typescript-eslint/parser": "^5.61.0",
+    "@vitejs/plugin-react-swc": "^3.3.2",
+    "concurrently": "^8.2.0",
+    "eslint": "^8.44.0",
+    "eslint-config-airbnb": "^19.0.4",
+    "eslint-config-prettier": "^8.8.0",
+    "eslint-plugin-import": "^2.27.5",
+    "eslint-plugin-jsx-a11y": "^6.7.1",
+    "eslint-plugin-prettier": "^5.0.0",
+    "eslint-plugin-react": "^7.32.2",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-react-refresh": "^0.4.1",
+    "ethers": "^6.6.4",
+    "prettier": "^3.0.0",
+    "typescript": "^5.0.2",
+    "vite": "^4.4.0"
+  }
+}
