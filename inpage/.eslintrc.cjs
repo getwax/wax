@@ -111,5 +111,6 @@ module.exports = {
 
     'implicit-arrow-linebreak': 'off',
     'function-paren-newline': 'off',
+    'react/jsx-wrap-multilines': 'off',
   },
 };

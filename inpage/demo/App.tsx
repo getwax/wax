@@ -1,9 +1,7 @@
 import './App.css';
-import Button from '../src/Button';
 import DemoContext from './DemoContext';
-import Heading from '../src/Heading';
-import AccountTable from './AccountTable';
 import ConnectPage from './ConnectPage';
+import WaxHeader from './WaxHeader';
 
 const App = () => {
   const demo = DemoContext.use();
@@ -14,15 +12,9 @@ const App = () => {
   }
 
   return (
-    <>
-      <Heading>WAX</Heading>
-      <div>
-        <AccountTable address={address} />
-      </div>
-      <Button secondary onPress={() => demo.clear()}>
-        Clear
-      </Button>
-    </>
+    <div className="wax-app">
+      <WaxHeader />
+    </div>
   );
 };
 
