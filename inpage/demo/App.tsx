@@ -3,44 +3,22 @@ import Button from '../src/Button';
 import DemoContext from './DemoContext';
 import Heading from '../src/Heading';
 import AccountTable from './AccountTable';
-
-const globalRecord = globalThis as Record<string, unknown>;
+import ConnectPage from './ConnectPage';
 
 const App = () => {
   const demo = DemoContext.use();
   const address = demo.useAddress();
 
+  if (!address) {
+    return <ConnectPage />;
+  }
+
   return (
     <>
       <Heading>WAX</Heading>
-      {(() => {
-        if (address) {
-          return (
-            <div>
-              <AccountTable address={address} />
-            </div>
-          );
-        }
-
-        return (
-          <Button
-            style={{ display: 'inline-block' }}
-            type="button"
-            onPress={() => demo.requestAddress()}
-          >
-            Connect
-          </Button>
-        );
-      })()}
-      <Button
-        secondary
-        onPress={async () => {
-          const signer = await demo.waxInPage.ethersProvider.getSigner();
-          globalRecord.signer = signer;
-        }}
-      >
-        window.signer
-      </Button>
+      <div>
+        <AccountTable address={address} />
+      </div>
       <Button secondary onPress={() => demo.clear()}>
         Clear
       </Button>
