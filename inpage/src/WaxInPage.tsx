@@ -157,10 +157,10 @@ export default class WaxInPage {
   async #requestDeployerWallet(): Promise<ethers.Wallet> {
     const popup = await createPopup();
 
-    let deployerPhrase: string;
+    let deployerKeyData: string;
 
     try {
-      deployerPhrase = await new Promise<string>((resolve, reject) => {
+      deployerKeyData = await new Promise<string>((resolve, reject) => {
         ReactDOM.createRoot(popup.document.getElementById('root')!).render(
           <React.StrictMode>
             <DeploymentPopup resolve={resolve} reject={reject} />
@@ -175,9 +175,13 @@ export default class WaxInPage {
       popup.close();
     }
 
-    const hdNode = ethers.HDNodeWallet.fromPhrase(deployerPhrase);
+    if (ethers.Mnemonic.isValidMnemonic(deployerKeyData)) {
+      const hdNode = ethers.HDNodeWallet.fromPhrase(deployerKeyData);
 
-    return new ethers.Wallet(hdNode.privateKey, this.ethersProvider);
+      return new ethers.Wallet(hdNode.privateKey, this.ethersProvider);
+    }
+
+    return new ethers.Wallet(deployerKeyData, this.ethersProvider);
   }
 
   getTestWallet(index: number): ethers.Wallet {
