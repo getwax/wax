@@ -6,7 +6,14 @@ import EthereumApi from './EthereumApi';
 import PermissionPopup from './PermissionPopup';
 import sheetsRegistry from './sheetsRegistry';
 import makeLocalWaxStorage, { WaxStorage } from './WaxStorage';
-import { Greeter, Greeter__factory } from '../hardhat/typechain-types';
+import {
+  EntryPoint,
+  EntryPoint__factory,
+  Greeter,
+  Greeter__factory,
+  SimpleAccountFactory,
+  SimpleAccountFactory__factory,
+} from '../hardhat/typechain-types';
 import SafeSingletonFactory, {
   SafeSingletonFactoryViewer,
 } from './SafeSingletonFactory';
@@ -20,6 +27,8 @@ const defaultConfig = {
 
 type Contracts = {
   greeter: Greeter;
+  entryPoint: EntryPoint;
+  simpleAccountFactory: SimpleAccountFactory;
 };
 
 type Config = typeof defaultConfig;
@@ -105,8 +114,15 @@ export default class WaxInPage {
 
     const viewer = new SafeSingletonFactoryViewer(this.ethersProvider, chainId);
 
+    const assumedEntryPoint = viewer.connectAssume(EntryPoint__factory, []);
+
     const contracts = {
       greeter: viewer.connectAssume(Greeter__factory, ['']).connect(runner),
+      entryPoint: assumedEntryPoint,
+      simpleAccountFactory: viewer.connectAssume(
+        SimpleAccountFactory__factory,
+        [await assumedEntryPoint.getAddress()],
+      ),
     };
 
     if (this.#contractsDeployed) {
@@ -126,10 +142,17 @@ export default class WaxInPage {
 
     const factory = await SafeSingletonFactory.init(wallet);
 
+    const entryPoint = await factory.connectOrDeploy(EntryPoint__factory, []);
+
     const deployments: {
       [C in keyof Contracts]: () => Promise<Contracts[C]>;
     } = {
       greeter: () => factory.connectOrDeploy(Greeter__factory, ['']),
+      entryPoint: () => Promise.resolve(entryPoint),
+      simpleAccountFactory: async () =>
+        factory.connectOrDeploy(SimpleAccountFactory__factory, [
+          await entryPoint.getAddress(),
+        ]),
     };
 
     for (const deployment of Object.values(deployments)) {
