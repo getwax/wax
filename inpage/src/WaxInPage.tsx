@@ -3,8 +3,6 @@ import React from 'react';
 
 import { ethers } from 'ethers';
 import EthereumApi from './EthereumApi';
-import assert from './helpers/assert';
-import popupUrl from './popupUrl';
 import PermissionPopup from './PermissionPopup';
 import sheetsRegistry from './sheetsRegistry';
 import makeLocalWaxStorage, { WaxStorage } from './WaxStorage';
@@ -12,10 +10,12 @@ import { Greeter, Greeter__factory } from '../hardhat/typechain-types';
 import SafeSingletonFactory, {
   SafeSingletonFactoryViewer,
 } from './SafeSingletonFactory';
+import createPopup from './createPopup';
+import DeploymentPopup from './DeploymentPopup';
 
 const defaultConfig = {
   requirePermission: true,
-  deploymentUI: true,
+  deployContractsIfNeeded: true,
 };
 
 type Contracts = {
@@ -79,33 +79,7 @@ export default class WaxInPage {
       return true;
     }
 
-    const opt = {
-      popup: true,
-      width: 400,
-      height: 600,
-      left:
-        window.screenLeft + window.innerWidth * window.devicePixelRatio - 410,
-      top: window.screenTop + 60,
-    };
-
-    const popup = window.open(
-      popupUrl,
-      undefined,
-      Object.entries(opt)
-        .map(([k, v]) => `${k}=${v.toString()}`)
-        .join(', '),
-    );
-
-    assert(popup !== null);
-
-    await new Promise((resolve) => {
-      popup.addEventListener('load', resolve);
-    });
-
-    const style = document.createElement('style');
-    style.textContent = sheetsRegistry.toString();
-
-    popup.document.head.append(style);
+    const popup = await createPopup();
 
     const response = await new Promise<boolean>((resolve) => {
       ReactDOM.createRoot(popup.document.getElementById('root')!).render(
@@ -122,7 +96,9 @@ export default class WaxInPage {
     return response;
   }
 
-  async getContracts(runner?: ethers.ContractRunner): Promise<Contracts> {
+  async getContracts(
+    runner: ethers.ContractRunner = this.ethersProvider,
+  ): Promise<Contracts> {
     const chainId = BigInt(
       await this.ethereum.request({ method: 'eth_chainId' }),
     );
@@ -140,6 +116,10 @@ export default class WaxInPage {
     if (await this.#checkDeployments(contracts)) {
       this.#contractsDeployed = true;
       return contracts;
+    }
+
+    if (!this.#config.deployContractsIfNeeded) {
+      throw new Error('Contracts not deployed');
     }
 
     const wallet = await this.#requestDeployerWallet();
@@ -175,14 +155,29 @@ export default class WaxInPage {
   }
 
   async #requestDeployerWallet(): Promise<ethers.Wallet> {
-    // eslint-disable-next-line @typescript-eslint/await-thenable
-    await 0;
+    const popup = await createPopup();
 
-    if (this.#config.deploymentUI) {
-      // TODO: Use UI to get custom phrase
+    let deployerPhrase: string;
+
+    try {
+      deployerPhrase = await new Promise<string>((resolve, reject) => {
+        ReactDOM.createRoot(popup.document.getElementById('root')!).render(
+          <React.StrictMode>
+            <DeploymentPopup resolve={resolve} reject={reject} />
+          </React.StrictMode>,
+        );
+
+        popup.addEventListener('unload', () =>
+          reject(new Error('Popup closed')),
+        );
+      });
+    } finally {
+      popup.close();
     }
 
-    return this.getTestWallet(0);
+    const hdNode = ethers.HDNodeWallet.fromPhrase(deployerPhrase);
+
+    return new ethers.Wallet(hdNode.privateKey, this.ethersProvider);
   }
 
   getTestWallet(index: number): ethers.Wallet {

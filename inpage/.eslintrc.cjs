@@ -108,5 +108,8 @@ module.exports = {
         allow: ['^[a-zA-Z]+__factory', '^eth_[a-zA-Z]+'],
       },
     ],
+
+    'implicit-arrow-linebreak': 'off',
+    'function-paren-newline': 'off',
   },
 };
