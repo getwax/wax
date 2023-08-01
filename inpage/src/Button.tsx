@@ -5,6 +5,7 @@ import assert from 'assert';
 import sheetsRegistry from './sheetsRegistry';
 import { bgColor, fgColor } from './styleConstants';
 import classes from './helpers/classes';
+import runAsync from '../demo/helpers/runAsync';
 
 const sheet = jss.createStyleSheet({
   Button: {
@@ -73,7 +74,7 @@ const Button = ({
         return;
       }
 
-      (async () => {
+      runAsync(async () => {
         try {
           setLoading(true);
           await onPress(e);
@@ -85,7 +86,7 @@ const Button = ({
         }
 
         setLoading(false);
-      })().catch(() => assert(false));
+      });
     },
     [disabled, loading, onPress],
   );
