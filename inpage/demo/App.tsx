@@ -1,10 +1,9 @@
-import z from 'zod';
-import { ethers } from 'ethers';
 import { useEffect, useState } from 'react';
 import './App.css';
 import Button from '../src/Button';
 import DemoContext from './DemoContext';
 import Heading from '../src/Heading';
+import AccountTable from './AccountTable';
 
 const globalRecord = globalThis as Record<string, unknown>;
 
@@ -12,62 +11,28 @@ const App = () => {
   const demo = DemoContext.use();
 
   const [address, setAddress] = useState<string>();
-  const [balance, setBalance] = useState<bigint>();
 
   useEffect(() => {
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
     (async () => {
       if (!address) {
-        const accounts = z.array(z.string()).parse(
-          await demo.ethereum.request({
-            method: 'eth_accounts',
-          }),
-        );
+        const accounts = await demo.ethereum.request({
+          method: 'eth_accounts',
+        });
 
         if (accounts.length > 0) {
           setAddress(accounts[0]);
         }
       }
-
-      if (address) {
-        setBalance(await demo.waxInPage.ethersProvider.getBalance(address));
-      }
     })();
   }, [demo, address]);
-
-  const balanceDisplay = (() => {
-    if (balance === undefined) {
-      return undefined;
-    }
-
-    return `${ethers.formatEther(balance)} ETH`;
-  })();
 
   return (
     <>
       <Heading>WAX</Heading>
       {address !== undefined && (
         <div>
-          <table>
-            <tbody>
-              <tr>
-                <td>Address</td>
-                <td>
-                  {(() => {
-                    if (!address) {
-                      return '';
-                    }
-
-                    return `${address.slice(0, 6)}..${address.slice(-4)}`;
-                  })()}
-                </td>
-              </tr>
-              <tr>
-                <td>Balance</td>
-                <td>{balanceDisplay}</td>
-              </tr>
-            </tbody>
-          </table>
+          <AccountTable address={address} />
         </div>
       )}
       {address === undefined && (
@@ -99,7 +64,6 @@ const App = () => {
         onPress={async () => {
           await demo.waxInPage.storage.clear();
           setAddress(undefined);
-          setBalance(undefined);
         }}
       >
         Clear
