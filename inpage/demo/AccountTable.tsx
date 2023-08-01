@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ethers } from 'ethers';
 import DemoContext from './DemoContext';
+import runAsync from './helpers/runAsync';
 
 const AccountTable = ({ address }: { address: string }) => {
   const demo = DemoContext.use();
@@ -8,10 +9,9 @@ const AccountTable = ({ address }: { address: string }) => {
   const [balance, setBalance] = useState<bigint>();
 
   useEffect(() => {
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    (async () => {
+    runAsync(async () => {
       setBalance(await demo.waxInPage.ethersProvider.getBalance(address));
-    })();
+    });
   }, [demo, address]);
 
   const balanceDisplay = (() => {
