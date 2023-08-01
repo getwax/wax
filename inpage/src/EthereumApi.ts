@@ -16,6 +16,10 @@ const schema = {
     params: emptyParams,
     output: z.array(z.string()),
   },
+  eth_chainId: {
+    params: emptyParams,
+    output: z.string(),
+  },
 };
 
 type Schema = typeof schema;

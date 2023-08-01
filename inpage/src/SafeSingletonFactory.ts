@@ -1,6 +1,6 @@
-import assert from 'assert';
 import { ethers, Signer } from 'ethers';
 import SignerOrProvider from './helpers/SignerOrProvider';
+import assert from './helpers/assert';
 
 /**
  * Filters out the optional elements of an array type because an optional
@@ -17,6 +17,10 @@ type NonOptionalElementsOf<A extends unknown[]> = A extends [
 
 export type ContractFactoryConstructor = {
   new (): ethers.ContractFactory;
+  connect(
+    address: string,
+    runner?: ethers.ContractRunner | null,
+  ): Pick<ethers.Contract, 'getAddress'>;
 };
 
 export type DeployParams<CFC extends ContractFactoryConstructor> =
@@ -26,7 +30,7 @@ type Deployment = {
   gasPrice: bigint;
   gasLimit: bigint;
   signerAddress: string;
-  transaction: ethers.Transaction;
+  transaction: string;
   address: string;
 };
 
@@ -38,32 +42,28 @@ export default class SafeSingletonFactory {
       gasPrice: 100000000000n,
       gasLimit: 100000n,
       signerAddress: '0xE1CB04A0fA36DdD16a06ea828007E35e1a3cBC37',
-      transaction: ethers.Transaction.from(
-        [
-          '0x',
-          'f8a78085174876e800830186a08080b853604580600e600039806000f350fe7ffffff',
-          'fffffffffffffffffffffffffffffffffffffffffffffffffffffffffe03601600081',
-          '602082378035828234f58015156039578182fd5b8082525050506014600cf3820a96a',
-          '0460c6ea9b8f791e5d9e67fbf2c70aba92bf88591c39ac3747ea1bedc2ef1750ca04b',
-          '08a4b5cea15a56276513da7a0c0b34f16e89811d5dd911efba5f8625a921cc',
-        ].join(''),
-      ),
+      transaction: [
+        '0x',
+        'f8a78085174876e800830186a08080b853604580600e600039806000f350fe7ffffff',
+        'fffffffffffffffffffffffffffffffffffffffffffffffffffffffffe03601600081',
+        '602082378035828234f58015156039578182fd5b8082525050506014600cf3820a96a',
+        '0460c6ea9b8f791e5d9e67fbf2c70aba92bf88591c39ac3747ea1bedc2ef1750ca04b',
+        '08a4b5cea15a56276513da7a0c0b34f16e89811d5dd911efba5f8625a921cc',
+      ].join(''),
       address: SafeSingletonFactory.sharedAddress,
     },
     31337: {
       gasPrice: 100000000000n,
       gasLimit: 100000n,
       signerAddress: '0xE1CB04A0fA36DdD16a06ea828007E35e1a3cBC37',
-      transaction: ethers.Transaction.from(
-        [
-          '0x',
-          'f8a78085174876e800830186a08080b853604580600e600039806000f350fe7ffffff',
-          'fffffffffffffffffffffffffffffffffffffffffffffffffffffffffe03601600081',
-          '602082378035828234f58015156039578182fd5b8082525050506014600cf382f4f5a',
-          '00dc4d1d21b308094a30f5f93da35e4d72e99115378f135f2295bea47301a3165a063',
-          '6b822daad40aa8c52dd5132f378c0c0e6d83b4898228c7e21c84e631a0b891',
-        ].join(''),
-      ),
+      transaction: [
+        '0x',
+        'f8a78085174876e800830186a08080b853604580600e600039806000f350fe7ffffff',
+        'fffffffffffffffffffffffffffffffffffffffffffffffffffffffffe03601600081',
+        '602082378035828234f58015156039578182fd5b8082525050506014600cf382f4f5a',
+        '00dc4d1d21b308094a30f5f93da35e4d72e99115378f135f2295bea47301a3165a063',
+        '6b822daad40aa8c52dd5132f378c0c0e6d83b4898228c7e21c84e631a0b891',
+      ].join(''),
       address: SafeSingletonFactory.sharedAddress,
     },
   };
@@ -123,8 +123,7 @@ export default class SafeSingletonFactory {
       })
     ).wait();
 
-    assert(provider.sendTransaction);
-    await (await provider.sendTransaction(deployment.transaction)).wait();
+    await (await provider.broadcastTransaction(deployment.transaction)).wait();
 
     const deployedCode = await provider.getCode(deployment.address);
     assert(deployedCode !== '0x', 'Failed to deploy safe singleton factory');
@@ -168,16 +167,12 @@ export default class SafeSingletonFactory {
     ContractFactoryConstructor: CFC,
     deployParams: DeployParams<CFC>,
     salt: ethers.BytesLike = ethers.solidityPacked(['uint256'], [0]),
-  ): Promise<ReturnType<InstanceType<CFC>['attach']> | undefined> {
-    let contract = await this.viewer.connectIfDeployed(
+  ): Promise<ReturnType<CFC['connect']> | undefined> {
+    const contract = await this.viewer.connectIfDeployed(
       ContractFactoryConstructor,
       deployParams,
       salt,
     );
-
-    if (contract !== undefined) {
-      contract = contract.connect(this.signer) as typeof contract;
-    }
 
     return contract;
   }
@@ -186,7 +181,7 @@ export default class SafeSingletonFactory {
     ContractFactoryConstructor: CFC,
     deployParams: DeployParams<CFC>,
     salt: ethers.BytesLike = ethers.solidityPacked(['uint256'], [0]),
-  ): Promise<ReturnType<InstanceType<CFC>['attach']>> {
+  ): Promise<ReturnType<CFC['connect']>> {
     const contractFactory = new ContractFactoryConstructor();
 
     const initCode =
@@ -202,9 +197,10 @@ export default class SafeSingletonFactory {
     const existingCode = await this.provider.getCode(address);
 
     if (existingCode !== '0x') {
-      return contractFactory.attach(address).connect(this.signer) as ReturnType<
-        InstanceType<CFC>['attach']
-      >;
+      return ContractFactoryConstructor.connect(
+        address,
+        this.signer,
+      ) as ReturnType<CFC['connect']>;
     }
 
     const deployTx = {
@@ -245,9 +241,10 @@ export default class SafeSingletonFactory {
 
     assert(deployedCode !== '0x', 'Failed to deploy to expected address');
 
-    return contractFactory.attach(address).connect(this.signer) as ReturnType<
-      InstanceType<CFC>['attach']
-    >;
+    return ContractFactoryConstructor.connect(
+      address,
+      this.signer,
+    ) as ReturnType<CFC['connect']>;
   }
 }
 
@@ -330,31 +327,40 @@ export class SafeSingletonFactoryViewer {
     return existingCode !== '0x';
   }
 
-  async connectIfDeployed<CFC extends ContractFactoryConstructor>(
+  connectAssume<CFC extends ContractFactoryConstructor>(
     ContractFactoryConstructor: CFC,
     deployParams: DeployParams<CFC>,
     salt: ethers.BytesLike = ethers.solidityPacked(['uint256'], [0]),
-  ): Promise<ReturnType<InstanceType<CFC>['attach']> | undefined> {
+  ): ReturnType<CFC['connect']> {
     const address = this.calculateAddress(
       ContractFactoryConstructor,
       deployParams,
       salt,
     );
 
-    const existingCode = await this.provider.getCode(address);
+    const contract = ContractFactoryConstructor.connect(
+      address,
+      this.signer ?? this.provider,
+    ) as ReturnType<CFC['connect']>;
+
+    return contract;
+  }
+
+  async connectIfDeployed<CFC extends ContractFactoryConstructor>(
+    ContractFactoryConstructor: CFC,
+    deployParams: DeployParams<CFC>,
+    salt: ethers.BytesLike = ethers.solidityPacked(['uint256'], [0]),
+  ): Promise<ReturnType<CFC['connect']> | undefined> {
+    const contract = this.connectAssume(
+      ContractFactoryConstructor,
+      deployParams,
+      salt,
+    );
+
+    const existingCode = await this.provider.getCode(contract.getAddress());
 
     if (existingCode === '0x') {
       return undefined;
-    }
-
-    const contractFactory = new ContractFactoryConstructor();
-
-    let contract = contractFactory.attach(address) as ReturnType<
-      InstanceType<CFC>['attach']
-    >;
-
-    if (this.signer) {
-      contract = contract.connect(this.signer) as typeof contract;
     }
 
     return contract;
@@ -364,7 +370,7 @@ export class SafeSingletonFactoryViewer {
     ContractFactoryConstructor: CFC,
     deployParams: DeployParams<CFC>,
     salt: ethers.BytesLike = ethers.solidityPacked(['uint256'], [0]),
-  ): Promise<ReturnType<InstanceType<CFC>['attach']>> {
+  ): Promise<ReturnType<CFC['connect']>> {
     const contract = await this.connectIfDeployed(
       ContractFactoryConstructor,
       deployParams,

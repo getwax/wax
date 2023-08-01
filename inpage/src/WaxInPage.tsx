@@ -1,26 +1,41 @@
 import ReactDOM from 'react-dom/client';
 import React from 'react';
 
+import { ethers } from 'ethers';
 import EthereumApi from './EthereumApi';
 import assert from './helpers/assert';
 import popupUrl from './popupUrl';
 import PermissionPopup from './PermissionPopup';
 import sheetsRegistry from './sheetsRegistry';
 import makeLocalWaxStorage, { WaxStorage } from './WaxStorage';
+import { Greeter, Greeter__factory } from '../hardhat/typechain-types';
+import SafeSingletonFactory, {
+  SafeSingletonFactoryViewer,
+} from './SafeSingletonFactory';
 
 const defaultConfig = {
   requirePermission: true,
+  deploymentUI: true,
+};
+
+type Contracts = {
+  greeter: Greeter;
 };
 
 type Config = typeof defaultConfig;
 
 export default class WaxInPage {
   #config = defaultConfig;
+  #contractsDeployed = false;
+
+  browserProvider: ethers.BrowserProvider;
 
   private constructor(
     public ethereum: EthereumApi,
     public storage: WaxStorage,
-  ) {}
+  ) {
+    this.browserProvider = new ethers.BrowserProvider(this.ethereum);
+  }
 
   static create(): WaxInPage {
     const storage = makeLocalWaxStorage();
@@ -105,5 +120,84 @@ export default class WaxInPage {
     popup.close();
 
     return response;
+  }
+
+  async getContracts(): Promise<Contracts> {
+    const chainId = BigInt(
+      await this.ethereum.request({ method: 'eth_chainId' }),
+    );
+
+    const viewer = new SafeSingletonFactoryViewer(
+      this.browserProvider,
+      chainId,
+    );
+
+    const contracts = {
+      greeter: viewer.connectAssume(Greeter__factory, ['']),
+    };
+
+    if (this.#contractsDeployed) {
+      return contracts;
+    }
+
+    if (await this.#checkDeployments(contracts)) {
+      this.#contractsDeployed = true;
+      return contracts;
+    }
+
+    const wallet = await this.#requestDeployerWallet();
+
+    const factory = await SafeSingletonFactory.init(wallet);
+
+    const deployments: {
+      [C in keyof Contracts]: () => Promise<Contracts[C]>;
+    } = {
+      greeter: () => factory.connectOrDeploy(Greeter__factory, ['']),
+    };
+
+    for (const deployment of Object.values(deployments)) {
+      // eslint-disable-next-line no-await-in-loop
+      await deployment();
+    }
+
+    return contracts;
+  }
+
+  async #checkDeployments(contracts: Contracts): Promise<boolean> {
+    const deployFlags = await Promise.all(
+      Object.values(contracts).map(async (contract) => {
+        const existingCode = await this.browserProvider.getCode(
+          contract.getAddress(),
+        );
+
+        return existingCode !== '0x';
+      }),
+    );
+
+    return deployFlags.every((flag) => flag);
+  }
+
+  async #requestDeployerWallet(): Promise<ethers.Wallet> {
+    // eslint-disable-next-line @typescript-eslint/await-thenable
+    await 0;
+
+    if (this.#config.deploymentUI) {
+      // TODO: Use UI to get custom phrase
+    }
+
+    return this.getTestWallet(0);
+  }
+
+  getTestWallet(index: number): ethers.Wallet {
+    const hdNode = ethers.HDNodeWallet.fromPhrase(
+      `${'test '.repeat(11)}junk`,
+      undefined,
+      "m/44'/60'/0'/0",
+    );
+
+    return new ethers.Wallet(
+      hdNode.deriveChild(index).privateKey,
+      this.browserProvider,
+    );
   }
 }

@@ -1,5 +1,5 @@
 export default function assert(
-  condition: boolean,
+  condition: unknown,
   msg = 'Assertion failed',
 ): asserts condition {
   if (!condition) {

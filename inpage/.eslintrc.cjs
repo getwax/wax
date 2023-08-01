@@ -101,5 +101,12 @@ module.exports = {
 
     'no-shadow': 'off',
     '@typescript-eslint/no-shadow': 'error',
+
+    camelcase: [
+      'error',
+      {
+        allow: ['^[a-zA-Z]+__factory', '^eth_[a-zA-Z]+'],
+      },
+    ],
   },
 };
