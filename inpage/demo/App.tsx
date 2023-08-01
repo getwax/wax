@@ -30,7 +30,7 @@ const App = () => {
       }
 
       if (address) {
-        setBalance(await demo.provider.getBalance(address));
+        setBalance(await demo.waxInPage.ethersProvider.getBalance(address));
       }
     })();
   }, [demo, address]);
@@ -88,7 +88,7 @@ const App = () => {
       <Button
         secondary
         onPress={async () => {
-          const signer = await demo.provider.getSigner();
+          const signer = await demo.waxInPage.ethersProvider.getSigner();
           globalRecord.signer = signer;
         }}
       >

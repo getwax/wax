@@ -28,13 +28,13 @@ export default class WaxInPage {
   #config = defaultConfig;
   #contractsDeployed = false;
 
-  browserProvider: ethers.BrowserProvider;
+  ethersProvider: ethers.BrowserProvider;
 
   private constructor(
     public ethereum: EthereumApi,
     public storage: WaxStorage,
   ) {
-    this.browserProvider = new ethers.BrowserProvider(this.ethereum);
+    this.ethersProvider = new ethers.BrowserProvider(this.ethereum);
   }
 
   static create(): WaxInPage {
@@ -122,18 +122,15 @@ export default class WaxInPage {
     return response;
   }
 
-  async getContracts(): Promise<Contracts> {
+  async getContracts(runner?: ethers.ContractRunner): Promise<Contracts> {
     const chainId = BigInt(
       await this.ethereum.request({ method: 'eth_chainId' }),
     );
 
-    const viewer = new SafeSingletonFactoryViewer(
-      this.browserProvider,
-      chainId,
-    );
+    const viewer = new SafeSingletonFactoryViewer(this.ethersProvider, chainId);
 
     const contracts = {
-      greeter: viewer.connectAssume(Greeter__factory, ['']),
+      greeter: viewer.connectAssume(Greeter__factory, ['']).connect(runner),
     };
 
     if (this.#contractsDeployed) {
@@ -166,7 +163,7 @@ export default class WaxInPage {
   async #checkDeployments(contracts: Contracts): Promise<boolean> {
     const deployFlags = await Promise.all(
       Object.values(contracts).map(async (contract) => {
-        const existingCode = await this.browserProvider.getCode(
+        const existingCode = await this.ethersProvider.getCode(
           contract.getAddress(),
         );
 
@@ -197,7 +194,7 @@ export default class WaxInPage {
 
     return new ethers.Wallet(
       hdNode.deriveChild(index).privateKey,
-      this.browserProvider,
+      this.ethersProvider,
     );
   }
 }
