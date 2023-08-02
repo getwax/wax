@@ -2,6 +2,7 @@ import Button from '../src/Button';
 import Heading from '../src/Heading';
 import DemoContext from './DemoContext';
 import Loading from './Loading';
+import RenderAsync from './RenderAsync';
 
 const GreeterDApp = () => {
   const demo = DemoContext.use();
@@ -17,7 +18,12 @@ const GreeterDApp = () => {
     );
   }
 
-  return <>TODO</>;
+  return (
+    <RenderAsync
+      promise={contracts.greeter.getAddress()}
+      render={(addr) => addr}
+    />
+  );
 };
 
 export default GreeterDApp;
