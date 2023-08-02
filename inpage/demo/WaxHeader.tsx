@@ -1,12 +1,12 @@
 import './WaxHeader.css';
 import { useEffect, useState } from 'react';
-import { ethers } from 'ethers';
 import Heading from '../src/Heading';
 import Button from '../src/Button';
 import DemoContext from './DemoContext';
 import Loading from './Loading';
 import runAsync from './helpers/runAsync';
 import usePath from './usePath';
+import formatRoundedEther from './helpers/formatRoundedEther';
 
 const WaxHeader = () => {
   const demo = DemoContext.use();
@@ -40,7 +40,7 @@ const WaxHeader = () => {
           Address: {address.slice(0, 6)}..{address.slice(-4)}
         </div>
         <div>
-          Balance: {balance ? `${ethers.formatEther(balance)} ETH` : ''}
+          Balance: {balance ? `${formatRoundedEther(balance)} ETH` : ''}
         </div>
       </div>
       <div>
