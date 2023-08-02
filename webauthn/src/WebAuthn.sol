@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {FCL_WebAuthn} from "./lib/FCL_WebAuthn.sol";
+import {FCL_WebAuthn} from "./lib/FCL_Webauthn.sol";
 
 contract Webauthn {
     function verifySignature(
