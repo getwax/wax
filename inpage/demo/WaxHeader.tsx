@@ -6,10 +6,13 @@ import Button from '../src/Button';
 import DemoContext from './DemoContext';
 import Loading from './Loading';
 import runAsync from './helpers/runAsync';
+import usePath from './usePath';
 
 const WaxHeader = () => {
   const demo = DemoContext.use();
   const address = demo.useAddress();
+
+  const [, setPath] = usePath();
 
   const [balance, setBalance] = useState<bigint>();
 
@@ -29,7 +32,9 @@ const WaxHeader = () => {
 
   return (
     <div className="wax-header">
-      <Heading>WAX</Heading>
+      <Heading onClick={() => setPath('/')} style={{ cursor: 'pointer' }}>
+        WAX
+      </Heading>
       <div className="account-fields">
         <div>
           Address: {address.slice(0, 6)}..{address.slice(-4)}
