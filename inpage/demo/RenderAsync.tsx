@@ -1,7 +1,7 @@
 import { ReactNode, useEffect, useState } from 'react';
 import Loading from './Loading';
 
-function RenderAsync<T>({
+function RenderAsync<T extends NonNullable<unknown>>({
   promise,
   loading = () => <Loading />,
   render,
@@ -25,11 +25,11 @@ function RenderAsync<T>({
     promise.then(setValue, setError);
   }, [promise]);
 
-  if (error) {
+  if (error !== undefined) {
     return renderError(error);
   }
 
-  if (value) {
+  if (value !== undefined) {
     return render(value);
   }
 

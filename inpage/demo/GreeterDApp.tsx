@@ -19,10 +19,21 @@ const GreeterDApp = () => {
   }
 
   return (
-    <RenderAsync
-      promise={contracts.greeter.getAddress()}
-      render={(addr) => addr}
-    />
+    <div>
+      <div>
+        <RenderAsync
+          promise={contracts.greeter.getAddress()}
+          render={(addr) => addr}
+        />
+      </div>
+      <div>
+        Current greeting:&nbsp;
+        <RenderAsync
+          promise={contracts.greeter.greet()}
+          render={(greeting) => `"${greeting}"`}
+        />
+      </div>
+    </div>
   );
 };
 
