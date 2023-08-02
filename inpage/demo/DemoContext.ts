@@ -1,13 +1,17 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import WaxInPage, { EthereumApi } from '../src';
+import WaxInPage, { Contracts, EthereumApi } from '../src';
 import TypedEmitter from './helpers/TypedEmitter';
 import runAsync from './helpers/runAsync';
 
 export default class DemoContext {
   ethereum: EthereumApi;
   address?: string;
+  contracts?: Contracts;
+  #contractsPromise?: Promise<Contracts>;
+
   events = new TypedEmitter<{
     addressChanged(newAddress?: string): void;
+    contractsChanged(newContracts?: Contracts): void;
   }>();
 
   constructor(public waxInPage: WaxInPage) {
@@ -40,6 +44,11 @@ export default class DemoContext {
     this.events.emit('addressChanged', newAddress);
   }
 
+  setContracts(newContracts?: Contracts) {
+    this.contracts = newContracts;
+    this.events.emit('contractsChanged', newContracts);
+  }
+
   async requestAddress() {
     const response = await this.ethereum.request({
       method: 'eth_requestAccounts',
@@ -65,4 +74,42 @@ export default class DemoContext {
 
     return address;
   };
+
+  useContracts = () => {
+    const [contracts, setContracts] = useState(this.contracts);
+
+    useEffect(() => {
+      const listener = (newContracts: Contracts) => {
+        setContracts(newContracts);
+      };
+
+      this.events.on('contractsChanged', listener);
+
+      if (!this.contracts) {
+        void this.getContracts();
+      }
+
+      return () => {
+        this.events.off('contractsChanged', listener);
+      };
+    }, []);
+
+    return contracts;
+  };
+
+  async getContracts() {
+    if (this.#contractsPromise) {
+      return await this.#contractsPromise;
+    }
+
+    this.#contractsPromise = this.waxInPage.getContracts();
+
+    try {
+      const contracts = await this.#contractsPromise;
+      this.setContracts(contracts);
+      return contracts;
+    } finally {
+      this.#contractsPromise = undefined;
+    }
+  }
 }

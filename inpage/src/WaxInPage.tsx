@@ -25,7 +25,7 @@ const defaultConfig = {
   deployContractsIfNeeded: true,
 };
 
-type Contracts = {
+export type Contracts = {
   greeter: Greeter;
   entryPoint: EntryPoint;
   simpleAccountFactory: SimpleAccountFactory;

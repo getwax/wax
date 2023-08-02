@@ -1,7 +1,6 @@
 import jss from 'jss';
 import color from 'color';
 import React, { HTMLProps, useCallback, useState } from 'react';
-import assert from 'assert';
 import sheetsRegistry from './sheetsRegistry';
 import { bgColor, fgColor } from './styleConstants';
 import classes from './helpers/classes';
@@ -60,7 +59,7 @@ const Button = ({
 }: Omit<HTMLProps<HTMLDivElement>, 'className' | 'onClick'> & {
   secondary?: boolean;
   onPress?: (
-    e: React.MouseEvent<HTMLDivElement> | React.KeyboardEvent<HTMLDivElement>,
+    e?: React.MouseEvent<HTMLDivElement> | React.KeyboardEvent<HTMLDivElement>,
   ) => unknown;
 }) => {
   const [loading, setLoading] = useState(false);

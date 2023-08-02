@@ -19,7 +19,13 @@ export default async function createPopup(): Promise<Window> {
       .join(', '),
   );
 
-  assert(popup !== null);
+  assert(
+    popup !== null,
+    [
+      'Failed to create popup. The browser may have blocked this due to not',
+      'being triggered by user input.',
+    ].join(' '),
+  );
 
   await new Promise((resolve) => {
     popup.addEventListener('load', resolve);
