@@ -113,5 +113,6 @@ module.exports = {
     'function-paren-newline': 'off',
     'react/jsx-wrap-multilines': 'off',
     'no-void': 'off',
+    'react/jsx-curly-newline': 'off',
   },
 };

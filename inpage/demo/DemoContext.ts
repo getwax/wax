@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react';
+import { ethers } from 'ethers';
 import WaxInPage, { Contracts, EthereumApi } from '../src';
 import TypedEmitter from './helpers/TypedEmitter';
 import runAsync from './helpers/runAsync';
@@ -112,4 +113,16 @@ export default class DemoContext {
       this.#contractsPromise = undefined;
     }
   }
+
+  useSigner = () => {
+    const [signer, setSigner] = useState<ethers.Signer>();
+
+    useEffect(() => {
+      runAsync(async () => {
+        setSigner(await this.waxInPage.ethersProvider.getSigner());
+      });
+    }, []);
+
+    return signer;
+  };
 }
