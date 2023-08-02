@@ -1,5 +1,5 @@
 import ReactDOM from 'react-dom/client';
-import React from 'react';
+import React, { ReactNode } from 'react';
 
 import { ethers } from 'ethers';
 import EthereumApi from './EthereumApi';
@@ -83,7 +83,7 @@ export default class WaxInPage {
     };
   }
 
-  async requestPermission(message: string) {
+  async requestPermission(message: ReactNode) {
     if (this.#config.requirePermission === false) {
       return true;
     }
