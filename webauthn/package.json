@@ -1,0 +1,11 @@
+{
+  "name": "webauthn",
+  "private": true,
+  "version": "0.1.0",
+  "description": "webauthn plugin for 4337 accounts",
+  "repository": "https://github.com/getwax/wax",
+  "license": "MIT",
+  "devDependencies": {
+    "hardhat": "^2.17.1"
+  }
+}
