@@ -4,45 +4,7 @@ import JsonRpcError from './JsonRpcError';
 import assert from './helpers/assert';
 import randomId from './helpers/randomId';
 import WaxInPage from '.';
-
-const emptyParams = z.union([z.tuple([]), z.undefined()]);
-
-const schema = {
-  eth_requestAccounts: {
-    params: emptyParams,
-    output: z.array(z.string()).min(1),
-  },
-  eth_accounts: {
-    params: emptyParams,
-    output: z.array(z.string()),
-  },
-  eth_chainId: {
-    params: emptyParams,
-    output: z.string(),
-  },
-  eth_sendTransaction: {
-    params: z.array(z.unknown()),
-    output: z.string(),
-  },
-};
-
-type Schema = typeof schema;
-
-type RequestParams<M extends string> = M extends keyof Schema
-  ? undefined extends z.infer<Schema[M]['params']>
-    ? { params?: z.infer<Schema[M]['params']> }
-    : { params: z.infer<Schema[M]['params']> }
-  : { params?: unknown[] };
-
-type Response<M extends string> = M extends keyof Schema
-  ? z.infer<Schema[M]['output']>
-  : unknown;
-
-type SchemaHandlers = {
-  [M in keyof Schema]: (
-    ...params: Exclude<z.infer<Schema[M]['params']>, undefined>
-  ) => Promise<Response<M>>;
-};
+import EthereumRpc from './EthereumRpc';
 
 export default class EthereumApi {
   #waxInPage: WaxInPage;
@@ -59,18 +21,21 @@ export default class EthereumApi {
     params,
   }: {
     method: M;
-  } & RequestParams<M>): Promise<Response<M>> {
-    if (!(method in schema)) {
-      return (await this.#requestImpl({ method, params })) as Response<M>;
+  } & EthereumRpc.RequestParams<M>): Promise<EthereumRpc.Response<M>> {
+    if (!(method in EthereumRpc.schema)) {
+      return (await this.#requestImpl({
+        method,
+        params,
+      })) as EthereumRpc.Response<M>;
     }
 
-    const methodSchema = schema[method as keyof Schema];
+    const methodSchema = EthereumRpc.schema[method as keyof EthereumRpc.Schema];
 
     const parsedParams = methodSchema.params.parse(params);
     const response = await this.#requestImpl({ method, params: parsedParams });
 
     const parsedResponse = methodSchema.output.parse(response);
-    return parsedResponse as Response<M>;
+    return parsedResponse as EthereumRpc.Response<M>;
   }
 
   async #requestImpl({
@@ -88,7 +53,7 @@ export default class EthereumApi {
     return await this.#networkRequest({ method, params });
   }
 
-  #customHandlers: Partial<SchemaHandlers> = {
+  #customHandlers: Partial<EthereumRpc.Handlers> = {
     eth_requestAccounts: async () => {
       let connectedAccounts =
         await this.#waxInPage.storage.connectedAccounts.get();
