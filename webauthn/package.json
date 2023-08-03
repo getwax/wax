@@ -21,6 +21,7 @@
     "chai": "^4.2.0",
     "dotenv": "^16.3.1",
     "ethers": "^6.4.0",
+    "ethers-v5": "npm:ethers@5.7.2",
     "hardhat": "^2.17.1",
     "hardhat-gas-reporter": "^1.0.8",
     "hardhat-preprocessor": "^0.1.5",

@@ -1,42 +1,51 @@
-import { DeployFunction, DeployResult } from "hardhat-deploy/types";
-import { HardhatRuntimeEnvironment } from "hardhat/types";
-import hre from "hardhat";
+import { ethers } from "ethers";
+import SimulateTxAccessor from "../artifacts/lib/safe-contracts/contracts/accessors/SimulateTxAccessor.sol/SimulateTxAccessor.json";
+import SafeProxyFactory from "../artifacts/lib/safe-contracts/contracts/proxies/SafeProxyFactory.sol/SafeProxyFactory.json";
+import TokenCallbackHandler from "../artifacts/lib/safe-contracts/contracts/handler/TokenCallbackHandler.sol/TokenCallbackHandler.json";
+import CompatibilityFallbackHandler from "../artifacts/lib/safe-contracts/contracts/handler/CompatibilityFallbackHandler.sol/CompatibilityFallbackHandler.json";
+import CreateCall from "../artifacts/lib/safe-contracts/contracts/libraries/CreateCall.sol/CreateCall.json";
+import MultiSend from "../artifacts/lib/safe-contracts/contracts/libraries/MultiSend.sol/MultiSend.json";
+import MultiSendCallOnly from "../artifacts/lib/safe-contracts/contracts/libraries/MultiSendCallOnly.sol/MultiSendCallOnly.json";
+import SignMessageLib from "../artifacts/lib/safe-contracts/contracts/libraries/SignMessageLib.sol/SignMessageLib.json";
+import SafeL2 from "../artifacts/lib/safe-contracts/contracts/SafeL2.sol/SafeL2.json";
+import Safe from "../artifacts/lib/safe-contracts/contracts/Safe.sol/Safe.json";
 
-type DeployResultWithContractName = DeployResult & {
-  contractName: string;
-};
-
-const deploy: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
-  const { deployments, getNamedAccounts } = hre;
-  const { deployer } = await getNamedAccounts();
-  const { deploy } = deployments;
-
+const deploy = async function () {
   const contracts = [
-    "SimulateTxAccessor",
-    "SafeProxyFactory",
-    "TokenCallbackHandler",
-    "CompatibilityFallbackHandler",
-    "CreateCall",
-    "MultiSend",
-    "MultiSendCallOnly",
-    "SignMessageLib",
-    "SafeL2",
-    "Safe",
+    SimulateTxAccessor,
+    SafeProxyFactory,
+    TokenCallbackHandler,
+    CompatibilityFallbackHandler,
+    CreateCall,
+    MultiSend,
+    MultiSendCallOnly,
+    SignMessageLib,
+    SafeL2,
+    Safe,
   ];
 
+  const provider = new ethers.JsonRpcProvider(process.env.NODE_URL);
+  const signer = await provider.getSigner();
+
   for (const contract of contracts) {
-    const deployment = (await deploy(contract, {
-      from: deployer,
-      args: [],
-      log: true,
-      deterministicDeployment: true,
-      gasLimit: 10_000_000,
-    })) as DeployResultWithContractName;
-    console.log(`deployed ${deployment.contractName} to ${deployment.address}`);
+    const contractFactory = new ethers.ContractFactory(
+      contract.abi,
+      contract.bytecode
+    );
+    const deployedContract = await contractFactory
+      .connect(signer)
+      .deploy({ gasLimit: 10_000_000 });
+    await deployedContract.waitForDeployment();
+
+    console.log(
+      `deployed ${
+        contract.contractName
+      } to ${await deployedContract.getAddress()}`
+    );
   }
 };
 
-deploy(hre).catch((error) => {
+deploy().catch((error: Error) => {
   console.error(error);
   process.exitCode = 1;
 });

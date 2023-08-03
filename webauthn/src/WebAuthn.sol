@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.12;
 
 import {FCL_WebAuthn} from "./lib/FCL_Webauthn.sol";
 

@@ -1,13 +1,10 @@
-# Sample Hardhat Project
+# Webauthn plugin
 
-This project demonstrates a basic Hardhat use case. It comes with a sample contract, a test for that contract, and a script that deploys that contract.
+# Getting Started
 
-Try running some of the following tasks:
+To run the integration test:
 
-```shell
-npx hardhat help
-npx hardhat test
-REPORT_GAS=true npx hardhat test
-npx hardhat node
-npx hardhat run scripts/deploy.ts
+```bash
+# Start a geth node, fund accounts and deploy Safe contracts
+./script/start.sh
 ```
