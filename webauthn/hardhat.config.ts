@@ -2,6 +2,9 @@ import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
 import "hardhat-preprocessor";
 import fs from "fs";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 function getRemappings() {
   return fs
@@ -12,7 +15,23 @@ function getRemappings() {
 }
 
 const config: HardhatUserConfig = {
-  solidity: "0.8.20",
+  solidity: {
+    version: "0.8.20",
+    settings: {
+      optimizer: {
+        enabled: true,
+        runs: 200,
+      },
+    },
+  },
+  networks: {
+    localhost: {
+      allowUnlimitedContractSize: true,
+      blockGasLimit: 100000000,
+      gas: 100000000,
+      url: "http://localhost:8545",
+    },
+  },
   preprocess: {
     eachLine: (hre) => ({
       transform: (line: string) => {
