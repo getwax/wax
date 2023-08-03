@@ -37,28 +37,18 @@ export default class WaxInPage {
   #config = defaultConfig;
   #contractsDeployed = false;
 
+  ethereum: EthereumApi;
+  storage: WaxStorage;
   ethersProvider: ethers.BrowserProvider;
 
-  private constructor(
-    public ethereum: EthereumApi,
-    public storage: WaxStorage,
-  ) {
+  constructor(storage = makeLocalWaxStorage()) {
+    this.ethereum = new EthereumApi(this);
+    this.storage = storage;
     this.ethersProvider = new ethers.BrowserProvider(this.ethereum);
   }
 
-  static create(): WaxInPage {
-    const storage = makeLocalWaxStorage();
-
-    const wax: WaxInPage = new WaxInPage(
-      new EthereumApi((message) => wax.requestPermission(message), storage),
-      storage,
-    );
-
-    return wax;
-  }
-
   static global() {
-    WaxInPage.create().attachGlobals();
+    new WaxInPage().attachGlobals();
   }
 
   static addStylesheet() {

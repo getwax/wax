@@ -8,7 +8,7 @@ import DemoContext from './DemoContext.ts';
 
 WaxInPage.addStylesheet();
 
-const waxInPage = WaxInPage.create();
+const waxInPage = new WaxInPage();
 waxInPage.attachGlobals();
 
 const globalRecord = globalThis as Record<string, unknown>;

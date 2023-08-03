@@ -1,10 +1,9 @@
 import z from 'zod';
 
-import { ReactNode } from 'react';
 import JsonRpcError from './JsonRpcError';
 import assert from './helpers/assert';
 import randomId from './helpers/randomId';
-import { WaxStorage } from './WaxStorage';
+import WaxInPage from '.';
 
 const emptyParams = z.union([z.tuple([]), z.undefined()]);
 
@@ -46,18 +45,13 @@ type SchemaHandlers = {
 };
 
 export default class EthereumApi {
-  #storage: WaxStorage;
+  #waxInPage: WaxInPage;
 
   #networkUrl = 'http://127.0.0.1:8545';
   #testAddress = '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266';
-  #requestPermission: (message: ReactNode) => Promise<boolean>;
 
-  constructor(
-    requestPermission: (message: ReactNode) => Promise<boolean>,
-    storage: WaxStorage,
-  ) {
-    this.#requestPermission = requestPermission;
-    this.#storage = storage;
+  constructor(waxInPage: WaxInPage) {
+    this.#waxInPage = waxInPage;
   }
 
   async request<M extends string>({
@@ -96,13 +90,14 @@ export default class EthereumApi {
 
   #customHandlers: Partial<SchemaHandlers> = {
     eth_requestAccounts: async () => {
-      let connectedAccounts = await this.#storage.connectedAccounts.get();
+      let connectedAccounts =
+        await this.#waxInPage.storage.connectedAccounts.get();
 
       if (connectedAccounts.length > 0) {
         return connectedAccounts;
       }
 
-      const granted = await this.#requestPermission(
+      const granted = await this.#waxInPage.requestPermission(
         'Allow this page to see your account address?',
       );
 
@@ -115,12 +110,13 @@ export default class EthereumApi {
 
       connectedAccounts = [this.#testAddress];
 
-      await this.#storage.connectedAccounts.set(connectedAccounts);
+      await this.#waxInPage.storage.connectedAccounts.set(connectedAccounts);
 
       return connectedAccounts;
     },
 
-    eth_accounts: async () => await this.#storage.connectedAccounts.get(),
+    eth_accounts: async () =>
+      await this.#waxInPage.storage.connectedAccounts.get(),
 
     eth_sendTransaction: async (...txs) => {
       const question =
@@ -130,7 +126,7 @@ export default class EthereumApi {
 
       const txData = txs.length === 1 ? txs[0] : txs;
 
-      const granted = await this.#requestPermission(
+      const granted = await this.#waxInPage.requestPermission(
         <pre style={{ overflowX: 'auto', maxWidth: '100%', fontSize: '1em' }}>
           {question} {JSON.stringify(txData, null, 2)}
         </pre>,
