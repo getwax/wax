@@ -1,7 +1,5 @@
 import TypedEmitter from '../demo/helpers/TypedEmitter';
-import runAsync from '../demo/helpers/runAsync';
 import assert from './helpers/assert';
-import delay from './helpers/delay';
 import popupUrl from './popupUrl';
 import sheetsRegistry from './sheetsRegistry';
 
@@ -12,7 +10,7 @@ export default class ReusablePopup {
 
   useIndex = 0;
 
-  private constructor(public window: Window) {
+  private constructor(public iframe: HTMLIFrameElement) {
     window.addEventListener('unload', () => {
       this.events.emit('unload');
     });
@@ -22,72 +20,56 @@ export default class ReusablePopup {
     return new ReusablePopup(await createPopup());
   }
 
+  getWindow() {
+    const w = this.iframe.contentWindow;
+    assert(w !== null);
+
+    return w;
+  }
+
   unload() {
-    if (this.window.closed) {
+    if (this.iframe.contentWindow === null) {
       return;
     }
 
     this.events.emit('unload');
 
-    const rootEl = this.window.document.getElementById('root');
-    assert(rootEl !== null);
+    const rootEl = this.getWindow().document.getElementById('root');
+    assert(rootEl !== null && rootEl !== undefined);
 
     rootEl.innerHTML = '';
   }
 
   close() {
-    if (this.window.closed) {
-      return;
-    }
-
     this.unload();
-
-    const expiredUseIndex = this.useIndex;
-
-    console.log(Date.now(), 'soft closed popup');
-
-    runAsync(async () => {
-      await delay(1000);
-
-      if (this.useIndex === expiredUseIndex) {
-        this.window.close();
-        console.log(Date.now(), 'actually closed popup');
-      } else {
-        console.log(Date.now(), 'popup close canceled due to reuse');
-      }
-    });
+    this.iframe.remove();
   }
 
   async reuse() {
-    console.log(Date.now(), 'reusing popup');
     this.unload();
-    this.useIndex += 1;
-
-    if (this.window.closed) {
-      console.log(Date.now(), 'popup was closed, creating a new one');
-      this.window = await createPopup();
-    } else {
-      console.log(Date.now(), 'successfully reused existing popup');
-    }
+    this.iframe = await createPopup();
   }
 }
 
 async function createPopup() {
-  const opt = {
-    popup: true,
-    width: 400,
-    height: 600,
-    left: window.screenLeft + window.innerWidth * window.devicePixelRatio - 410,
-    top: window.screenTop + 60,
-  };
+  const iframe = document.createElement('iframe');
+  iframe.src = popupUrl;
+  iframe.style.opacity = '0';
+  iframe.style.zIndex = '100';
+  iframe.style.background = 'transparent';
+  iframe.style.position = 'absolute';
+  iframe.style.right = '20px';
+  iframe.style.top = '20px';
+  iframe.style.width = '400px';
+  iframe.style.height = '650px';
+  iframe.style.border = '3px solid grey';
+  iframe.style.borderTop = '18px solid grey';
+  iframe.style.borderRadius = '5px';
+  iframe.style.boxShadow = '5px 5px 10px black';
 
-  const popupWindow = window.open(
-    popupUrl,
-    undefined,
-    Object.entries(opt)
-      .map(([k, v]) => `${k}=${v.toString()}`)
-      .join(', '),
-  );
+  document.body.append(iframe);
+
+  const popupWindow = iframe.contentWindow;
 
   assert(
     popupWindow !== null,
@@ -101,10 +83,12 @@ async function createPopup() {
     popupWindow.addEventListener('load', resolve);
   });
 
+  iframe.style.opacity = '1';
+
   const style = document.createElement('style');
   style.textContent = sheetsRegistry.toString();
 
   popupWindow.document.head.append(style);
 
-  return popupWindow;
+  return iframe;
 }

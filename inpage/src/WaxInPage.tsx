@@ -83,7 +83,9 @@ export default class WaxInPage {
     const popup = await this.getPopup();
 
     const response = await new Promise<boolean>((resolve) => {
-      ReactDOM.createRoot(popup.window.document.getElementById('root')!).render(
+      ReactDOM.createRoot(
+        popup.getWindow().document.getElementById('root')!,
+      ).render(
         <React.StrictMode>
           <PermissionPopup message={message} respond={resolve} />
         </React.StrictMode>,
@@ -203,7 +205,7 @@ export default class WaxInPage {
     try {
       deployerKeyData = await new Promise<string>((resolve, reject) => {
         ReactDOM.createRoot(
-          popup.window.document.getElementById('root')!,
+          popup.getWindow().document.getElementById('root')!,
         ).render(
           <React.StrictMode>
             <AdminPopup purpose={purpose} resolve={resolve} reject={reject} />

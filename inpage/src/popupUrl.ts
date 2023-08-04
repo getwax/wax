@@ -13,11 +13,11 @@ const popupHtml = `
       font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
       line-height: 1.5;
       font-weight: 400;
-    
+
       color-scheme: light dark;
       color: ${fgColor};
       background-color: ${bgColor};
-    
+
       font-synthesis: none;
       text-rendering: optimizeLegibility;
       -webkit-font-smoothing: antialiased;
