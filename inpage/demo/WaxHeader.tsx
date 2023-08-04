@@ -40,7 +40,8 @@ const WaxHeader = () => {
           Address: {address.slice(0, 6)}..{address.slice(-4)}
         </div>
         <div>
-          Balance: {balance ? `${formatRoundedEther(balance)} ETH` : ''}
+          Balance:{' '}
+          {balance !== undefined ? `${formatRoundedEther(balance)} ETH` : ''}
         </div>
       </div>
       <div>
