@@ -1,6 +1,6 @@
 import z from 'zod';
 
-import { ethers, BigNumberish, BytesLike } from 'ethers';
+import { ethers, BytesLike } from 'ethers';
 import JsonRpcError from './JsonRpcError';
 import randomId from './helpers/randomId';
 import WaxInPage from '.';
@@ -9,6 +9,7 @@ import ZodNonNullable from './helpers/ZodNonNullable';
 import { UserOperationStruct } from '../hardhat/typechain-types/@account-abstraction/contracts/interfaces/IEntryPoint';
 import { SimpleAccount__factory } from '../hardhat/typechain-types';
 import todo from './helpers/todo';
+import assert from './helpers/assert';
 
 export default class EthereumApi {
   #waxInPage: WaxInPage;
@@ -169,6 +170,10 @@ export default class EthereumApi {
             initCode = '0x0';
           }
 
+          const feeData = await this.#waxInPage.ethersProvider.getFeeData();
+          assert(feeData.maxFeePerGas !== null);
+          assert(feeData.maxPriorityFeePerGas !== null);
+
           return {
             sender: from,
             nonce: `0x${nonce.toString(16)}`,
@@ -181,8 +186,8 @@ export default class EthereumApi {
             callGasLimit: gas,
             verificationGasLimit: '0x0', // TODO
             preVerificationGas: '0x0', // TODO
-            maxFeePerGas: todo<BigNumberish>(),
-            maxPriorityFeePerGas: todo<BigNumberish>(),
+            maxFeePerGas: feeData.maxFeePerGas,
+            maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
             paymasterAndData: '0x',
             signature: todo<BytesLike>(),
           };
