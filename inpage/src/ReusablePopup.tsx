@@ -47,7 +47,7 @@ export default class ReusablePopup {
     console.log(Date.now(), 'soft closed popup');
 
     runAsync(async () => {
-      await delay(200);
+      await delay(1000);
 
       if (this.useIndex === expiredUseIndex) {
         this.window.close();

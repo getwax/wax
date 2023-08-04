@@ -1,5 +1,3 @@
-/* eslint-disable no-multiple-empty-lines */
-/* eslint-disable prettier/prettier */
 import z from 'zod';
 
 import { ethers } from 'ethers';
@@ -12,11 +10,11 @@ import { UserOperationStruct } from '../hardhat/typechain-types/@account-abstrac
 import { SimpleAccount__factory } from '../hardhat/typechain-types';
 import assert from './helpers/assert';
 
+const baseVerificationGas = 100_000n;
+
 export default class EthereumApi {
   #waxInPage: WaxInPage;
-
   #networkUrl = 'http://127.0.0.1:8545';
-  #testAddress = '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266';
 
   constructor(waxInPage: WaxInPage) {
     this.#waxInPage = waxInPage;
@@ -136,7 +134,7 @@ export default class EthereumApi {
 
           const { to, from, gas, data, value } = parsedTx.data;
 
-          if (from !== account.address) {
+          if (from.toLowerCase() !== account.address.toLowerCase()) {
             throw new JsonRpcError({
               code: -32000,
               message: `unknown account ${from}`,
@@ -155,7 +153,7 @@ export default class EthereumApi {
           );
 
           let initCode: string;
-          let verificationGasLimit: bigint;
+          let verificationGasLimit = baseVerificationGas;
 
           if (accountBytecode === '0x') {
             nonce = 0n;
@@ -166,15 +164,14 @@ export default class EthereumApi {
               .encodeFunctionData('createAccount', [account.ownerAddress, 0])
               .slice(2);
 
-            verificationGasLimit =
+            verificationGasLimit +=
               await contracts.simpleAccountFactory.createAccount.estimateGas(
                 account.ownerAddress,
                 0,
               );
           } else {
             nonce = await simpleAccount.getNonce();
-            initCode = '0x0';
-            verificationGasLimit = 0n;
+            initCode = '0x';
           }
 
           const feeData = await this.#waxInPage.ethersProvider.getFeeData();
@@ -189,12 +186,12 @@ export default class EthereumApi {
             initCode,
             callData: simpleAccount.interface.encodeFunctionData('execute', [
               to,
-              value ?? 0,
+              value ?? 0n,
               data ?? '0x',
             ]),
             callGasLimit: gas,
             verificationGasLimit,
-            preVerificationGas: '0x0', // TODO
+            preVerificationGas: 0n, // TODO
             maxFeePerGas: feeData.maxFeePerGas,
             maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
             paymasterAndData: '0x',

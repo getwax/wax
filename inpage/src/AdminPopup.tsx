@@ -86,13 +86,17 @@ const AdminPopup = ({
   return (
     <div className={sheet.classes.DeploymentPopup}>
       <Heading>Admin Account Needed</Heading>
-      <div>{purposeMap[purpose].desc}</div>
+      <div>{purposeMap[purpose]?.desc ?? purpose}</div>
       <div>
         This account will also be used (if needed) for other purposes:
         <ul>
-          {typedObjectKeys(purposeMap).map((k) => (
-            <li>{purposeMap[k].short}</li>
-          ))}
+          {typedObjectKeys(purposeMap).map((k) => {
+            if (k === purpose) {
+              return [];
+            }
+
+            return <li>{purposeMap[k].short}</li>;
+          })}
         </ul>
       </div>
       <div className={sheet.classes.InputSection}>

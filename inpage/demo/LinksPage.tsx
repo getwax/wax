@@ -5,10 +5,33 @@ import DemoContext from './DemoContext';
 
 const LinksPage = () => {
   const demo = DemoContext.use();
+  const address = demo.useAddress();
   const [, setPath] = usePath();
 
   return (
     <div className="links-page">
+      <Button
+        secondary
+        disabled={address === undefined}
+        onPress={async () => {
+          if (address === undefined) {
+            return;
+          }
+
+          const admin = await demo.waxInPage.requestAdminAccount(
+            'fund-new-account',
+          );
+
+          await (
+            await admin.sendTransaction({
+              to: address,
+              value: 10n ** 18n,
+            })
+          ).wait();
+        }}
+      >
+        Add Funds
+      </Button>
       <Button secondary onPress={() => setPath('/greeter')}>
         Greeter dApp
       </Button>
