@@ -255,4 +255,8 @@ export default class WaxInPage {
 
     return this.#reusablePopup;
   }
+
+  async disconnect() {
+    await this.storage.connectedAccounts.clear();
+  }
 }

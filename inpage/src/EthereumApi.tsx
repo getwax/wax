@@ -1,6 +1,8 @@
+/* eslint-disable no-multiple-empty-lines */
+/* eslint-disable prettier/prettier */
 import z from 'zod';
 
-import { ethers, BytesLike } from 'ethers';
+import { ethers } from 'ethers';
 import JsonRpcError from './JsonRpcError';
 import randomId from './helpers/randomId';
 import WaxInPage from '.';
@@ -8,7 +10,6 @@ import EthereumRpc from './EthereumRpc';
 import ZodNonNullable from './helpers/ZodNonNullable';
 import { UserOperationStruct } from '../hardhat/typechain-types/@account-abstraction/contracts/interfaces/IEntryPoint';
 import { SimpleAccount__factory } from '../hardhat/typechain-types';
-import todo from './helpers/todo';
 import assert from './helpers/assert';
 
 export default class EthereumApi {
@@ -112,6 +113,7 @@ export default class EthereumApi {
       }
 
       const account = await this.#getAccount();
+      const contracts = await this.#waxInPage.getContracts();
 
       const userOps: UserOperationStruct[] = await Promise.all(
         txs.map(async (tx): Promise<UserOperationStruct> => {
@@ -152,29 +154,36 @@ export default class EthereumApi {
             this.#waxInPage.ethersProvider,
           );
 
-          let initCode: BytesLike;
+          let initCode: string;
+          let verificationGasLimit: bigint;
 
           if (accountBytecode === '0x') {
             nonce = 0n;
 
-            const { simpleAccountFactory } =
-              await this.#waxInPage.getContracts();
-
             initCode = await this.#waxInPage.getSimpleAccountFactoryAddress();
 
-            initCode += simpleAccountFactory.interface
+            initCode += contracts.simpleAccountFactory.interface
               .encodeFunctionData('createAccount', [account.ownerAddress, 0])
               .slice(2);
+
+            verificationGasLimit =
+              await contracts.simpleAccountFactory.createAccount.estimateGas(
+                account.ownerAddress,
+                0,
+              );
           } else {
             nonce = await simpleAccount.getNonce();
             initCode = '0x0';
+            verificationGasLimit = 0n;
           }
 
           const feeData = await this.#waxInPage.ethersProvider.getFeeData();
           assert(feeData.maxFeePerGas !== null);
           assert(feeData.maxPriorityFeePerGas !== null);
 
-          return {
+          const ownerWallet = new ethers.Wallet(account.privateKey);
+
+          const userOp = {
             sender: from,
             nonce: `0x${nonce.toString(16)}`,
             initCode,
@@ -184,22 +193,38 @@ export default class EthereumApi {
               data ?? '0x',
             ]),
             callGasLimit: gas,
-            verificationGasLimit: '0x0', // TODO
+            verificationGasLimit,
             preVerificationGas: '0x0', // TODO
             maxFeePerGas: feeData.maxFeePerGas,
             maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
             paymasterAndData: '0x',
-            signature: todo<BytesLike>(),
+            signature: '0x',
           };
+
+          const userOpHash = await contracts.entryPoint.getUserOpHash(userOp);
+
+          userOp.signature = await ownerWallet.signMessage(
+            ethers.getBytes(userOpHash),
+          );
+
+          return userOp;
         }),
       );
 
-      // const userOp: UserOperationStruct = {};
+      const adminAccount = await this.#waxInPage.requestAdminAccount(
+        'simulate-bundler',
+      );
 
-      return (await this.#networkRequest({
-        method: 'eth_sendTransaction',
-        params: txs,
-      })) as string;
+      // *not* the confirmation, just the response (don't add .wait(), that's
+      // wrong).
+      const response = await contracts.entryPoint
+        .connect(adminAccount)
+        .handleOps(userOps, adminAccount.getAddress());
+
+      // TODO: This should be the userOpHash (I think). Implementing that means
+      // also intercepting the call to check whether that tx hash has been
+      // confirmed. (Also can't have multiple.)
+      return response.hash;
     },
   };
 
@@ -251,7 +276,7 @@ export default class EthereumApi {
     account = {
       privateKey: wallet.privateKey,
       ownerAddress: wallet.address,
-      address: await contracts.simpleAccountFactory.getAddress(
+      address: await contracts.simpleAccountFactory.createAccount.staticCall(
         wallet.address,
         0,
       ),

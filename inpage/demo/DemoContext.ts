@@ -40,6 +40,11 @@ export default class DemoContext {
     this.setAddress(undefined);
   }
 
+  async disconnect() {
+    await this.waxInPage.disconnect();
+    this.setAddress(undefined);
+  }
+
   setAddress(newAddress?: string) {
     this.address = newAddress;
     this.events.emit('addressChanged', newAddress);

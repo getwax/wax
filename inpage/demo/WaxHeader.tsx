@@ -46,7 +46,7 @@ const WaxHeader = () => {
       </div>
       <div>
         <div style={{ display: 'inline-block' }}>
-          <Button onPress={() => demo.clear()}>Disconnect</Button>
+          <Button onPress={() => demo.disconnect()}>Disconnect</Button>
         </div>
       </div>
     </div>
