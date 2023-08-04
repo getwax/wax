@@ -17,8 +17,8 @@ import {
 import SafeSingletonFactory, {
   SafeSingletonFactoryViewer,
 } from './SafeSingletonFactory';
-import createPopup from './createPopup';
-import DeploymentPopup from './DeploymentPopup';
+import ReusablePopup from './ReusablePopup';
+import AdminPopup, { AdminPurpose } from './AdminPopup';
 
 const defaultConfig = {
   requirePermission: true,
@@ -36,6 +36,8 @@ type Config = typeof defaultConfig;
 export default class WaxInPage {
   #config = defaultConfig;
   #contractsDeployed = false;
+  #reusablePopup?: ReusablePopup;
+  #adminAccount?: ethers.Wallet;
 
   ethereum: EthereumApi;
   storage: WaxStorage;
@@ -78,16 +80,16 @@ export default class WaxInPage {
       return true;
     }
 
-    const popup = await createPopup();
+    const popup = await this.getPopup();
 
     const response = await new Promise<boolean>((resolve) => {
-      ReactDOM.createRoot(popup.document.getElementById('root')!).render(
+      ReactDOM.createRoot(popup.window.document.getElementById('root')!).render(
         <React.StrictMode>
           <PermissionPopup message={message} respond={resolve} />
         </React.StrictMode>,
       );
 
-      popup.addEventListener('unload', () => resolve(false));
+      popup.events.on('unload', () => resolve(false));
     });
 
     popup.close();
@@ -128,7 +130,7 @@ export default class WaxInPage {
       throw new Error('Contracts not deployed');
     }
 
-    const wallet = await this.#requestDeployerWallet();
+    const wallet = await this.requestAdminAccount('deploy-contracts');
 
     const factory = await SafeSingletonFactory.init(wallet);
 
@@ -167,22 +169,26 @@ export default class WaxInPage {
     return deployFlags.every((flag) => flag);
   }
 
-  async #requestDeployerWallet(): Promise<ethers.Wallet> {
-    const popup = await createPopup();
+  async requestAdminAccount(purpose: AdminPurpose): Promise<ethers.Wallet> {
+    if (this.#adminAccount) {
+      return this.#adminAccount;
+    }
+
+    const popup = await this.getPopup();
 
     let deployerKeyData: string;
 
     try {
       deployerKeyData = await new Promise<string>((resolve, reject) => {
-        ReactDOM.createRoot(popup.document.getElementById('root')!).render(
+        ReactDOM.createRoot(
+          popup.window.document.getElementById('root')!,
+        ).render(
           <React.StrictMode>
-            <DeploymentPopup resolve={resolve} reject={reject} />
+            <AdminPopup purpose={purpose} resolve={resolve} reject={reject} />
           </React.StrictMode>,
         );
 
-        popup.addEventListener('unload', () =>
-          reject(new Error('Popup closed')),
-        );
+        popup.events.on('unload', () => reject(new Error('Popup closed')));
       });
     } finally {
       popup.close();
@@ -191,10 +197,18 @@ export default class WaxInPage {
     if (ethers.Mnemonic.isValidMnemonic(deployerKeyData)) {
       const hdNode = ethers.HDNodeWallet.fromPhrase(deployerKeyData);
 
-      return new ethers.Wallet(hdNode.privateKey, this.ethersProvider);
+      this.#adminAccount = new ethers.Wallet(
+        hdNode.privateKey,
+        this.ethersProvider,
+      );
+    } else {
+      this.#adminAccount = new ethers.Wallet(
+        deployerKeyData,
+        this.ethersProvider,
+      );
     }
 
-    return new ethers.Wallet(deployerKeyData, this.ethersProvider);
+    return this.#adminAccount;
   }
 
   getTestWallet(index: number): ethers.Wallet {
@@ -208,5 +222,15 @@ export default class WaxInPage {
       hdNode.deriveChild(index).privateKey,
       this.ethersProvider,
     );
+  }
+
+  async getPopup() {
+    if (this.#reusablePopup) {
+      await this.#reusablePopup.reuse();
+    } else {
+      this.#reusablePopup = await ReusablePopup.create();
+    }
+
+    return this.#reusablePopup;
   }
 }

@@ -1,10 +1,14 @@
 import z from 'zod';
 
+import { ethers, BigNumberish, BytesLike } from 'ethers';
 import JsonRpcError from './JsonRpcError';
-import assert from './helpers/assert';
 import randomId from './helpers/randomId';
 import WaxInPage from '.';
 import EthereumRpc from './EthereumRpc';
+import ZodNonNullable from './helpers/ZodNonNullable';
+import { UserOperationStruct } from '../hardhat/typechain-types/@account-abstraction/contracts/interfaces/IEntryPoint';
+import { SimpleAccount__factory } from '../hardhat/typechain-types';
+import todo from './helpers/todo';
 
 export default class EthereumApi {
   #waxInPage: WaxInPage;
@@ -73,7 +77,9 @@ export default class EthereumApi {
         });
       }
 
-      connectedAccounts = [this.#testAddress];
+      const account = await this.#getAccount();
+
+      connectedAccounts = [account.address];
 
       await this.#waxInPage.storage.connectedAccounts.set(connectedAccounts);
 
@@ -104,6 +110,75 @@ export default class EthereumApi {
         });
       }
 
+      const account = await this.#getAccount();
+
+      const userOps: UserOperationStruct[] = await Promise.all(
+        txs.map(async (tx): Promise<UserOperationStruct> => {
+          const parsedTx = z
+            .object({
+              gas: z.string(), // TODO: should be optional (calculate gas here)
+              from: z.string(),
+              to: z.string(),
+              data: z.optional(z.string()),
+              value: z.optional(z.string()),
+            })
+            .safeParse(tx);
+
+          if (!parsedTx.success) {
+            throw new JsonRpcError({
+              code: -32000,
+              message: `Failed to parse tx: ${parsedTx.error.toString()}`,
+            });
+          }
+
+          const { to, from, gas, data, value } = parsedTx.data;
+
+          if (from !== account.address) {
+            throw new JsonRpcError({
+              code: -32000,
+              message: `unknown account ${from}`,
+            });
+          }
+
+          let nonce: bigint;
+
+          const accountBytecode = await this.#waxInPage.ethersProvider.getCode(
+            from,
+          );
+
+          const simpleAccount = SimpleAccount__factory.connect(
+            account.address,
+            this.#waxInPage.ethersProvider,
+          );
+
+          if (accountBytecode === '0x') {
+            nonce = 0n;
+          } else {
+            nonce = await simpleAccount.getNonce();
+          }
+
+          return {
+            sender: from,
+            nonce: `0x${nonce.toString(16)}`,
+            initCode: todo<BytesLike>(),
+            callData: simpleAccount.interface.encodeFunctionData('execute', [
+              to,
+              value ?? 0,
+              data ?? '0x',
+            ]),
+            callGasLimit: gas,
+            verificationGasLimit: '0x0', // TODO
+            preVerificationGas: '0x0', // TODO
+            maxFeePerGas: todo<BigNumberish>(),
+            maxPriorityFeePerGas: todo<BigNumberish>(),
+            paymasterAndData: '0x',
+            signature: todo<BytesLike>(),
+          };
+        }),
+      );
+
+      // const userOp: UserOperationStruct = {};
+
       return (await this.#networkRequest({
         method: 'eth_sendTransaction',
         params: txs,
@@ -133,8 +208,8 @@ export default class EthereumApi {
 
     const json = z
       .union([
-        z.object({ result: z.unknown() }),
-        z.object({ error: z.unknown() }),
+        z.object({ result: ZodNonNullable() }),
+        z.object({ error: ZodNonNullable() }),
       ])
       .parse(await res.json());
 
@@ -142,7 +217,30 @@ export default class EthereumApi {
       return json.result;
     }
 
-    assert('error' in json);
     throw JsonRpcError.parse(json.error);
+  }
+
+  async #getAccount() {
+    let account = await this.#waxInPage.storage.account.get();
+
+    if (account) {
+      return account;
+    }
+
+    const contracts = await this.#waxInPage.getContracts();
+
+    const wallet = ethers.Wallet.createRandom();
+
+    account = {
+      privateKey: wallet.privateKey,
+      address: await contracts.simpleAccountFactory.getAddress(
+        wallet.address,
+        0,
+      ),
+    };
+
+    await this.#waxInPage.storage.account.set(account);
+
+    return account;
   }
 }

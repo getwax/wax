@@ -2,13 +2,21 @@
 import { mapValues } from '@s-libs/micro-dash';
 import z from 'zod';
 
-const typeAndDefault = <T>(type: z.ZodType<T>, default_: T) => ({
+const defaultField = <T>(type: z.ZodType<T>, default_: T) => ({
   type,
   default_,
 });
 
+const optionalField = <T>(type: z.ZodType<T>) => ({
+  type: z.union([z.undefined(), type]),
+  default_: undefined,
+});
+
 const schema = {
-  connectedAccounts: typeAndDefault(z.array(z.string()), []),
+  connectedAccounts: defaultField(z.array(z.string()), []),
+  account: optionalField(
+    z.object({ privateKey: z.string(), address: z.string() }),
+  ),
 };
 
 type Field<T> = {
