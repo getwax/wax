@@ -15,7 +15,11 @@ const optionalField = <T>(type: z.ZodType<T>) => ({
 const schema = {
   connectedAccounts: defaultField(z.array(z.string()), []),
   account: optionalField(
-    z.object({ privateKey: z.string(), address: z.string() }),
+    z.object({
+      privateKey: z.string(),
+      ownerAddress: z.string(),
+      address: z.string(),
+    }),
   ),
 };
 

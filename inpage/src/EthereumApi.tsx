@@ -151,16 +151,28 @@ export default class EthereumApi {
             this.#waxInPage.ethersProvider,
           );
 
+          let initCode: BytesLike;
+
           if (accountBytecode === '0x') {
             nonce = 0n;
+
+            const { simpleAccountFactory } =
+              await this.#waxInPage.getContracts();
+
+            initCode = await this.#waxInPage.getSimpleAccountFactoryAddress();
+
+            initCode += simpleAccountFactory.interface
+              .encodeFunctionData('createAccount', [account.ownerAddress, 0])
+              .slice(2);
           } else {
             nonce = await simpleAccount.getNonce();
+            initCode = '0x0';
           }
 
           return {
             sender: from,
             nonce: `0x${nonce.toString(16)}`,
-            initCode: todo<BytesLike>(),
+            initCode,
             callData: simpleAccount.interface.encodeFunctionData('execute', [
               to,
               value ?? 0,
@@ -233,6 +245,7 @@ export default class EthereumApi {
 
     account = {
       privateKey: wallet.privateKey,
+      ownerAddress: wallet.address,
       address: await contracts.simpleAccountFactory.getAddress(
         wallet.address,
         0,
