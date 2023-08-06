@@ -1,30 +1,17 @@
 import './WaxHeader.css';
-import { useEffect, useState } from 'react';
 import Heading from '../src/Heading';
 import Button from '../src/Button';
 import DemoContext from './DemoContext';
 import Loading from './Loading';
-import runAsync from './helpers/runAsync';
 import usePath from './usePath';
 import formatRoundedEther from './helpers/formatRoundedEther';
 
 const WaxHeader = () => {
   const demo = DemoContext.use();
   const address = demo.useAddress();
+  const balance = demo.useBalance();
 
   const [, setPath] = usePath();
-
-  const [balance, setBalance] = useState<bigint>();
-
-  useEffect(() => {
-    runAsync(async () => {
-      if (address) {
-        setBalance(await demo.waxInPage.ethersProvider.getBalance(address));
-      } else {
-        setBalance(undefined);
-      }
-    });
-  }, [demo, address]);
 
   if (!address) {
     return <Loading>Error: missing address</Loading>;

@@ -4,6 +4,8 @@ import WaxInPage, { Contracts, EthereumApi } from '../src';
 import TypedEmitter from './helpers/TypedEmitter';
 import runAsync from './helpers/runAsync';
 
+type BalanceUpdate = { address: string; balance: bigint };
+
 export default class DemoContext {
   ethereum: EthereumApi;
   address?: string;
@@ -13,6 +15,7 @@ export default class DemoContext {
   events = new TypedEmitter<{
     addressChanged(newAddress?: string): void;
     contractsChanged(newContracts?: Contracts): void;
+    balanceChanged(update: BalanceUpdate): void;
   }>();
 
   constructor(public waxInPage: WaxInPage) {
@@ -129,5 +132,50 @@ export default class DemoContext {
     }, []);
 
     return signer;
+  };
+
+  useBalance = () => {
+    const address = this.useAddress();
+    const [balance, setBalance] = useState<bigint>();
+
+    useEffect(() => {
+      if (address === undefined) {
+        return () => undefined;
+      }
+
+      const handleBalanceChange = (update: BalanceUpdate) => {
+        if (update.address === address) {
+          setBalance(update.balance);
+        }
+      };
+
+      runAsync(async () => {
+        const newBalance = await this.waxInPage.ethersProvider.getBalance(
+          address,
+        );
+
+        this.events.emit('balanceChanged', { address, balance: newBalance });
+      });
+
+      this.events.on('balanceChanged', handleBalanceChange);
+
+      return () => {
+        this.events.off('balanceChanged', handleBalanceChange);
+      };
+    }, [address]);
+
+    return balance;
+  };
+
+  refreshBalance = async () => {
+    if (this.address === undefined) {
+      return;
+    }
+
+    const balance = await this.waxInPage.ethersProvider.getBalance(
+      this.address,
+    );
+
+    this.events.emit('balanceChanged', { address: this.address, balance });
   };
 }

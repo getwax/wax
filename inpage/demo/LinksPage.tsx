@@ -2,6 +2,7 @@ import './LinksPage.css';
 import Button from '../src/Button';
 import usePath from './usePath';
 import DemoContext from './DemoContext';
+import runAsync from './helpers/runAsync';
 
 const LinksPage = () => {
   const demo = DemoContext.use();
@@ -28,6 +29,8 @@ const LinksPage = () => {
               value: 10n ** 18n,
             })
           ).wait();
+
+          runAsync(() => demo.refreshBalance());
         }}
       >
         Add Funds
