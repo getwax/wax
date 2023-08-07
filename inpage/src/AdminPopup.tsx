@@ -95,7 +95,7 @@ const AdminPopup = ({
               return [];
             }
 
-            return <li>{purposeMap[k].short}</li>;
+            return <li key={k}>{purposeMap[k].short}</li>;
           })}
         </ul>
       </div>
