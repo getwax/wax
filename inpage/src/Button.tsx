@@ -41,6 +41,10 @@ const sheet = jss.createStyleSheet({
     background: 'transparent',
     border: `1px solid ${fgColor}`,
     color: fgColor,
+
+    '& .loading-marker': {
+      background: fgColor,
+    },
   },
   ButtonSecondaryStates: {
     '&:hover': {
@@ -74,12 +78,28 @@ const sheet = jss.createStyleSheet({
   },
   HoverErrorContent: {
     position: 'absolute',
-    width: 'initial',
     transform: 'translateX(-50%)',
     top: '-2.2em',
 
     display: 'block',
     background: bgColor,
+  },
+  LoadingMarker: {
+    position: 'absolute',
+    bottom: '0px',
+    left: '0px',
+    width: '3px',
+    height: '3px',
+    background: bgColor,
+    animation: '$loading-marker 3s ease infinite',
+  },
+  '@keyframes loading-marker': {
+    '0%, 100%': {
+      left: 'max(0%, min(30%, calc(50% - 50px)))',
+    },
+    '50%': {
+      left: 'min(calc(100% - 3px), max(70%, calc(50% + 50px)))',
+    },
   },
 });
 
@@ -159,12 +179,19 @@ const Button = ({
               }}
               secondary
               errorStyle
+              style={{
+                display: 'inline-block',
+                whiteSpace: 'nowrap',
+              }}
             >
               {shortErrorString(error)}
             </Button>
           </div>
         </div>
       ) : undefined}
+      {loading && (
+        <div {...classes('loading-marker', sheet.classes.LoadingMarker)} />
+      )}
       <div className="button-content">{children}</div>
     </div>
   );
@@ -178,9 +205,9 @@ function shortErrorString(error: unknown) {
       ? `${error.name}: ${error.message}`
       : `Error: ${JSON.stringify(error)}`;
 
-  if (errStr.length < 30) {
+  if (errStr.length < 25) {
     return errStr;
   }
 
-  return `${errStr.slice(0, 26)} ...`;
+  return `${errStr.slice(0, 21)} ...`;
 }
