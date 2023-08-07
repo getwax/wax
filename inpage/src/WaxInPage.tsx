@@ -20,18 +20,24 @@ import SafeSingletonFactory, {
 import ReusablePopup from './ReusablePopup';
 import AdminPopup, { AdminPurpose } from './AdminPopup';
 
-const defaultConfig = {
+type Config = {
+  requirePermission: boolean;
+  deployContractsIfNeeded: boolean;
+  ethersPollingInterval?: number;
+};
+
+const defaultConfig: Config = {
   requirePermission: true,
   deployContractsIfNeeded: true,
 };
+
+let ethersDefaultPollingInterval = 4000;
 
 export type Contracts = {
   greeter: Greeter;
   entryPoint: EntryPoint;
   simpleAccountFactory: SimpleAccountFactory;
 };
-
-type Config = typeof defaultConfig;
 
 export default class WaxInPage {
   #config = defaultConfig;
@@ -47,6 +53,7 @@ export default class WaxInPage {
     this.ethereum = new EthereumApi(this);
     this.storage = storage;
     this.ethersProvider = new ethers.BrowserProvider(this.ethereum);
+    ethersDefaultPollingInterval = this.ethersProvider.pollingInterval;
   }
 
   static global() {
@@ -73,6 +80,11 @@ export default class WaxInPage {
       ...this.#config,
       ...newConfig,
     };
+
+    if ('ethersPollingInterval' in newConfig) {
+      this.ethersProvider.pollingInterval =
+        newConfig.ethersPollingInterval ?? ethersDefaultPollingInterval;
+    }
   }
 
   async requestPermission(message: ReactNode) {
