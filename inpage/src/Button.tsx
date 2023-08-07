@@ -160,7 +160,7 @@ const Button = ({
               secondary
               errorStyle
             >
-              View Error
+              {shortErrorString(error)}
             </Button>
           </div>
         </div>
@@ -171,3 +171,16 @@ const Button = ({
 };
 
 export default Button;
+
+function shortErrorString(error: unknown) {
+  const errStr =
+    error instanceof Error
+      ? `${error.name}: ${error.message}`
+      : `Error: ${JSON.stringify(error)}`;
+
+  if (errStr.length < 30) {
+    return errStr;
+  }
+
+  return `${errStr.slice(0, 26)} ...`;
+}
