@@ -114,5 +114,8 @@ module.exports = {
     'react/jsx-wrap-multilines': 'off',
     'no-void': 'off',
     'react/jsx-curly-newline': 'off',
+    'no-await-in-loop': 'off',
+    'no-continue': 'off',
+    'no-constant-condition': 'off',
   },
 };
