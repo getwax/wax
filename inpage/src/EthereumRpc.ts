@@ -4,6 +4,30 @@ import z from 'zod';
 namespace EthereumRpc {
   export const emptyParams = z.union([z.tuple([]), z.undefined()]);
 
+  export const Transaction = z.object({
+    blockHash: z.string(),
+    blockNumber: z.string(),
+    from: z.string(),
+    gas: z.string(),
+    hash: z.string(),
+    input: z.string(),
+    nonce: z.string(),
+    to: z.string(),
+    transactionIndex: z.string(),
+    value: z.string(),
+    v: z.string(),
+    r: z.string(),
+    s: z.string(),
+    type: z.optional(z.string()),
+    accessList: z.array(z.unknown()),
+    chainId: z.string(),
+    gasPrice: z.optional(z.string()),
+    maxFeePerGas: z.optional(z.string()),
+    maxPriorityFeePerGas: z.optional(z.string()),
+  });
+
+  export type Transaction = z.infer<typeof Transaction>;
+
   export const schema = {
     eth_requestAccounts: {
       params: emptyParams,
@@ -18,8 +42,18 @@ namespace EthereumRpc {
       output: z.string(),
     },
     eth_sendTransaction: {
-      params: z.array(z.unknown()),
+      params: z
+        .array(
+          z.object({
+            from: z.string(),
+          }),
+        )
+        .min(1),
       output: z.string(),
+    },
+    eth_getTransactionByHash: {
+      params: z.tuple([z.string()]),
+      output: z.union([z.null(), Transaction]),
     },
   };
 
