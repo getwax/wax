@@ -1,19 +1,17 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.19;
 
-import {Kernel} from "kernel/src/Kernel.sol";
-import {KernelFactory} from "kernel/src/factory/KernelFactory.sol";
-import {ECDSAKernelFactory} from "kernel/src/factory/ECDSAKernelFactory.sol";
-import {ECDSAValidator} from "kernel/src/validator/ECDSAValidator.sol";
+import "kernel/src/factory/KernelFactory.sol";
+import "kernel/src/factory/ECDSAKernelFactory.sol";
+
 // // test artifacts
-// import "kernel/src/test/TestValidator.sol";
 import "kernel/src/test/TestExecutor.sol";
 import "kernel/src/test/TestERC721.sol";
 // // test utils
 import "forge-std/Test.sol";
-import "kernel/test/foundry/ERC4337Utils.sol";
+import {ERC4337Utils} from "kernel/test/foundry/ERC4337Utils.sol";
 // // BLS validator
-import "../../src/BLSValidator.sol";
+import {BLSValidator} from "../../src/BLSValidator.sol";
 
 using ERC4337Utils for EntryPoint;
 
@@ -42,10 +40,16 @@ contract BLSValidatorTest is Test {
 
     function test_mode_2_bls() external {
         BLSValidator blsValidator = new BLSValidator();
+        // Note: With the Kernel wallet validation and execution are seperate
+        // Executors are plugins that add custom functions to Kernel and each function
+        // is tied to a validator.  In this test we will be enabling the blsValidator and
+        // tying the TextExecutor to it.
         TestExecutor testExecutor = new TestExecutor();
         UserOperation memory op =
             entryPoint.fillUserOp(address(kernel), abi.encodeWithSelector(TestExecutor.doNothing.selector));
 
+        // BLS public/private key pair and signatures created using the '@thehubbleproject/bls' library.
+        // Hard coded in the test because I don't know of a way to do this in solidity.
         uint256[4] memory publicKey = [
             0x004b1d8408dcc643647e4f32a761853e873cd1da8ffc40f03b00647484b3498a,
             0x248b9979254108c9cbb2005739dc693f1694b7b2058942114a0ab4aa81723a6d,
@@ -95,7 +99,7 @@ contract BLSValidatorTest is Test {
             0x21f8022a28193d60e8f28bb4ce35086c28b1bbe5bb5bf1564bc7b63a2e544f54
         ];
 
-        // First signature is the ecdsa signature for the original validator. We
+        // First signature is the ecdsa signature for the default (ecdsa) validator. We
         // need that signature to validate the BLSValidator for the kernel account.
         // Second signature is the BLS signature for the BLSValidator. We are calling
         // the TestExecutor with the BLSValidator as the validator.
