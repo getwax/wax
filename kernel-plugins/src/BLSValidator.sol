@@ -8,7 +8,7 @@ import "kernel/src/utils/KernelHelper.sol";
 import "account-abstraction/samples/bls/lib/hubble-contracts/contracts/libs/BLS.sol";
 
 // BLSValidator is a validator that uses BLS signatures to validate transactions.
-// TODO: Consider account recovery and aggregate signatures.
+// TODO: Consider account recovery, aggregate signatures, and use EIP 712.
 // Note: This is not audited and should not be used in production.
 contract BLSValidator is IKernelValidator {
     bytes32 public constant BLS_DOMAIN = keccak256("eip4337.bls.domain");
