@@ -5,6 +5,7 @@ import DemoContext from './DemoContext';
 import Loading from './Loading';
 import usePath from './usePath';
 import formatRoundedEther from './helpers/formatRoundedEther';
+import Address from './Address';
 
 const WaxHeader = () => {
   const demo = DemoContext.use();
@@ -24,7 +25,7 @@ const WaxHeader = () => {
       </Heading>
       <div className="account-fields">
         <div>
-          Address: {address.slice(0, 6)}..{address.slice(-4)}
+          Address: <Address value={address} />
         </div>
         <div>
           Balance:{' '}
