@@ -113,8 +113,8 @@ export default class WaxInPage {
 
   // Usually you could do `simpleAccountFactory.getAddress()` to get its
   // address, but SimpleAccountFactory overrides getAddress to be a function for
-  // getting the address of an account, which makes the ethers .getAddress
-  // builtin inaccessible.
+  // getting the address of an account, which messes with the ethers .getAddress
+  // builtin.
   //
   // Proposed fix:
   //   https://github.com/eth-infinitism/account-abstraction/pull/323
