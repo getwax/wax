@@ -31,6 +31,15 @@ const popupHtml = `
       width: 100vw;
       height: 100vh;
     }
+
+    #root {
+      width: 100vw;
+      font-size: 1rem;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
   </style>
 </head>
 <body>

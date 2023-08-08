@@ -1,0 +1,15 @@
+.wax-header {
+  display: flex;
+  flex-direction: row;
+  width: 100vw;
+  padding: 1em;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.87);
+  align-items: center;
+}
+
+.account-fields {
+  flex-grow: 1;
+  display: flex;
+  justify-content: center;
+  gap: 2em;
+}

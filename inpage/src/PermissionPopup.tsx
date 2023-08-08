@@ -1,4 +1,5 @@
 import jss from 'jss';
+import { ReactNode } from 'react';
 import sheetsRegistry from './sheetsRegistry';
 import Button from './Button';
 import Heading from './Heading';
@@ -28,7 +29,7 @@ const PermissionPopup = ({
   message,
   respond,
 }: {
-  message: string;
+  message: ReactNode;
   respond: (response: boolean) => void;
 }) => (
   <div className={sheet.classes.PermissionPopup}>

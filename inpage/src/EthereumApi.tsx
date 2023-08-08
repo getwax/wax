@@ -1,5 +1,6 @@
 import z from 'zod';
 
+import { ReactNode } from 'react';
 import JsonRpcError from './JsonRpcError';
 import assert from './helpers/assert';
 import randomId from './helpers/randomId';
@@ -15,6 +16,14 @@ const schema = {
   eth_accounts: {
     params: emptyParams,
     output: z.array(z.string()),
+  },
+  eth_chainId: {
+    params: emptyParams,
+    output: z.string(),
+  },
+  eth_sendTransaction: {
+    params: z.array(z.unknown()),
+    output: z.string(),
   },
 };
 
@@ -41,10 +50,10 @@ export default class EthereumApi {
 
   #networkUrl = 'http://127.0.0.1:8545';
   #testAddress = '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266';
-  #requestPermission: (message: string) => Promise<boolean>;
+  #requestPermission: (message: ReactNode) => Promise<boolean>;
 
   constructor(
-    requestPermission: (message: string) => Promise<boolean>,
+    requestPermission: (message: ReactNode) => Promise<boolean>,
     storage: WaxStorage,
   ) {
     this.#requestPermission = requestPermission;
@@ -112,6 +121,33 @@ export default class EthereumApi {
     },
 
     eth_accounts: async () => await this.#storage.connectedAccounts.get(),
+
+    eth_sendTransaction: async (...txs) => {
+      const question =
+        txs.length === 1
+          ? 'Send this transaction?'
+          : 'Send these transactions?';
+
+      const txData = txs.length === 1 ? txs[0] : txs;
+
+      const granted = await this.#requestPermission(
+        <pre style={{ overflowX: 'auto', maxWidth: '100%', fontSize: '1em' }}>
+          {question} {JSON.stringify(txData, null, 2)}
+        </pre>,
+      );
+
+      if (!granted) {
+        throw new JsonRpcError({
+          code: 4001,
+          message: 'User rejected request',
+        });
+      }
+
+      return (await this.#networkRequest({
+        method: 'eth_sendTransaction',
+        params: txs,
+      })) as string;
+    },
   };
 
   async #networkRequest({

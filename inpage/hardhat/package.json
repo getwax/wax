@@ -4,6 +4,8 @@
   "main": "index.js",
   "private": true,
   "dependencies": {
+    "@account-abstraction/contracts": "^0.6.0",
+    "@openzeppelin/contracts": "^4.9.3",
     "hardhat": "^2.17.0"
   },
   "devDependencies": {

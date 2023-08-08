@@ -1,3 +1,4 @@
+import { ethers } from 'ethers';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.tsx';
@@ -9,6 +10,9 @@ WaxInPage.addStylesheet();
 
 const waxInPage = WaxInPage.create();
 waxInPage.attachGlobals();
+
+const globalRecord = globalThis as Record<string, unknown>;
+globalRecord.ethers = ethers;
 
 const demoContext = new DemoContext(waxInPage);
 

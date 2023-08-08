@@ -1,8 +1,12 @@
 export default function assert(
-  condition: boolean,
+  condition: unknown,
   msg = 'Assertion failed',
 ): asserts condition {
   if (!condition) {
-    throw new Error(msg);
+    throw new AssertionError(msg);
   }
+}
+
+class AssertionError extends Error {
+  name = 'AssertionError';
 }

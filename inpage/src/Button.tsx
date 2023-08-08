@@ -1,10 +1,10 @@
 import jss from 'jss';
 import color from 'color';
 import React, { HTMLProps, useCallback, useState } from 'react';
-import assert from 'assert';
 import sheetsRegistry from './sheetsRegistry';
 import { bgColor, fgColor } from './styleConstants';
 import classes from './helpers/classes';
+import runAsync from '../demo/helpers/runAsync';
 
 const sheet = jss.createStyleSheet({
   Button: {
@@ -59,7 +59,7 @@ const Button = ({
 }: Omit<HTMLProps<HTMLDivElement>, 'className' | 'onClick'> & {
   secondary?: boolean;
   onPress?: (
-    e: React.MouseEvent<HTMLDivElement> | React.KeyboardEvent<HTMLDivElement>,
+    e?: React.MouseEvent<HTMLDivElement> | React.KeyboardEvent<HTMLDivElement>,
   ) => unknown;
 }) => {
   const [loading, setLoading] = useState(false);
@@ -73,7 +73,7 @@ const Button = ({
         return;
       }
 
-      (async () => {
+      runAsync(async () => {
         try {
           setLoading(true);
           await onPress(e);
@@ -85,7 +85,7 @@ const Button = ({
         }
 
         setLoading(false);
-      })().catch(() => assert(false));
+      });
     },
     [disabled, loading, onPress],
   );

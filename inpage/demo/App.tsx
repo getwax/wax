@@ -1,110 +1,24 @@
-import z from 'zod';
-import { ethers } from 'ethers';
-import { useEffect, useState } from 'react';
 import './App.css';
-import Button from '../src/Button';
 import DemoContext from './DemoContext';
-import Heading from '../src/Heading';
-
-const globalRecord = globalThis as Record<string, unknown>;
+import ConnectPage from './ConnectPage';
+import WaxHeader from './WaxHeader';
+import PageRouter from './PageRouter';
 
 const App = () => {
   const demo = DemoContext.use();
+  const address = demo.useAddress();
 
-  const [address, setAddress] = useState<string>();
-  const [balance, setBalance] = useState<bigint>();
-
-  useEffect(() => {
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    (async () => {
-      if (!address) {
-        const accounts = z.array(z.string()).parse(
-          await demo.ethereum.request({
-            method: 'eth_accounts',
-          }),
-        );
-
-        if (accounts.length > 0) {
-          setAddress(accounts[0]);
-        }
-      }
-
-      if (address) {
-        setBalance(await demo.provider.getBalance(address));
-      }
-    })();
-  }, [demo, address]);
-
-  const balanceDisplay = (() => {
-    if (balance === undefined) {
-      return undefined;
-    }
-
-    return `${ethers.formatEther(balance)} ETH`;
-  })();
+  if (!address) {
+    return <ConnectPage />;
+  }
 
   return (
-    <>
-      <Heading>WAX</Heading>
-      {address !== undefined && (
-        <div>
-          <table>
-            <tbody>
-              <tr>
-                <td>Address</td>
-                <td>
-                  {(() => {
-                    if (!address) {
-                      return '';
-                    }
-
-                    return `${address.slice(0, 6)}..${address.slice(-4)}`;
-                  })()}
-                </td>
-              </tr>
-              <tr>
-                <td>Balance</td>
-                <td>{balanceDisplay}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      )}
-      {address === undefined && (
-        <Button
-          style={{ display: 'inline-block' }}
-          type="button"
-          onPress={async () => {
-            const response = await demo.ethereum.request({
-              method: 'eth_requestAccounts',
-            });
-
-            setAddress(response[0]);
-          }}
-        >
-          Connect
-        </Button>
-      )}
-      <Button
-        secondary
-        onPress={async () => {
-          const signer = await demo.provider.getSigner();
-          globalRecord.signer = signer;
-        }}
-      >
-        window.signer
-      </Button>
-      <Button
-        secondary
-        onPress={async () => {
-          await demo.waxInPage.storage.clear();
-          setAddress(undefined);
-          setBalance(undefined);
-        }}
-      >
-        Clear
-      </Button>
-    </>
+    <div className="wax-app">
+      <WaxHeader />
+      <div className="page-wrapper">
+        <PageRouter />
+      </div>
+    </div>
   );
 };
 
