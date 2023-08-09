@@ -50,7 +50,7 @@ contract BLSValidatorTest is Test {
 
         // BLS public/private key pair and signatures created using the '@thehubbleproject/bls' library.
         // Hard coded in the test because I don't know of a way to do this in solidity.
-        uint256[4] memory publicKey = [
+        uint256[4] memory blsPublicKey = [
             0x004b1d8408dcc643647e4f32a761853e873cd1da8ffc40f03b00647484b3498a,
             0x248b9979254108c9cbb2005739dc693f1694b7b2058942114a0ab4aa81723a6d,
             0x0edd89947147f52246e1dc3092b62c9020afca38d470b3b827e267c66350da93,
@@ -58,7 +58,7 @@ contract BLSValidatorTest is Test {
         ];
 
         bytes memory enableData = abi.encodePacked(
-            publicKey,
+            blsPublicKey,
             uint48(0),
             TestExecutor.doNothing.selector,
             uint48(0),

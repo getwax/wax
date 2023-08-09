@@ -1,7 +1,4 @@
-@openzeppelin/=lib/kernel/lib/openzeppelin-contracts/
 account-abstraction/=lib/kernel/lib/account-abstraction/contracts/
-ds-test/=lib/forge-std/lib/ds-test/src/
 forge-std/=lib/forge-std/src/
 kernel/=lib/kernel/
-openzeppelin-contracts/=lib/kernel/lib/openzeppelin-contracts/
-solady/=lib/kernel/lib/solady/
+openzeppelin-contracts/=lib/openzeppelin-contracts/

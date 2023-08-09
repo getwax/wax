@@ -37,14 +37,18 @@ contract BLSValidator is IKernelValidator {
         override
         returns (uint256 validationData)
     {
-        uint256[4] memory publicKey = blsValidatorStorage[_userOp.sender];
-        bytes memory hashBytes = abi.encodePacked(_userOpHash);
+        require(_userOp.signature.length == 64, "BLS Validator: Sig bytes length must be 64");
 
+        uint256[2] memory decodedSignature = abi.decode(_userOp.signature, (uint256[2]));
+        uint256[4] memory publicKey = blsValidatorStorage[_userOp.sender];
+
+        require(publicKey[0] != 0, "BLS Validator: Public key not set");
+
+        bytes memory hashBytes = abi.encodePacked(_userOpHash);
         uint256[2] memory message = BLS.hashToPoint(
             BLS_DOMAIN,
             hashBytes
         );
-        uint256[2] memory decodedSignature = abi.decode(_userOp.signature, (uint256[2]));
         (bool verified, bool callSuccess) = BLS.verifySingle(decodedSignature, publicKey, message);
 
         if (verified && callSuccess) {
@@ -56,6 +60,8 @@ contract BLSValidator is IKernelValidator {
 
 
     function validateSignature(bytes32 hash, bytes calldata signature) public view override returns (uint256) {
+        require(signature.length == 64, "VG: Sig bytes length must be 64");
+
         uint256[4] memory publicKey = blsValidatorStorage[msg.sender];
         uint256[2] memory decodedSignature = abi.decode(signature, (uint256[2]));
 
