@@ -208,36 +208,63 @@ export default class SafeSingletonFactory {
       data: ethers.solidityPacked(['uint256', 'bytes'], [salt, initCode]),
     };
 
-    try {
-      await (await this.signer.sendTransaction(deployTx)).wait();
-    } catch (error) {
-      if ((error as { code: string }).code !== 'INSUFFICIENT_FUNDS') {
+    let receipt;
+    let failedAttempts = 0;
+
+    while (true) {
+      try {
+        receipt = await (await this.signer.sendTransaction(deployTx)).wait();
+        break;
+      } catch (error) {
+        const errorCode = (error as { code: unknown }).code;
+
+        if (errorCode === 'NONCE_EXPIRED') {
+          failedAttempts += 1;
+
+          if (failedAttempts >= 3) {
+            throw error;
+          }
+
+          continue;
+        }
+
+        if (errorCode === 'INSUFFICIENT_FUNDS') {
+          const gasEstimate = await this.provider.estimateGas(deployTx);
+          const { gasPrice } = await this.provider.getFeeData();
+
+          if (!gasPrice) {
+            throw error;
+          }
+
+          const balance = await this.provider.getBalance(
+            this.signer.getAddress(),
+          );
+
+          throw new Error(
+            [
+              'Account',
+              await this.signer.getAddress(),
+              'has insufficient funds:',
+              ethers.formatEther(balance),
+              'ETH, need (approx):',
+              ethers.formatEther(gasEstimate * gasPrice),
+              'ETH',
+            ].join(' '),
+          );
+        }
+
         throw error;
       }
-
-      const gasEstimate = await this.provider.estimateGas(deployTx);
-      const { gasPrice } = await this.provider.getFeeData();
-
-      if (!gasPrice) {
-        throw error;
-      }
-
-      const balance = await this.provider.getBalance(this.signer.getAddress());
-
-      throw new Error(
-        [
-          'Account',
-          await this.signer.getAddress(),
-          'has insufficient funds:',
-          ethers.formatEther(balance),
-          'ETH, need (approx):',
-          ethers.formatEther(gasEstimate * gasPrice),
-          'ETH',
-        ].join(' '),
-      );
     }
 
-    const deployedCode = await this.provider.getCode(address);
+    if (receipt === null) {
+      throw new Error('Failed to get transaction receipt for deployment');
+    }
+
+    const deployedCode = await this.provider.getCode(
+      address,
+      receipt.blockNumber,
+    );
 
     assert(deployedCode !== '0x', 'Failed to deploy to expected address');
 

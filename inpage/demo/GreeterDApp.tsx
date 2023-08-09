@@ -6,6 +6,8 @@ import DemoContext from './DemoContext';
 import Loading from './Loading';
 import RenderAsync from './RenderAsync';
 import useRefresh from './useRefresh';
+import runAsync from './helpers/runAsync';
+import Address from './Address';
 
 const GreeterDApp = () => {
   const demo = DemoContext.use();
@@ -31,7 +33,7 @@ const GreeterDApp = () => {
       <div>
         <RenderAsync
           promise={contracts.greeter.getAddress()}
-          render={(addr) => addr}
+          render={(addr) => <Address short={false} value={addr} />}
         />
       </div>
       <div>
@@ -52,6 +54,7 @@ const GreeterDApp = () => {
         disabled={!signer}
         onPress={async () => {
           await contracts.greeter.connect(signer).setGreeting(greetingInput);
+          runAsync(() => demo.refreshBalance());
           refresh();
         }}
       >

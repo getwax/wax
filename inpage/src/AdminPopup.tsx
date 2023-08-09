@@ -4,6 +4,7 @@ import { ethers } from 'ethers';
 import sheetsRegistry from './sheetsRegistry';
 import Button from './Button';
 import Heading from './Heading';
+import typedObjectKeys from './helpers/typedObjectKeys';
 
 const sheet = jss.createStyleSheet({
   DeploymentPopup: {
@@ -35,10 +36,40 @@ const sheet = jss.createStyleSheet({
 
 sheetsRegistry.add(sheet);
 
-const DeploymentPopup = ({
+const purposeMap = {
+  'deploy-contracts': {
+    short: 'Deploy contracts',
+    desc: [
+      'Some of the WAX-related contracts have not been deployed on this',
+      'network. Please enter a private key or seed phrase with funds to pay',
+      'for gas to deploy them.',
+    ].join(' '),
+  },
+  'simulate-bundler': {
+    short: 'Simulate a bundler',
+    desc: [
+      '4337 smart accounts require a bundler to send the top-level transaction',
+      'to the EntryPoint. As an alternative to an external bundler, please',
+      'enter a private key or seed phrase with funds to simulate one.',
+    ].join(' '),
+  },
+  'fund-new-account': {
+    short: 'Fund new accounts',
+    desc: [
+      'Funds have been requested for a new acount. Please enter a private key',
+      'or seed phrase with funds that can be transferred.',
+    ].join(' '),
+  },
+};
+
+export type AdminPurpose = keyof typeof purposeMap;
+
+const AdminPopup = ({
+  purpose,
   resolve,
   reject,
 }: {
+  purpose: AdminPurpose;
   resolve: (response: string) => void;
   reject: (error: Error) => void;
 }) => {
@@ -54,11 +85,19 @@ const DeploymentPopup = ({
 
   return (
     <div className={sheet.classes.DeploymentPopup}>
-      <Heading>Deploy Contracts</Heading>
+      <Heading>Admin Account Needed</Heading>
+      <div>{purposeMap[purpose]?.desc ?? purpose}</div>
       <div>
-        Some of the WAX-related contracts have not been deployed on this
-        network. Please enter a private key or seed phrase with funds to pay for
-        gas to deploy them.
+        This account will also be used (if needed) for other purposes:
+        <ul>
+          {typedObjectKeys(purposeMap).map((k) => {
+            if (k === purpose) {
+              return [];
+            }
+
+            return <li key={k}>{purposeMap[k].short}</li>;
+          })}
+        </ul>
       </div>
       <div className={sheet.classes.InputSection}>
         <textarea
@@ -84,4 +123,4 @@ const DeploymentPopup = ({
   );
 };
 
-export default DeploymentPopup;
+export default AdminPopup;
