@@ -32,9 +32,25 @@ const popupHtml = `
       height: 100vh;
     }
 
-    #root {
+    #root-container {
+      display: flex;
+      flex-direction: column;
       width: 100vw;
+      height: 100%;
       font-size: 1rem;
+    }
+
+    #root {
+      display: flex;
+      flex-grow: 1;
+      max-height: 100%;
+      overflow: auto;
+    }
+
+    #footer {
+      background-color: hsla(-20, 100%, 50%, 0.1);
+      width: 100vw;
+      padding: 1em 2em;
     }
 
     * {
@@ -43,7 +59,13 @@ const popupHtml = `
   </style>
 </head>
 <body>
-  <div id="root"></div>
+  <div id="root-container">
+    <div id="root"></div>
+    <div id="footer">
+      <b>Note:</b> ${window.location.host} can access your account without this
+      dialog. Visit (TBD) to learn about upgrading to a custodial wallet.
+    </div>
+  </div>
 </body>
 </html>
 `.trim();

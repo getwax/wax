@@ -5,14 +5,10 @@ import sheetsRegistry from './sheetsRegistry';
 import Button from './Button';
 import Heading from './Heading';
 import typedObjectKeys from './helpers/typedObjectKeys';
+import PopupPage from './PopupPage';
 
 const sheet = jss.createStyleSheet({
   DeploymentPopup: {
-    padding: '2em',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '2em',
-
     '& textarea': {
       fontSize: '1em',
     },
@@ -84,7 +80,7 @@ const AdminPopup = ({
   }
 
   return (
-    <div className={sheet.classes.DeploymentPopup}>
+    <PopupPage className={sheet.classes.DeploymentPopup}>
       <Heading>Admin Account Needed</Heading>
       <div>{purposeMap[purpose]?.desc ?? purpose}</div>
       <div>
@@ -119,7 +115,7 @@ const AdminPopup = ({
           Approve
         </Button>
       </div>
-    </div>
+    </PopupPage>
   );
 };
 
