@@ -63,9 +63,14 @@ yarn build
 
 Copy `waxInPage.iife.js` to your `public/ext` directory.
 
-Add this script to your html:
+Add these scripts to your html:
 
 ```html
+<script>
+window.waxInPageConfig = {
+  rpcUrl: '<your rpc url>', // eg for hardhat use http://127.0.0.1:8545
+};
+</script>
 <script src="/ext/waxInPage.iife.js"></script>
 ```
 
