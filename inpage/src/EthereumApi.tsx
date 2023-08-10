@@ -284,15 +284,10 @@ export default class EthereumApi {
         ethers.getBytes(userOpHash),
       );
 
-      const adminAccount = await this.#waxInPage.requestAdminAccount(
-        'simulate-bundler',
-      );
-
-      // *not* the confirmation, just the response (don't add .wait(), that's
-      // wrong).
-      await contracts.entryPoint
-        .connect(adminAccount)
-        .handleOps([userOp], adminAccount.getAddress());
+      await this.request({
+        method: 'eth_sendUserOperation',
+        params: [userOp],
+      });
 
       this.#userOps.set(userOpHash, {
         chainId: BigInt(await this.request({ method: 'eth_chainId' })),
@@ -363,6 +358,22 @@ export default class EthereumApi {
         maxFeePerGas: `0x${userOp.maxFeePerGas.toString(16)}`,
         maxPriorityFeePerGas: `0x${userOp.maxPriorityFeePerGas.toString(16)}`,
       } satisfies EthereumRpc.Transaction;
+    },
+
+    eth_sendUserOperation: async (userOp) => {
+      const adminAccount = await this.#waxInPage.requestAdminAccount(
+        'simulate-bundler',
+      );
+
+      const contracts = await this.#waxInPage.getContracts();
+
+      // *not* the confirmation, just the response (don't add .wait(), that's
+      // wrong).
+      await contracts.entryPoint
+        .connect(adminAccount)
+        .handleOps([userOp], adminAccount.getAddress());
+
+      return await contracts.entryPoint.getUserOpHash(userOp);
     },
   };
 

@@ -4,6 +4,9 @@ import z from 'zod';
 namespace EthereumRpc {
   export const emptyParams = z.union([z.tuple([]), z.undefined()]);
 
+  export const BigNumberish = z.union([z.string(), z.number(), z.bigint()]);
+  export type BigNumberish = z.infer<typeof BigNumberish>;
+
   export const Transaction = z.object({
     blockHash: z.union([z.string(), z.null()]),
     blockNumber: z.union([z.string(), z.null()]),
@@ -30,14 +33,14 @@ namespace EthereumRpc {
 
   export const UserOperation = z.object({
     sender: z.string(),
-    nonce: z.string(),
+    nonce: BigNumberish,
     initCode: z.string(),
     callData: z.string(),
-    callGasLimit: z.string(),
-    verificationGasLimit: z.string(),
-    preVerificationGas: z.string(),
-    maxFeePerGas: z.string(),
-    maxPriorityFeePerGas: z.string(),
+    callGasLimit: BigNumberish,
+    verificationGasLimit: BigNumberish,
+    preVerificationGas: BigNumberish,
+    maxFeePerGas: BigNumberish,
+    maxPriorityFeePerGas: BigNumberish,
     paymasterAndData: z.string(),
     signature: z.string(),
   });
