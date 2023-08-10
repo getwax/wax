@@ -16,6 +16,10 @@ yarn setup
 yarn dev
 ```
 
+The dev server will run a hardhat-based testnet for you by default. If you'd
+like to use an external network, configure your `rpcUrl` in `demo/config.ts` and
+the dev server will skip running a local node.
+
 ## Use the Library (as an Npm Module)
 
 ```sh
