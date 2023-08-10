@@ -67,7 +67,7 @@ export default class EthereumApi {
 
     if (!parsedParams.success) {
       throw new JsonRpcError({
-        code: -32601,
+        code: -32602,
         message: parsedParams.error.toString(),
       });
     }
@@ -178,7 +178,7 @@ export default class EthereumApi {
 
         if (!parsedTx.success) {
           throw new JsonRpcError({
-            code: -32601,
+            code: -32602,
             message: `Failed to parse tx: ${parsedTx.error.toString()}`,
           });
         }
