@@ -56,6 +56,7 @@ module.exports = {
         devDependencies: [
           'demo/**/*.ts',
           'demo/**/*.tsx',
+          'scripts/**/*.ts',
           'vite.config.ts',
           'hardhat/**/*.ts',
         ],

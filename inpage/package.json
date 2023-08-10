@@ -6,7 +6,7 @@
   "types": "build/lib/index.d.ts",
   "scripts": {
     "setup": "yarn && scripts/setup.ts",
-    "dev": "concurrently --kill-others vite \"yarn --cwd hardhat hardhat node\"",
+    "dev": "scripts/dev.ts",
     "check-ts": "tsc --noEmit",
     "build": "yarn check-ts && rm -rf build && yarn build:lib && yarn build:demo && yarn build:globalScript && yarn build:packed-lib",
     "build:lib": "tsc -p tsconfig.lib.json",
