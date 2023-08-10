@@ -33,6 +33,11 @@ const defaultConfig: Config = {
 
 let ethersDefaultPollingInterval = 4000;
 
+type ConstructorOptions = {
+  rpcUrl: string;
+  storage?: WaxStorage;
+};
+
 export type Contracts = {
   greeter: Greeter;
   entryPoint: EntryPoint;
@@ -49,15 +54,15 @@ export default class WaxInPage {
   storage: WaxStorage;
   ethersProvider: ethers.BrowserProvider;
 
-  constructor(storage = makeLocalWaxStorage()) {
-    this.ethereum = new EthereumApi(this);
+  constructor({ rpcUrl, storage = makeLocalWaxStorage() }: ConstructorOptions) {
+    this.ethereum = new EthereumApi(rpcUrl, this);
     this.storage = storage;
     this.ethersProvider = new ethers.BrowserProvider(this.ethereum);
     ethersDefaultPollingInterval = this.ethersProvider.pollingInterval;
   }
 
-  static global() {
-    new WaxInPage().attachGlobals();
+  static global(opt: ConstructorOptions) {
+    new WaxInPage(opt).attachGlobals();
   }
 
   static addStylesheet() {
