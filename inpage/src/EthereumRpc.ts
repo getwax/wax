@@ -7,7 +7,7 @@ namespace EthereumRpc {
   export const BigNumberish = z.union([z.string(), z.number(), z.bigint()]);
   export type BigNumberish = z.infer<typeof BigNumberish>;
 
-  export const Transaction = z.object({
+  export const TransactionReceipt = z.object({
     blockHash: z.union([z.string(), z.null()]),
     blockNumber: z.union([z.string(), z.null()]),
     from: z.string(),
@@ -15,7 +15,7 @@ namespace EthereumRpc {
     hash: z.string(),
     input: z.string(),
     nonce: z.string(),
-    to: z.string(),
+    to: z.union([z.string(), z.null()]),
     transactionIndex: z.union([z.string(), z.null()]),
     value: z.string(),
     v: z.string(),
@@ -29,7 +29,7 @@ namespace EthereumRpc {
     maxPriorityFeePerGas: z.optional(z.string()),
   });
 
-  export type Transaction = z.infer<typeof Transaction>;
+  export type TransactionReceipt = z.infer<typeof TransactionReceipt>;
 
   export const UserOperation = z.object({
     sender: z.string(),
@@ -46,6 +46,22 @@ namespace EthereumRpc {
   });
 
   export type UserOperation = z.infer<typeof UserOperation>;
+
+  export const UserOperationReceipt = z.object({
+    userOpHash: z.string(),
+    entryPoint: z.string(),
+    sender: z.string(),
+    nonce: z.string(),
+    paymaster: z.string(),
+    actualGasCost: z.string(),
+    actualGasUsed: z.string(),
+    success: z.boolean(),
+    reason: z.string(),
+    logs: z.string(),
+    receipt: TransactionReceipt,
+  });
+
+  export type UserOperationReceipt = z.infer<typeof UserOperationReceipt>;
 
   export const schema = {
     eth_requestAccounts: {
@@ -72,7 +88,7 @@ namespace EthereumRpc {
     },
     eth_getTransactionByHash: {
       params: z.tuple([z.string()]),
-      output: z.union([z.null(), Transaction]),
+      output: z.union([z.null(), TransactionReceipt]),
     },
     eth_sendUserOperation: {
       params: z.tuple([UserOperation]),
@@ -88,22 +104,7 @@ namespace EthereumRpc {
     },
     eth_getUserOperationReceipt: {
       params: z.tuple([z.string()]),
-      output: z.union([
-        z.null(),
-        z.object({
-          userOpHash: z.string(),
-          entryPoint: z.string(),
-          sender: z.string(),
-          nonce: z.string(),
-          paymaster: z.string(),
-          actualGasCost: z.string(),
-          actualGasUsed: z.string(),
-          success: z.boolean(),
-          reason: z.string(),
-          logs: z.string(),
-          receipt: Transaction,
-        }),
-      ]),
+      output: z.union([z.null(), UserOperationReceipt]),
     },
     eth_supportedEntryPoints: {
       params: emptyParams,

@@ -310,20 +310,17 @@ export default class EthereumApi {
         return (await this.#networkRequest({
           method: 'eth_getTransactionByHash',
           params: [txHash],
-        })) as EthereumRpc.Transaction | null;
+        })) as EthereumRpc.TransactionReceipt | null;
       }
 
-      const contracts = await this.#waxInPage.getContracts();
+      const receipt = await this.request({
+        method: 'eth_getUserOperationReceipt',
+        params: [txHash],
+      });
 
-      const events = await contracts.entryPoint.queryFilter(
-        contracts.entryPoint.filters.UserOperationEvent(txHash),
-      );
-
-      if (events.length === 0) {
+      if (receipt === null) {
         return null;
       }
-
-      const event = events[0];
 
       const { userOp } = opInfo;
 
@@ -334,15 +331,15 @@ export default class EthereumApi {
       const action = opInfo.actions[0];
 
       return {
-        blockHash: event.blockHash,
-        blockNumber: `0x${event.blockNumber.toString(16)}`,
-        from: userOp.sender,
-        gas: `0x${event.args.actualGasUsed.toString(16)}`,
-        hash: txHash,
+        blockHash: receipt.receipt.blockHash,
+        blockNumber: receipt.receipt.blockNumber,
+        from: receipt.sender,
+        gas: receipt.actualGasUsed,
+        hash: receipt.userOpHash,
         input: userOp.callData,
-        nonce: userOp.nonce,
+        nonce: receipt.nonce,
         to: action.to,
-        transactionIndex: `0x${event.transactionIndex.toString(16)}`,
+        transactionIndex: receipt.receipt.transactionIndex,
         value: `0x${action.value.toString(16)}`,
         accessList: [],
 
@@ -354,10 +351,10 @@ export default class EthereumApi {
         v: '0x0',
 
         chainId: `0x${opInfo.chainId.toString(16)}`,
-        gasPrice: `0x${event.args.actualGasCost.toString(16)}`,
+        gasPrice: receipt.actualGasCost,
         maxFeePerGas: `0x${userOp.maxFeePerGas.toString(16)}`,
         maxPriorityFeePerGas: `0x${userOp.maxPriorityFeePerGas.toString(16)}`,
-      } satisfies EthereumRpc.Transaction;
+      } satisfies EthereumRpc.TransactionReceipt;
     },
 
     eth_sendUserOperation: async (userOp) => {
@@ -374,6 +371,65 @@ export default class EthereumApi {
         .handleOps([userOp], adminAccount.getAddress());
 
       return await contracts.entryPoint.getUserOpHash(userOp);
+    },
+
+    eth_getUserOperationReceipt: async (userOpHash) => {
+      const opInfo = this.#userOps.get(userOpHash);
+
+      if (opInfo === undefined) {
+        return null;
+      }
+
+      const contracts = await this.#waxInPage.getContracts();
+
+      const events = await contracts.entryPoint.queryFilter(
+        contracts.entryPoint.filters.UserOperationEvent(userOpHash),
+      );
+
+      if (events.length === 0) {
+        return null;
+      }
+
+      const event = events[0];
+
+      const { userOp } = opInfo;
+
+      const txReceipt = await this.request({
+        method: 'eth_getTransactionByHash',
+        params: [event.transactionHash],
+      });
+
+      if (txReceipt === null) {
+        return null;
+      }
+
+      let revertReason = '0x';
+
+      if (!event.args.success) {
+        const errorEvents = await contracts.entryPoint.queryFilter(
+          contracts.entryPoint.filters.UserOperationRevertReason(userOpHash),
+        );
+
+        const errorEvent = errorEvents.at(0);
+
+        if (errorEvent !== undefined) {
+          revertReason = errorEvent.args.revertReason;
+        }
+      }
+
+      return {
+        userOpHash,
+        entryPoint: await contracts.entryPoint.getAddress(),
+        sender: event.args.sender,
+        nonce: `0x${event.args.nonce.toString(16)}`,
+        paymaster: userOp.paymasterAndData.slice(0, 22),
+        actualGasCost: `0x${event.args.actualGasCost.toString(16)}`,
+        actualGasUsed: `0x${event.args.actualGasUsed.toString(16)}`,
+        success: event.args.success,
+        reason: revertReason,
+        logs: '0x', // TODO: Logs
+        receipt: txReceipt,
+      } satisfies EthereumRpc.UserOperationReceipt;
     },
   };
 
