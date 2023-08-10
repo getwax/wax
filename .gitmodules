@@ -4,6 +4,12 @@
 [submodule "compression/lib/openzeppelin-contracts"]
 	path = compression/lib/openzeppelin-contracts
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts
+[submodule "webauthn/lib/forge-std"]
+	path = webauthn/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
+[submodule "webauthn/lib/openzeppelin-contracts"]
+	path = webauthn/lib/openzeppelin-contracts
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts
 [submodule "kernel-plugins/lib/forge-std"]
 	path = kernel-plugins/lib/forge-std
 	url = https://github.com/foundry-rs/forge-std
