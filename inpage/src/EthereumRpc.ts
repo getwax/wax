@@ -5,15 +5,15 @@ namespace EthereumRpc {
   export const emptyParams = z.union([z.tuple([]), z.undefined()]);
 
   export const Transaction = z.object({
-    blockHash: z.string(),
-    blockNumber: z.string(),
+    blockHash: z.union([z.string(), z.null()]),
+    blockNumber: z.union([z.string(), z.null()]),
     from: z.string(),
     gas: z.string(),
     hash: z.string(),
     input: z.string(),
     nonce: z.string(),
     to: z.string(),
-    transactionIndex: z.string(),
+    transactionIndex: z.union([z.string(), z.null()]),
     value: z.string(),
     v: z.string(),
     r: z.string(),

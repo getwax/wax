@@ -1,8 +1,18 @@
 import './LinksPage.css';
+import { ethers } from 'ethers';
 import Button from '../src/Button';
 import usePath from './usePath';
 import DemoContext from './DemoContext';
 import runAsync from './helpers/runAsync';
+import config from './config';
+
+const addFundsDefault = (() => {
+  if (config.rpcUrl === 'http://127.0.0.1:8545') {
+    return '1.0';
+  }
+
+  return '0.002';
+})();
 
 const LinksPage = () => {
   const demo = DemoContext.use();
@@ -26,7 +36,9 @@ const LinksPage = () => {
           await (
             await admin.sendTransaction({
               to: address,
-              value: 10n ** 18n,
+              value: ethers.parseEther(
+                config.addFundsEthAmount ?? addFundsDefault,
+              ),
             })
           ).wait();
 
