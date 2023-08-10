@@ -1,15 +1,11 @@
 import jss from 'jss';
+import { ReactNode } from 'react';
 import sheetsRegistry from './sheetsRegistry';
 import Button from './Button';
 import Heading from './Heading';
+import PopupPage from './PopupPage';
 
 const sheet = jss.createStyleSheet({
-  PermissionPopup: {
-    padding: '2em',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '2em',
-  },
   ButtonRow: {
     display: 'flex',
     flexDirection: 'row',
@@ -28,10 +24,10 @@ const PermissionPopup = ({
   message,
   respond,
 }: {
-  message: string;
+  message: ReactNode;
   respond: (response: boolean) => void;
 }) => (
-  <div className={sheet.classes.PermissionPopup}>
+  <PopupPage>
     <Heading>Permission Request</Heading>
     <div>{message}</div>
     <div className={sheet.classes.ButtonRow}>
@@ -40,7 +36,7 @@ const PermissionPopup = ({
       </Button>
       <Button onPress={() => respond(true)}>Approve</Button>
     </div>
-  </div>
+  </PopupPage>
 );
 
 export default PermissionPopup;

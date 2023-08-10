@@ -1,40 +1,63 @@
 import ReactDOM from 'react-dom/client';
-import React from 'react';
+import React, { ReactNode } from 'react';
 
+import { ethers } from 'ethers';
 import EthereumApi from './EthereumApi';
-import assert from './helpers/assert';
-import popupUrl from './popupUrl';
 import PermissionPopup from './PermissionPopup';
 import sheetsRegistry from './sheetsRegistry';
 import makeLocalWaxStorage, { WaxStorage } from './WaxStorage';
+import {
+  EntryPoint,
+  EntryPoint__factory,
+  Greeter,
+  Greeter__factory,
+  SimpleAccountFactory,
+  SimpleAccountFactory__factory,
+} from '../hardhat/typechain-types';
+import SafeSingletonFactory, {
+  SafeSingletonFactoryViewer,
+} from './SafeSingletonFactory';
+import ReusablePopup from './ReusablePopup';
+import AdminPopup, { AdminPurpose } from './AdminPopup';
 
-const defaultConfig = {
-  requirePermission: true,
+type Config = {
+  requirePermission: boolean;
+  deployContractsIfNeeded: boolean;
+  ethersPollingInterval?: number;
 };
 
-type Config = typeof defaultConfig;
+const defaultConfig: Config = {
+  requirePermission: true,
+  deployContractsIfNeeded: true,
+};
+
+let ethersDefaultPollingInterval = 4000;
+
+export type Contracts = {
+  greeter: Greeter;
+  entryPoint: EntryPoint;
+  simpleAccountFactory: SimpleAccountFactory;
+};
 
 export default class WaxInPage {
   #config = defaultConfig;
+  #contractsDeployed = false;
+  #reusablePopup?: ReusablePopup;
+  #adminAccount?: ethers.Wallet;
 
-  private constructor(
-    public ethereum: EthereumApi,
-    public storage: WaxStorage,
-  ) {}
+  ethereum: EthereumApi;
+  storage: WaxStorage;
+  ethersProvider: ethers.BrowserProvider;
 
-  static create(): WaxInPage {
-    const storage = makeLocalWaxStorage();
-
-    const wax: WaxInPage = new WaxInPage(
-      new EthereumApi((message) => wax.requestPermission(message), storage),
-      storage,
-    );
-
-    return wax;
+  constructor(storage = makeLocalWaxStorage()) {
+    this.ethereum = new EthereumApi(this);
+    this.storage = storage;
+    this.ethersProvider = new ethers.BrowserProvider(this.ethereum);
+    ethersDefaultPollingInterval = this.ethersProvider.pollingInterval;
   }
 
   static global() {
-    WaxInPage.create().attachGlobals();
+    new WaxInPage().attachGlobals();
   }
 
   static addStylesheet() {
@@ -57,53 +80,197 @@ export default class WaxInPage {
       ...this.#config,
       ...newConfig,
     };
+
+    if ('ethersPollingInterval' in newConfig) {
+      this.ethersProvider.pollingInterval =
+        newConfig.ethersPollingInterval ?? ethersDefaultPollingInterval;
+    }
   }
 
-  async requestPermission(message: string) {
+  async requestPermission(message: ReactNode) {
     if (this.#config.requirePermission === false) {
       return true;
     }
 
-    const opt = {
-      popup: true,
-      width: 400,
-      height: 600,
-      left:
-        window.screenLeft + window.innerWidth * window.devicePixelRatio - 410,
-      top: window.screenTop + 60,
-    };
-
-    const popup = window.open(
-      popupUrl,
-      undefined,
-      Object.entries(opt)
-        .map(([k, v]) => `${k}=${v.toString()}`)
-        .join(', '),
-    );
-
-    assert(popup !== null);
-
-    await new Promise((resolve) => {
-      popup.addEventListener('load', resolve);
-    });
-
-    const style = document.createElement('style');
-    style.textContent = sheetsRegistry.toString();
-
-    popup.document.head.append(style);
+    const popup = await this.getPopup();
 
     const response = await new Promise<boolean>((resolve) => {
-      ReactDOM.createRoot(popup.document.getElementById('root')!).render(
+      ReactDOM.createRoot(
+        popup.getWindow().document.getElementById('root')!,
+      ).render(
         <React.StrictMode>
           <PermissionPopup message={message} respond={resolve} />
         </React.StrictMode>,
       );
 
-      popup.addEventListener('unload', () => resolve(false));
+      popup.events.on('unload', () => resolve(false));
     });
 
     popup.close();
 
     return response;
+  }
+
+  // Usually you could do `simpleAccountFactory.getAddress()` to get its
+  // address, but SimpleAccountFactory overrides getAddress to be a function for
+  // getting the address of an account, which messes with the ethers .getAddress
+  // builtin.
+  //
+  // Proposed fix:
+  //   https://github.com/eth-infinitism/account-abstraction/pull/323
+  //
+  async getSimpleAccountFactoryAddress(): Promise<string> {
+    const chainId = BigInt(
+      await this.ethereum.request({ method: 'eth_chainId' }),
+    );
+
+    const viewer = new SafeSingletonFactoryViewer(this.ethersProvider, chainId);
+
+    const entryPointAddress = viewer.calculateAddress(EntryPoint__factory, []);
+
+    return viewer.calculateAddress(SimpleAccountFactory__factory, [
+      entryPointAddress,
+    ]);
+  }
+
+  async getContracts(
+    runner: ethers.ContractRunner = this.ethersProvider,
+  ): Promise<Contracts> {
+    const chainId = BigInt(
+      await this.ethereum.request({ method: 'eth_chainId' }),
+    );
+
+    const viewer = new SafeSingletonFactoryViewer(this.ethersProvider, chainId);
+
+    const assumedEntryPoint = viewer.connectAssume(EntryPoint__factory, []);
+
+    const contracts = {
+      greeter: viewer.connectAssume(Greeter__factory, ['']).connect(runner),
+      entryPoint: assumedEntryPoint,
+      simpleAccountFactory: viewer.connectAssume(
+        SimpleAccountFactory__factory,
+        [await assumedEntryPoint.getAddress()],
+      ),
+    };
+
+    if (this.#contractsDeployed) {
+      return contracts;
+    }
+
+    if (await this.#checkDeployments(contracts)) {
+      this.#contractsDeployed = true;
+      return contracts;
+    }
+
+    if (!this.#config.deployContractsIfNeeded) {
+      throw new Error('Contracts not deployed');
+    }
+
+    const wallet = await this.requestAdminAccount('deploy-contracts');
+
+    const factory = await SafeSingletonFactory.init(wallet);
+
+    const entryPoint = await factory.connectOrDeploy(EntryPoint__factory, []);
+
+    const deployments: {
+      [C in keyof Contracts]: () => Promise<Contracts[C]>;
+    } = {
+      greeter: () => factory.connectOrDeploy(Greeter__factory, ['']),
+      entryPoint: () => Promise.resolve(entryPoint),
+      simpleAccountFactory: async () =>
+        factory.connectOrDeploy(SimpleAccountFactory__factory, [
+          await entryPoint.getAddress(),
+        ]),
+    };
+
+    for (const deployment of Object.values(deployments)) {
+      // eslint-disable-next-line no-await-in-loop
+      await deployment();
+    }
+
+    return contracts;
+  }
+
+  async #checkDeployments(contracts: Contracts): Promise<boolean> {
+    const deployFlags = await Promise.all(
+      Object.values(contracts).map(async (contract) => {
+        const existingCode = await this.ethersProvider.getCode(
+          contract.getAddress(),
+        );
+
+        return existingCode !== '0x';
+      }),
+    );
+
+    return deployFlags.every((flag) => flag);
+  }
+
+  async requestAdminAccount(purpose: AdminPurpose): Promise<ethers.Wallet> {
+    if (this.#adminAccount) {
+      return this.#adminAccount;
+    }
+
+    const popup = await this.getPopup();
+
+    let deployerKeyData: string;
+
+    try {
+      deployerKeyData = await new Promise<string>((resolve, reject) => {
+        ReactDOM.createRoot(
+          popup.getWindow().document.getElementById('root')!,
+        ).render(
+          <React.StrictMode>
+            <AdminPopup purpose={purpose} resolve={resolve} reject={reject} />
+          </React.StrictMode>,
+        );
+
+        popup.events.on('unload', () => reject(new Error('Popup closed')));
+      });
+    } finally {
+      popup.close();
+    }
+
+    if (ethers.Mnemonic.isValidMnemonic(deployerKeyData)) {
+      const hdNode = ethers.HDNodeWallet.fromPhrase(deployerKeyData);
+
+      this.#adminAccount = new ethers.Wallet(
+        hdNode.privateKey,
+        this.ethersProvider,
+      );
+    } else {
+      this.#adminAccount = new ethers.Wallet(
+        deployerKeyData,
+        this.ethersProvider,
+      );
+    }
+
+    return this.#adminAccount;
+  }
+
+  getTestWallet(index: number): ethers.Wallet {
+    const hdNode = ethers.HDNodeWallet.fromPhrase(
+      `${'test '.repeat(11)}junk`,
+      undefined,
+      "m/44'/60'/0'/0",
+    );
+
+    return new ethers.Wallet(
+      hdNode.deriveChild(index).privateKey,
+      this.ethersProvider,
+    );
+  }
+
+  async getPopup() {
+    if (this.#reusablePopup) {
+      await this.#reusablePopup.reuse();
+    } else {
+      this.#reusablePopup = await ReusablePopup.create();
+    }
+
+    return this.#reusablePopup;
+  }
+
+  async disconnect() {
+    await this.storage.connectedAccounts.clear();
   }
 }

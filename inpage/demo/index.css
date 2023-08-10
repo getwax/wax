@@ -27,3 +27,7 @@ body {
   flex-direction: column;
   gap: 1em;
 }
+
+* {
+  box-sizing: border-box;
+}

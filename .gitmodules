@@ -10,3 +10,9 @@
 [submodule "webauthn/lib/openzeppelin-contracts"]
 	path = webauthn/lib/openzeppelin-contracts
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts
+[submodule "kernel-plugins/lib/forge-std"]
+	path = kernel-plugins/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
+[submodule "kernel-plugins/lib/kernel"]
+	path = kernel-plugins/lib/kernel
+	url = https://github.com/zerodevapp/kernel

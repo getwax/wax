@@ -35,7 +35,7 @@ Then:
 ```ts
 import WaxInPage from '@getwax/wax';
 
-const wax = WaxInPage.create();
+const wax = new WaxInPage();
 
 console.log(await wax.ethereum.request({
   method: 'eth_requestAccounts',
