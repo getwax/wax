@@ -63,7 +63,7 @@ const popupHtml = `
     <div id="root"></div>
     <div id="footer">
       <b>Note:</b> ${window.location.host} can control your account without this
-      dialog. Visit (TBD) to learn about upgrading to a custodial wallet.
+      dialog. Visit (TBD) to learn about upgrading to a non-custodial wallet.
     </div>
   </div>
 </body>
