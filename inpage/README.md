@@ -33,9 +33,11 @@ yet.)
 Then:
 
 ```ts
-import WaxInPage from '@getwax/wax';
+import WaxInPage from '@getwax/inpage';
 
-const wax = new WaxInPage();
+const wax = new WaxInPage({
+  rpcUrl: '<your rpc url>', // eg for hardhat use http://127.0.0.1:8545
+});
 
 console.log(await wax.ethereum.request({
   method: 'eth_requestAccounts',
@@ -43,7 +45,9 @@ console.log(await wax.ethereum.request({
 
 // Alternatively...
 
-WaxInPage.global();
+WaxInPage.global({
+  rpcUrl: '<your rpc url>', // eg for hardhat use http://127.0.0.1:8545
+});
 
 console.log(await ethereum.request({
   method: 'eth_requestAccounts',
