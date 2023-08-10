@@ -28,6 +28,22 @@ namespace EthereumRpc {
 
   export type Transaction = z.infer<typeof Transaction>;
 
+  export const UserOperation = z.object({
+    sender: z.string(),
+    nonce: z.string(),
+    initCode: z.string(),
+    callData: z.string(),
+    callGasLimit: z.string(),
+    verificationGasLimit: z.string(),
+    preVerificationGas: z.string(),
+    maxFeePerGas: z.string(),
+    maxPriorityFeePerGas: z.string(),
+    paymasterAndData: z.string(),
+    signature: z.string(),
+  });
+
+  export type UserOperation = z.infer<typeof UserOperation>;
+
   export const schema = {
     eth_requestAccounts: {
       params: emptyParams,
@@ -54,6 +70,41 @@ namespace EthereumRpc {
     eth_getTransactionByHash: {
       params: z.tuple([z.string()]),
       output: z.union([z.null(), Transaction]),
+    },
+    eth_sendUserOperation: {
+      params: z.tuple([UserOperation]),
+      output: z.string(),
+    },
+    eth_estimateUserOperationGas: {
+      params: z.tuple([UserOperation]),
+      output: z.object({
+        preVerificationGas: z.string(),
+        verificationGasLimit: z.string(),
+        callGasLimit: z.string(),
+      }),
+    },
+    eth_getUserOperationReceipt: {
+      params: z.tuple([z.string()]),
+      output: z.union([
+        z.null(),
+        z.object({
+          userOpHash: z.string(),
+          entryPoint: z.string(),
+          sender: z.string(),
+          nonce: z.string(),
+          paymaster: z.string(),
+          actualGasCost: z.string(),
+          actualGasUsed: z.string(),
+          success: z.boolean(),
+          reason: z.string(),
+          logs: z.string(),
+          receipt: Transaction,
+        }),
+      ]),
+    },
+    eth_supportedEntryPoints: {
+      params: emptyParams,
+      output: z.array(z.string()),
     },
   };
 
