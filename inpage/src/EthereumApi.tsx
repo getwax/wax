@@ -28,7 +28,8 @@ type StrictUserOperation = {
 
 export default class EthereumApi {
   #waxInPage: WaxInPage;
-  #networkUrl = 'http://127.0.0.1:8545';
+  #rpcUrl: string;
+  #chainIdPromise: Promise<string>;
 
   #userOps = new Map<
     string,
@@ -44,8 +45,13 @@ export default class EthereumApi {
     }
   >();
 
-  constructor(waxInPage: WaxInPage) {
+  constructor(rpcUrl: string, waxInPage: WaxInPage) {
+    this.#rpcUrl = rpcUrl;
     this.#waxInPage = waxInPage;
+
+    this.#chainIdPromise = this.#networkRequest({ method: 'eth_chainId' }).then(
+      (res) => z.string().parse(res),
+    );
   }
 
   async request<M extends string>({
@@ -102,6 +108,8 @@ export default class EthereumApi {
   }
 
   #customHandlers: Partial<EthereumRpc.Handlers> = {
+    eth_chainId: () => this.#chainIdPromise,
+
     eth_requestAccounts: async () => {
       let connectedAccounts =
         await this.#waxInPage.storage.connectedAccounts.get();
@@ -365,7 +373,7 @@ export default class EthereumApi {
     method: string;
     params?: unknown[];
   }) {
-    const res = await fetch(this.#networkUrl, {
+    const res = await fetch(this.#rpcUrl, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',

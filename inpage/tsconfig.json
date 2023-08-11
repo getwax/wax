@@ -17,5 +17,9 @@
     "strict": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["*.*", "./**/*"]
+  "include": ["*.*", "./**/*"],
+  "ts-node": {
+    "transpileOnly": true,
+    "swc": true
+  }
 }
