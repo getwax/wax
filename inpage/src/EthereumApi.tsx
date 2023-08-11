@@ -147,12 +147,22 @@ export default class EthereumApi {
       await this.#waxInPage.storage.connectedAccounts.get(),
 
     eth_sendTransaction: async (...txs) => {
-      const sender = txs[0].from;
+      const account = await this.#waxInPage._getAccount(waxPrivate);
+      const contracts = await this.#waxInPage.getContracts();
 
-      if (txs.find((tx) => tx.from !== sender)) {
+      const sender = txs[0].from ?? account.address;
+
+      if (txs.find((tx) => tx.from !== txs[0].from)) {
         throw new JsonRpcError({
           code: -32602,
           message: 'All txs must have the same sender (aka `.from`)',
+        });
+      }
+
+      if (sender.toLowerCase() !== account.address.toLowerCase()) {
+        throw new JsonRpcError({
+          code: -32000,
+          message: `unknown account ${sender}`,
         });
       }
 
@@ -175,9 +185,6 @@ export default class EthereumApi {
           message: 'User rejected request',
         });
       }
-
-      const account = await this.#waxInPage._getAccount(waxPrivate);
-      const contracts = await this.#waxInPage.getContracts();
 
       const actions = txs.map((tx) => {
         const parsedTx = z

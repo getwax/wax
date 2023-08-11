@@ -90,7 +90,7 @@ namespace EthereumRpc {
       params: z
         .array(
           z.object({
-            from: z.string(),
+            from: z.optional(z.string()),
           }),
         )
         .min(1),
@@ -103,7 +103,7 @@ namespace EthereumRpc {
     eth_estimateGas: {
       params: z.tuple([
         z.object({
-          from: z.string(),
+          from: z.optional(z.string()),
           to: z.optional(z.string()),
           gas: z.optional(BigNumberish),
           gasPrice: z.optional(BigNumberish),
