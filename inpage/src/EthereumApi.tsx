@@ -501,6 +501,12 @@ export default class EthereumApi {
         receipt: txReceipt,
       } satisfies EthereumRpc.UserOperationReceipt;
     },
+
+    eth_supportedEntryPoints: async () => {
+      const contracts = await this.#waxInPage.getContracts();
+
+      return [await contracts.entryPoint.getAddress()];
+    },
   };
 
   async #networkRequest({
