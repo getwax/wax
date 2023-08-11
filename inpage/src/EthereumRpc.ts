@@ -90,6 +90,19 @@ namespace EthereumRpc {
       params: z.tuple([z.string()]),
       output: z.union([z.null(), TransactionReceipt]),
     },
+    eth_estimateGas: {
+      params: z.tuple([
+        z.object({
+          from: z.string(),
+          to: z.optional(z.string()),
+          gas: z.optional(BigNumberish),
+          gasPrice: z.optional(BigNumberish),
+          value: z.optional(BigNumberish),
+          data: z.optional(z.string()),
+        }),
+      ]),
+      output: z.string(),
+    },
     eth_sendUserOperation: {
       params: z.tuple([UserOperation]),
       output: z.string(),

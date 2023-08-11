@@ -9,8 +9,24 @@ import ZodNotUndefined from './helpers/ZodNotUndefined';
 import { UserOperationStruct } from '../hardhat/typechain-types/@account-abstraction/contracts/interfaces/IEntryPoint';
 import { SimpleAccount__factory } from '../hardhat/typechain-types';
 import assert from './helpers/assert';
+import measureCalldataGas from './measureCalldataGas';
 
+// This value is needed to account for the overheads of running the entry point
+// that are difficult to attribute directly to each user op. It should be
+// calibrated so that the bundler makes a small profit overall.
+const basePreVerificationGas = 50_000n;
+
+// Cost of validating a signature or whatever verification method is in place.
 const baseVerificationGas = 100_000n;
+
+// We need a UserOperation in order to estimate the gas fields of a
+// UserOperation, so we use these values as placeholders.
+const temporaryEstimationGas = '0x012345';
+const temporarySignature = [
+  '0x',
+  '123456fe2807660c417ca1a38760342fa70135fcab89a8c7c879a77da8ce7a0b5a3805735e',
+  '95170906b11c6f30dcc74e463e1e6990c68a3998a7271b728b123456',
+].join('');
 
 type StrictUserOperation = {
   sender: string;
@@ -18,8 +34,8 @@ type StrictUserOperation = {
   initCode: string;
   callData: string;
   callGasLimit: bigint;
-  verificationGasLimit: bigint;
-  preVerificationGas: bigint;
+  verificationGasLimit: string;
+  preVerificationGas: string;
   maxFeePerGas: bigint;
   maxPriorityFeePerGas: bigint;
   paymasterAndData: string;
@@ -237,7 +253,6 @@ export default class EthereumApi {
       );
 
       let initCode: string;
-      let verificationGasLimit = baseVerificationGas;
 
       if (accountBytecode === '0x') {
         nonce = 0n;
@@ -247,12 +262,6 @@ export default class EthereumApi {
         initCode += contracts.simpleAccountFactory.interface
           .encodeFunctionData('createAccount', [account.ownerAddress, 0])
           .slice(2);
-
-        verificationGasLimit +=
-          await contracts.simpleAccountFactory.createAccount.estimateGas(
-            account.ownerAddress,
-            0,
-          );
       } else {
         nonce = await simpleAccount.getNonce();
         initCode = '0x';
@@ -270,13 +279,21 @@ export default class EthereumApi {
         initCode,
         callData,
         callGasLimit: actions.map((a) => BigInt(a.gas)).reduce((a, b) => a + b),
-        verificationGasLimit,
-        preVerificationGas: 0n, // TODO
+        verificationGasLimit: temporaryEstimationGas,
+        preVerificationGas: temporaryEstimationGas,
         maxFeePerGas: feeData.maxFeePerGas,
         maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
         paymasterAndData: '0x',
-        signature: '0x',
+        signature: temporarySignature,
       } satisfies UserOperationStruct;
+
+      const { verificationGasLimit, preVerificationGas } = await this.request({
+        method: 'eth_estimateUserOperationGas',
+        params: [userOp],
+      });
+
+      userOp.verificationGasLimit = verificationGasLimit;
+      userOp.preVerificationGas = preVerificationGas;
 
       const userOpHash = await contracts.entryPoint.getUserOpHash(userOp);
 
@@ -371,6 +388,59 @@ export default class EthereumApi {
         .handleOps([userOp], adminAccount.getAddress());
 
       return await contracts.entryPoint.getUserOpHash(userOp);
+    },
+
+    eth_estimateUserOperationGas: async (userOp) => {
+      const contracts = await this.#waxInPage.getContracts();
+      const account = await this.#getAccount();
+
+      // We need a beneficiary address to measure the encoded calldata, but
+      // there's no need for it to be correct.
+      const fakeBeneficiary = userOp.sender;
+
+      const baselineData = contracts.entryPoint.interface.encodeFunctionData(
+        'handleOps',
+        [[], fakeBeneficiary],
+      );
+
+      const data = contracts.entryPoint.interface.encodeFunctionData(
+        'handleOps',
+        [[userOp], fakeBeneficiary],
+      );
+
+      const calldataGas =
+        measureCalldataGas(data) - measureCalldataGas(baselineData);
+
+      let verificationGasLimit = baseVerificationGas;
+
+      assert(userOp.sender.toLowerCase() === account.address.toLowerCase());
+
+      if (BigInt(userOp.nonce) === 0n) {
+        verificationGasLimit +=
+          await contracts.simpleAccountFactory.createAccount.estimateGas(
+            account.ownerAddress,
+            0,
+          );
+      }
+
+      const callGasLimit = await this.request({
+        method: 'eth_estimateGas',
+        params: [
+          {
+            from: await contracts.entryPoint.getAddress(),
+            to: userOp.sender,
+            data: userOp.callData,
+          },
+        ],
+      });
+
+      return {
+        preVerificationGas: `0x${(
+          basePreVerificationGas + calldataGas
+        ).toString(16)}`,
+        verificationGasLimit: `0x${verificationGasLimit.toString(16)}`,
+        callGasLimit,
+      };
     },
 
     eth_getUserOperationReceipt: async (userOpHash) => {
