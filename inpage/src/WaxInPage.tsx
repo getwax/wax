@@ -21,6 +21,8 @@ import ReusablePopup from './ReusablePopup';
 import AdminPopup, { AdminPurpose } from './AdminPopup';
 import waxPrivate from './waxPrivate';
 import SimulatedBundler from './bundlers/SimulatedBundler';
+import NetworkBundler from './bundlers/NetworkBundler';
+import IBundler from './bundlers/IBundler';
 
 type Config = {
   requirePermission: boolean;
@@ -37,6 +39,7 @@ let ethersDefaultPollingInterval = 4000;
 
 type ConstructorOptions = {
   rpcUrl: string;
+  bundlerRpcUrl?: string;
   storage?: WaxStorage;
 };
 
@@ -56,8 +59,20 @@ export default class WaxInPage {
   storage: WaxStorage;
   ethersProvider: ethers.BrowserProvider;
 
-  constructor({ rpcUrl, storage = makeLocalWaxStorage() }: ConstructorOptions) {
-    this.ethereum = new EthereumApi(rpcUrl, this, new SimulatedBundler(this));
+  constructor({
+    rpcUrl,
+    bundlerRpcUrl,
+    storage = makeLocalWaxStorage(),
+  }: ConstructorOptions) {
+    let bundler: IBundler;
+
+    if (bundlerRpcUrl === undefined) {
+      bundler = new SimulatedBundler(this);
+    } else {
+      bundler = new NetworkBundler(bundlerRpcUrl);
+    }
+
+    this.ethereum = new EthereumApi(rpcUrl, this, bundler);
     this.storage = storage;
     this.ethersProvider = new ethers.BrowserProvider(this.ethereum);
     ethersDefaultPollingInterval = this.ethersProvider.pollingInterval;

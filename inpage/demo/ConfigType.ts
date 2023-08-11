@@ -1,5 +1,6 @@
 type ConfigType = {
   rpcUrl: string;
+  bundlerRpcUrl?: string;
   pollingInterval?: number;
   addFundsEthAmount?: string;
 };
