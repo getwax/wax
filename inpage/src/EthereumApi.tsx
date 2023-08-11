@@ -9,7 +9,7 @@ import { SimpleAccount__factory } from '../hardhat/typechain-types';
 import assert from './helpers/assert';
 import IBundler from './bundlers/IBundler';
 import waxPrivate from './waxPrivate';
-import networkRequest from './networkRequest';
+import ethereumRequest from './ethereumRequest';
 
 // We need a UserOperation in order to estimate the gas fields of a
 // UserOperation, so we use these values as placeholders.
@@ -59,9 +59,10 @@ export default class EthereumApi {
     this.#waxInPage = waxInPage;
     this.#bundler = bundler;
 
-    this.#chainIdPromise = this.#networkRequest({ method: 'eth_chainId' }).then(
-      (res) => z.string().parse(res),
-    );
+    this.#chainIdPromise = ethereumRequest({
+      url: this.#rpcUrl,
+      method: 'eth_chainId',
+    }).then((res) => z.string().parse(res));
   }
 
   async request<M extends string>({
@@ -71,10 +72,14 @@ export default class EthereumApi {
     method: M;
   } & EthereumRpc.RequestParams<M>): Promise<EthereumRpc.Response<M>> {
     if (!(method in EthereumRpc.schema)) {
-      return (await this.#requestImpl({
+      return await ethereumRequest({
+        url: this.#rpcUrl,
         method,
         params,
-      })) as EthereumRpc.Response<M>;
+      } as {
+        url: string;
+        method: M;
+      } & EthereumRpc.RequestParams<M>);
     }
 
     const methodSchema = EthereumRpc.schema[method as keyof EthereumRpc.Schema];
@@ -88,33 +93,23 @@ export default class EthereumApi {
       });
     }
 
-    const response = await this.#requestImpl({ method, params });
+    let response: EthereumRpc.Response<M>;
 
-    const parsedResponse = methodSchema.output.safeParse(response);
-
-    if (!parsedResponse.success) {
-      throw new JsonRpcError({
-        code: -32602,
-        message: parsedResponse.error.toString(),
-      });
-    }
-
-    return parsedResponse.data as EthereumRpc.Response<M>;
-  }
-
-  async #requestImpl({
-    method,
-    params,
-  }: {
-    method: string;
-    params?: unknown[];
-  }): Promise<unknown> {
     if (method in this.#customHandlers) {
       // eslint-disable-next-line
-      return await (this.#customHandlers as any)[method](...(params ?? []));
+      response = await (this.#customHandlers as any)[method](...(params ?? []));
+    } else {
+      response = await ethereumRequest({
+        url: this.#rpcUrl,
+        method,
+        params,
+      } as {
+        url: string;
+        method: M;
+      } & EthereumRpc.RequestParams<M>);
     }
 
-    return await this.#networkRequest({ method, params });
+    return response;
   }
 
   #customHandlers: Partial<EthereumRpc.Handlers> = {
@@ -318,10 +313,11 @@ export default class EthereumApi {
       const opInfo = this.#userOps.get(txHash);
 
       if (opInfo === undefined) {
-        return (await this.#networkRequest({
+        return await ethereumRequest({
+          url: this.#rpcUrl,
           method: 'eth_getTransactionByHash',
           params: [txHash],
-        })) as EthereumRpc.TransactionReceipt | null;
+        });
       }
 
       const receipt = await this.request({
@@ -379,18 +375,4 @@ export default class EthereumApi {
 
     eth_supportedEntryPoints: () => this.#bundler.eth_supportedEntryPoints(),
   };
-
-  async #networkRequest({
-    method,
-    params = [],
-  }: {
-    method: string;
-    params?: unknown[];
-  }) {
-    return await networkRequest({
-      rpcUrl: this.#rpcUrl,
-      method,
-      params,
-    });
-  }
 }
