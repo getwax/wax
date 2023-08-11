@@ -118,5 +118,6 @@ module.exports = {
     'no-await-in-loop': 'off',
     'no-continue': 'off',
     'no-constant-condition': 'off',
+    'no-underscore-dangle': 'off',
   },
 };

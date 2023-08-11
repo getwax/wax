@@ -63,6 +63,16 @@ namespace EthereumRpc {
 
   export type UserOperationReceipt = z.infer<typeof UserOperationReceipt>;
 
+  export const UserOperationGasEstimate = z.object({
+    preVerificationGas: z.string(),
+    verificationGasLimit: z.string(),
+    callGasLimit: z.string(),
+  });
+
+  export type UserOperationGasEstimate = z.infer<
+    typeof UserOperationGasEstimate
+  >;
+
   export const schema = {
     eth_requestAccounts: {
       params: emptyParams,

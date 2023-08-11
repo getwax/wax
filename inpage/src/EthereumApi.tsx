@@ -9,15 +9,8 @@ import ZodNotUndefined from './helpers/ZodNotUndefined';
 import { UserOperationStruct } from '../hardhat/typechain-types/@account-abstraction/contracts/interfaces/IEntryPoint';
 import { SimpleAccount__factory } from '../hardhat/typechain-types';
 import assert from './helpers/assert';
-import measureCalldataGas from './measureCalldataGas';
-
-// This value is needed to account for the overheads of running the entry point
-// that are difficult to attribute directly to each user op. It should be
-// calibrated so that the bundler makes a small profit overall.
-const basePreVerificationGas = 50_000n;
-
-// Cost of validating a signature or whatever verification method is in place.
-const baseVerificationGas = 100_000n;
+import IBundler from './bundlers/IBundler';
+import waxPrivate from './waxPrivate';
 
 // We need a UserOperation in order to estimate the gas fields of a
 // UserOperation, so we use these values as placeholders.
@@ -43,8 +36,9 @@ type StrictUserOperation = {
 };
 
 export default class EthereumApi {
-  #waxInPage: WaxInPage;
   #rpcUrl: string;
+  #waxInPage: WaxInPage;
+  #bundler: IBundler;
   #chainIdPromise: Promise<string>;
 
   #userOps = new Map<
@@ -61,9 +55,10 @@ export default class EthereumApi {
     }
   >();
 
-  constructor(rpcUrl: string, waxInPage: WaxInPage) {
+  constructor(rpcUrl: string, waxInPage: WaxInPage, bundler: IBundler) {
     this.#rpcUrl = rpcUrl;
     this.#waxInPage = waxInPage;
+    this.#bundler = bundler;
 
     this.#chainIdPromise = this.#networkRequest({ method: 'eth_chainId' }).then(
       (res) => z.string().parse(res),
@@ -145,7 +140,7 @@ export default class EthereumApi {
         });
       }
 
-      const account = await this.#getAccount();
+      const account = await this.#waxInPage._getAccount(waxPrivate);
 
       connectedAccounts = [account.address];
 
@@ -187,7 +182,7 @@ export default class EthereumApi {
         });
       }
 
-      const account = await this.#getAccount();
+      const account = await this.#waxInPage._getAccount(waxPrivate);
       const contracts = await this.#waxInPage.getContracts();
 
       const actions = txs.map((tx) => {
@@ -374,139 +369,16 @@ export default class EthereumApi {
       } satisfies EthereumRpc.TransactionReceipt;
     },
 
-    eth_sendUserOperation: async (userOp) => {
-      const adminAccount = await this.#waxInPage.requestAdminAccount(
-        'simulate-bundler',
-      );
+    eth_sendUserOperation: (userOp) =>
+      this.#bundler.eth_sendUserOperation(userOp),
 
-      const contracts = await this.#waxInPage.getContracts();
+    eth_estimateUserOperationGas: (userOp) =>
+      this.#bundler.eth_estimateUserOperationGas(userOp),
 
-      // *not* the confirmation, just the response (don't add .wait(), that's
-      // wrong).
-      await contracts.entryPoint
-        .connect(adminAccount)
-        .handleOps([userOp], adminAccount.getAddress());
+    eth_getUserOperationReceipt: (userOpHash) =>
+      this.#bundler.eth_getUserOperationReceipt(userOpHash),
 
-      return await contracts.entryPoint.getUserOpHash(userOp);
-    },
-
-    eth_estimateUserOperationGas: async (userOp) => {
-      const contracts = await this.#waxInPage.getContracts();
-      const account = await this.#getAccount();
-
-      // We need a beneficiary address to measure the encoded calldata, but
-      // there's no need for it to be correct.
-      const fakeBeneficiary = userOp.sender;
-
-      const baselineData = contracts.entryPoint.interface.encodeFunctionData(
-        'handleOps',
-        [[], fakeBeneficiary],
-      );
-
-      const data = contracts.entryPoint.interface.encodeFunctionData(
-        'handleOps',
-        [[userOp], fakeBeneficiary],
-      );
-
-      const calldataGas =
-        measureCalldataGas(data) - measureCalldataGas(baselineData);
-
-      let verificationGasLimit = baseVerificationGas;
-
-      assert(userOp.sender.toLowerCase() === account.address.toLowerCase());
-
-      if (BigInt(userOp.nonce) === 0n) {
-        verificationGasLimit +=
-          await contracts.simpleAccountFactory.createAccount.estimateGas(
-            account.ownerAddress,
-            0,
-          );
-      }
-
-      const callGasLimit = await this.request({
-        method: 'eth_estimateGas',
-        params: [
-          {
-            from: await contracts.entryPoint.getAddress(),
-            to: userOp.sender,
-            data: userOp.callData,
-          },
-        ],
-      });
-
-      return {
-        preVerificationGas: `0x${(
-          basePreVerificationGas + calldataGas
-        ).toString(16)}`,
-        verificationGasLimit: `0x${verificationGasLimit.toString(16)}`,
-        callGasLimit,
-      };
-    },
-
-    eth_getUserOperationReceipt: async (userOpHash) => {
-      const opInfo = this.#userOps.get(userOpHash);
-
-      if (opInfo === undefined) {
-        return null;
-      }
-
-      const contracts = await this.#waxInPage.getContracts();
-
-      const events = await contracts.entryPoint.queryFilter(
-        contracts.entryPoint.filters.UserOperationEvent(userOpHash),
-      );
-
-      if (events.length === 0) {
-        return null;
-      }
-
-      const event = events[0];
-
-      const { userOp } = opInfo;
-
-      const txReceipt = await this.request({
-        method: 'eth_getTransactionByHash',
-        params: [event.transactionHash],
-      });
-
-      if (txReceipt === null) {
-        return null;
-      }
-
-      let revertReason = '0x';
-
-      if (!event.args.success) {
-        const errorEvents = await contracts.entryPoint.queryFilter(
-          contracts.entryPoint.filters.UserOperationRevertReason(userOpHash),
-        );
-
-        const errorEvent = errorEvents.at(0);
-
-        if (errorEvent !== undefined) {
-          revertReason = errorEvent.args.revertReason;
-        }
-      }
-
-      return {
-        userOpHash,
-        entryPoint: await contracts.entryPoint.getAddress(),
-        sender: event.args.sender,
-        nonce: `0x${event.args.nonce.toString(16)}`,
-        paymaster: userOp.paymasterAndData.slice(0, 22),
-        actualGasCost: `0x${event.args.actualGasCost.toString(16)}`,
-        actualGasUsed: `0x${event.args.actualGasUsed.toString(16)}`,
-        success: event.args.success,
-        reason: revertReason,
-        logs: '0x', // TODO: Logs
-        receipt: txReceipt,
-      } satisfies EthereumRpc.UserOperationReceipt;
-    },
-
-    eth_supportedEntryPoints: async () => {
-      const contracts = await this.#waxInPage.getContracts();
-
-      return [await contracts.entryPoint.getAddress()];
-    },
+    eth_supportedEntryPoints: () => this.#bundler.eth_supportedEntryPoints(),
   };
 
   async #networkRequest({
@@ -542,30 +414,5 @@ export default class EthereumApi {
 
     assert('error' in json);
     throw JsonRpcError.parse(json.error);
-  }
-
-  async #getAccount() {
-    let account = await this.#waxInPage.storage.account.get();
-
-    if (account) {
-      return account;
-    }
-
-    const contracts = await this.#waxInPage.getContracts();
-
-    const wallet = ethers.Wallet.createRandom();
-
-    account = {
-      privateKey: wallet.privateKey,
-      ownerAddress: wallet.address,
-      address: await contracts.simpleAccountFactory.createAccount.staticCall(
-        wallet.address,
-        0,
-      ),
-    };
-
-    await this.#waxInPage.storage.account.set(account);
-
-    return account;
   }
 }

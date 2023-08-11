@@ -19,6 +19,8 @@ import SafeSingletonFactory, {
 } from './SafeSingletonFactory';
 import ReusablePopup from './ReusablePopup';
 import AdminPopup, { AdminPurpose } from './AdminPopup';
+import waxPrivate from './waxPrivate';
+import SimulatedBundler from './bundlers/SimulatedBundler';
 
 type Config = {
   requirePermission: boolean;
@@ -55,7 +57,7 @@ export default class WaxInPage {
   ethersProvider: ethers.BrowserProvider;
 
   constructor({ rpcUrl, storage = makeLocalWaxStorage() }: ConstructorOptions) {
-    this.ethereum = new EthereumApi(rpcUrl, this);
+    this.ethereum = new EthereumApi(rpcUrl, this, new SimulatedBundler(this));
     this.storage = storage;
     this.ethersProvider = new ethers.BrowserProvider(this.ethereum);
     ethersDefaultPollingInterval = this.ethersProvider.pollingInterval;
@@ -277,5 +279,34 @@ export default class WaxInPage {
 
   async disconnect() {
     await this.storage.connectedAccounts.clear();
+  }
+
+  async _getAccount(waxPrivateParam: symbol) {
+    if (waxPrivateParam !== waxPrivate) {
+      throw new Error('This method is private to the waxInPage library');
+    }
+
+    let account = await this.storage.account.get();
+
+    if (account) {
+      return account;
+    }
+
+    const contracts = await this.getContracts();
+
+    const wallet = ethers.Wallet.createRandom();
+
+    account = {
+      privateKey: wallet.privateKey,
+      ownerAddress: wallet.address,
+      address: await contracts.simpleAccountFactory.createAccount.staticCall(
+        wallet.address,
+        0,
+      ),
+    };
+
+    await this.storage.account.set(account);
+
+    return account;
   }
 }
