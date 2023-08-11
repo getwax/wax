@@ -2,15 +2,14 @@ import z from 'zod';
 
 import { ethers } from 'ethers';
 import JsonRpcError from './JsonRpcError';
-import randomId from './helpers/randomId';
 import WaxInPage from '.';
 import EthereumRpc from './EthereumRpc';
-import ZodNotUndefined from './helpers/ZodNotUndefined';
 import { UserOperationStruct } from '../hardhat/typechain-types/@account-abstraction/contracts/interfaces/IEntryPoint';
 import { SimpleAccount__factory } from '../hardhat/typechain-types';
 import assert from './helpers/assert';
 import IBundler from './bundlers/IBundler';
 import waxPrivate from './waxPrivate';
+import networkRequest from './networkRequest';
 
 // We need a UserOperation in order to estimate the gas fields of a
 // UserOperation, so we use these values as placeholders.
@@ -388,31 +387,10 @@ export default class EthereumApi {
     method: string;
     params?: unknown[];
   }) {
-    const res = await fetch(this.#rpcUrl, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        jsonrpc: '2.0',
-        method,
-        params,
-        id: randomId(),
-      }),
+    return await networkRequest({
+      rpcUrl: this.#rpcUrl,
+      method,
+      params,
     });
-
-    const json = z
-      .union([
-        z.object({ result: ZodNotUndefined() }),
-        z.object({ error: ZodNotUndefined() }),
-      ])
-      .parse(await res.json());
-
-    if ('result' in json) {
-      return json.result;
-    }
-
-    assert('error' in json);
-    throw JsonRpcError.parse(json.error);
   }
 }
