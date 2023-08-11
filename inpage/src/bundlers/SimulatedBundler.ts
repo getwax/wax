@@ -13,36 +13,8 @@ const basePreVerificationGas = 50_000n;
 // Cost of validating a signature or whatever verification method is in place.
 const baseVerificationGas = 100_000n;
 
-type StrictUserOperation = {
-  sender: string;
-  nonce: string;
-  initCode: string;
-  callData: string;
-  callGasLimit: bigint;
-  verificationGasLimit: string;
-  preVerificationGas: string;
-  maxFeePerGas: bigint;
-  maxPriorityFeePerGas: bigint;
-  paymasterAndData: string;
-  signature: string;
-};
-
 export default class SimulatedBundler implements IBundler {
   #waxInPage: WaxInPage;
-
-  #userOps = new Map<
-    string,
-    {
-      chainId: bigint;
-      userOp: StrictUserOperation;
-      actions: {
-        to: string;
-        value: bigint;
-        data: string;
-      }[];
-      batch: boolean;
-    }
-  >();
 
   constructor(waxInPage: WaxInPage) {
     this.#waxInPage = waxInPage;
@@ -124,12 +96,6 @@ export default class SimulatedBundler implements IBundler {
   async eth_getUserOperationReceipt(
     userOpHash: string,
   ): Promise<EthereumRpc.UserOperationReceipt | null> {
-    const opInfo = this.#userOps.get(userOpHash);
-
-    if (opInfo === undefined) {
-      return null;
-    }
-
     const contracts = await this.#waxInPage.getContracts();
 
     const events = await contracts.entryPoint.queryFilter(
@@ -141,8 +107,6 @@ export default class SimulatedBundler implements IBundler {
     }
 
     const event = events[0];
-
-    const { userOp } = opInfo;
 
     const txReceipt = await this.#waxInPage.ethereum.request({
       method: 'eth_getTransactionByHash',
@@ -172,7 +136,7 @@ export default class SimulatedBundler implements IBundler {
       entryPoint: await contracts.entryPoint.getAddress(),
       sender: event.args.sender,
       nonce: `0x${event.args.nonce.toString(16)}`,
-      paymaster: userOp.paymasterAndData.slice(0, 22),
+      paymaster: event.args.paymaster,
       actualGasCost: `0x${event.args.actualGasCost.toString(16)}`,
       actualGasUsed: `0x${event.args.actualGasUsed.toString(16)}`,
       success: event.args.success,
