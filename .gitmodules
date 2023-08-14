@@ -10,6 +10,12 @@
 [submodule "webauthn/lib/openzeppelin-contracts"]
 	path = webauthn/lib/openzeppelin-contracts
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts
+[submodule "webauthn/lib/safe-contracts"]
+	path = webauthn/lib/safe-contracts
+	url = https://github.com/safe-global/safe-contracts
+[submodule "webauthn/lib/account-abstraction"]
+	path = webauthn/lib/account-abstraction
+	url = https://github.com/eth-infinitism/account-abstraction
 [submodule "kernel-plugins/lib/forge-std"]
 	path = kernel-plugins/lib/forge-std
 	url = https://github.com/foundry-rs/forge-std
