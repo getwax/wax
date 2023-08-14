@@ -141,8 +141,8 @@ out/
 /broadcast/*/1337/
 /broadcast/**/dry-run/
 
-# Docs
-docs/
+# drawio backups
+docs/images/.$*.bkp
 
 # Dotenv file
 .env
