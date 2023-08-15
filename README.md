@@ -21,14 +21,14 @@ Existing smart accounts will be used to demonstrate integration of the primitive
 - On-chain, between smart contracts and primitives, the verification data+logic will be designed to be composable. Smart accounts can then dynamically benefit from more than one primitive, and this will be developed in sync with broader smart account modularisation.
 
 # Using this monorepo
-## /webExamples
+## /demos
 You're a web dev and want to bring the latest web3 capabilities to your product/users.
 Here you will not only find 'hello world' wrappers of base primitives, but also composite examples highlighting novel product features.
 
-### EthDK (imported)
+### EthDK (imported?)
 The EthDK repo is useful for SDK devs who also want to support interaction with the bleeding edge of smart account verification capabilities.
 
-## /contracts
+## /account-integrations
 You're a smart account dev and would like to integrate new primitives
 New verification schemes are integrated into existing open smart accounts here.
 This is where modularised byte verification is developed.

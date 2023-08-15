@@ -144,5 +144,8 @@ out/
 # drawio backups
 docs/images/.$*.bkp
 
+# lib docs
+**/lib/**/docs
+
 # Dotenv file
 .env
