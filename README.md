@@ -1,8 +1,7 @@
 # Wallet Account eXperiments (WAX)
-## Overview
-Team WAX wants to see more applications readily benefiting from decentralised technologies, via a smooth journey across unfamiliar technical barriers.
+WAX's goal is to deliver set of production-ready components that help developers easily utilise cryptographic primitives in smart accounts
 
-WAX seeks to achieve this with a three pronged approach:
+We seek to achieve this with a three pronged approach:
 1. Showcase, via examples, the benefits of cryptographic primitives in smart accounts
    - including examples of novel use cases that compose smart account modules
 2. Develop an easy-to-use opinionated SDK ("EthDK") that makes integrating these benefits easy for non-web3 devs
@@ -26,7 +25,9 @@ You're a web dev and want to bring the latest web3 capabilities to your product/
 Here you will not only find 'hello world' wrappers of base primitives, but also composite examples highlighting novel product features.
 
 ### EthDK (imported?)
-The EthDK repo is useful for SDK devs who also want to support interaction with the bleeding edge of smart account verification capabilities.
+The EthDK repo is useful for:
+- non-web3 builders wanting to leverage the latest smart account capabiltiies
+- SDK devs who also want to support interaction with the bleeding edge of smart account verification capabilities
 
 ## /account-integrations
 You're a smart account dev and would like to integrate new primitives
