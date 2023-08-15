@@ -1,12 +1,10 @@
 // SPDX-License-Identifier: LGPL-3.0-only
-pragma solidity >=0.7.0 <0.9.0;
-pragma abicoder v2;
+pragma solidity >=0.8.0 <0.9.0;
 
 import {BaseAccount} from "account-abstraction/contracts/core/BaseAccount.sol";
 import {IEntryPoint, UserOperation} from "account-abstraction/contracts/interfaces/IEntryPoint.sol";
-import {UserOperation} from "account-abstraction/contracts/interfaces/IEntryPoint.sol";
 
-import {ECDSA} from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
+import {FCL_WebAuthn} from "./lib/FCL_Webauthn.sol";
 
 interface ISafe {
     function enableModule(address module) external;
@@ -20,18 +18,16 @@ interface ISafe {
 }
 
 contract SafeWebAuthnPlugin is BaseAccount {
-    using ECDSA for bytes32;
-
     address public immutable myAddress;
-    address private immutable _owner;
     address private immutable _entryPoint;
+    uint256[2] private _publicKey;
 
     address internal constant _SENTINEL_MODULES = address(0x1);
 
-    constructor(address entryPointAddress, address ownerAddress) {
+    constructor(address entryPointAddress, uint256[2] memory pubKey) {
         myAddress = address(this);
-        _owner = ownerAddress;
         _entryPoint = entryPointAddress;
+        _publicKey = pubKey;
     }
 
     function validateUserOp(
@@ -75,17 +71,38 @@ contract SafeWebAuthnPlugin is BaseAccount {
         return IEntryPoint(_entryPoint);
     }
 
-    function owner() public view returns (address) {
-        return _owner;
+    function publicKey() public view returns (uint256[2] memory) {
+        return _publicKey;
     }
 
     function _validateSignature(
         UserOperation calldata userOp,
         bytes32 userOpHash
     ) internal override returns (uint256 validationData) {
-        bytes32 hash = userOpHash.toEthSignedMessageHash();
-        if (_owner != hash.recover(userOp.signature))
-            return SIG_VALIDATION_FAILED;
-        return 0;
+        {
+            (
+                bytes memory authenticatorData,
+                bytes1 authenticatorDataFlagMask,
+                bytes memory clientData,
+                uint256 clientChallengeDataOffset,
+                uint256[2] memory signature,
+                uint256[2] memory pubKey
+            ) = abi.decode(
+                    userOp.signature,
+                    (bytes, bytes1, bytes, uint256, uint256[2], uint256[2])
+                );
+
+            bool verified = FCL_WebAuthn.checkSignature(
+                authenticatorData,
+                authenticatorDataFlagMask,
+                clientData,
+                userOpHash,
+                clientChallengeDataOffset,
+                signature,
+                pubKey
+            );
+            if (!verified) return SIG_VALIDATION_FAILED;
+            return 0;
+        }
     }
 }
