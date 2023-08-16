@@ -59,6 +59,47 @@ describe("SafeWebAuthnPlugin", () => {
     };
   };
 
+  const getPublicKeyAndSignature = () => {
+    const publicKey: [BigNumberish, BigNumberish] = [
+      BigInt(
+        "84983235508986227069118519878575107221347312419117152995971180204793547896817"
+      ),
+      BigInt(
+        "65342283463016373417889909198331793507107976344099657471582098851386861908802"
+      ),
+    ];
+
+    const authenticatorData =
+      "0x1584482fdf7a4d0b7eb9d45cf835288cb59e55b8249fff356e33be88ecc546d11d00000000";
+    const authenticatorDataFlagMask = "0x01";
+    const clientData =
+      "0x7b2274797065223a22776562617574686e2e676574222c226368616c6c656e6765223a22efbfbd22efbfbd5f21efbfbd1b113e63efbfbdefbfbd6defbfbd4fefbfbdefbfbd11efbfbd11efbfbd40efbfbdefbfbdefbfbd64efbfbdefbfbd3cefbfbd58222c226f726967696e223a2268747470733a2f2f646576656c6f706d656e742e666f72756d64616f732e636f6d227d";
+    const clientChallengeDataOffset = 36;
+    const signature = [
+      BigInt(
+        "36788204816852931931532076736929768488646494203674172515272861180041446565109"
+      ),
+      BigInt(
+        "60595451626159535380360537025565143491223093262105891867977188941268073626113"
+      ),
+    ];
+
+    const encoder = new ethers.AbiCoder();
+    const userOpSignature = encoder.encode(
+      ["bytes", "bytes1", "bytes", "uint256", "uint256[2]", "uint256[2]"],
+      [
+        authenticatorData,
+        authenticatorDataFlagMask,
+        clientData,
+        clientChallengeDataOffset,
+        signature,
+        publicKey,
+      ]
+    );
+
+    return { publicKey, userOpSignature };
+  };
+
   /**
    * This test verifies a ERC4337 transaction succeeds when sent via a plugin
    * The user operation deploys a Safe with the ERC4337 plugin and a handler
@@ -75,15 +116,8 @@ describe("SafeWebAuthnPlugin", () => {
       userWallet,
       entryPoints,
     } = await setupTests();
+    const { publicKey, userOpSignature } = getPublicKeyAndSignature();
     const ENTRYPOINT_ADDRESS = entryPoints[0];
-    const publicKey: [BigNumberish, BigNumberish] = [
-      BigInt(
-        "84983235508986227069118519878575107221347312419117152995971180204793547896817"
-      ),
-      BigInt(
-        "65342283463016373417889909198331793507107976344099657471582098851386861908802"
-      ),
-    ];
 
     const safeWebAuthnPluginFactory = (
       await hre.ethers.getContractFactory("SafeWebAuthnPlugin")
@@ -160,35 +194,6 @@ describe("SafeWebAuthnPlugin", () => {
     });
     // The bundler uses a different node, so we need to allow it sometime to sync
     await sleep(5000);
-
-    const authenticatorData =
-      "0x1584482fdf7a4d0b7eb9d45cf835288cb59e55b8249fff356e33be88ecc546d11d00000000";
-    const authenticatorDataFlagMask = "0x01";
-    const clientData =
-      "0x7b2274797065223a22776562617574686e2e676574222c226368616c6c656e6765223a22efbfbd22efbfbd5f21efbfbd1b113e63efbfbdefbfbd6defbfbd4fefbfbdefbfbd11efbfbd11efbfbd40efbfbdefbfbdefbfbd64efbfbdefbfbd3cefbfbd58222c226f726967696e223a2268747470733a2f2f646576656c6f706d656e742e666f72756d64616f732e636f6d227d";
-    // const clientChallengeDataOffset = "0x" + (36).toString(16);
-    const clientChallengeDataOffset = 36;
-    const signature = [
-      BigInt(
-        "36788204816852931931532076736929768488646494203674172515272861180041446565109"
-      ),
-      BigInt(
-        "60595451626159535380360537025565143491223093262105891867977188941268073626113"
-      ),
-    ];
-
-    const encoder = new ethersV5.utils.AbiCoder();
-    const userOpSignature = encoder.encode(
-      ["bytes", "bytes1", "bytes", "uint256", "uint256[2]", "uint256[2]"],
-      [
-        authenticatorData,
-        authenticatorDataFlagMask,
-        clientData,
-        clientChallengeDataOffset,
-        signature,
-        publicKey,
-      ]
-    );
 
     const userOperationWithoutGas: UserOperationStruct = {
       sender: deployedAddress,
