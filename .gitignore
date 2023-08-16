@@ -141,8 +141,8 @@ out/
 /broadcast/*/1337/
 /broadcast/**/dry-run/
 
-# Docs
-docs/
+# lib docs
+**/lib/**/docs
 
 # Dotenv file
 .env
