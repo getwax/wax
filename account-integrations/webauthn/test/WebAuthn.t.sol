@@ -5,11 +5,15 @@ import "forge-std/Test.sol";
 import {TestHelper} from "./utils/TestHelper.sol";
 import {Webauthn} from "../src/Webauthn.sol";
 
+/* solhint-disable func-name-mixedcase */
+
 contract WebauthnTest is TestHelper {
     constructor() TestHelper() {}
 
+    Webauthn public webauthn;
+
     function setUp() public {
-        webauthn = new Webauthn{salt: 0}();
+        webauthn = new Webauthn();
     }
 
     function test_verifySignature_ValidSignature() public {
@@ -20,9 +24,9 @@ contract WebauthnTest is TestHelper {
             bytes memory clientData,
             bytes32 messageHash,
             uint256 clientChallengeDataOffset,
-            uint256[2] memory signature,
-            uint256[2] memory publicKey
-        ) = getPublicKeyAndSignature();
+            uint256[2] memory signature
+        ) = getWebAuthnSignatureValues();
+        uint256[2] memory publicKey = getPublicKey();
 
         // Act
         bool verified = webauthn.verifySignature(
