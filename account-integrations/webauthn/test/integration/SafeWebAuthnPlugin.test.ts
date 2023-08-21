@@ -195,23 +195,19 @@ describe("SafeWebAuthnPlugin", () => {
     // The bundler uses a different node, so we need to allow it sometime to sync
     await sleep(5000);
 
-    const userOperationWithoutGas: UserOperationStruct = {
+    const userOperationWithoutGasFields = {
       sender: deployedAddress,
       nonce: "0x0",
       initCode,
       callData: userOpCallData,
       callGasLimit: "0x00",
-      verificationGasLimit: "0x00",
-      preVerificationGas: "0x00",
-      maxFeePerGas,
-      maxPriorityFeePerGas,
       paymasterAndData: "0x",
       signature: userOpSignature,
     };
 
     const gasEstimate = await bundlerProvider.send(
       "eth_estimateUserOperationGas",
-      [userOperationWithoutGas, ENTRYPOINT_ADDRESS]
+      [userOperationWithoutGasFields, ENTRYPOINT_ADDRESS]
     );
 
     const safeVerificationGasLimit =
