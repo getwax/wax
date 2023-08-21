@@ -4,17 +4,17 @@
 [submodule "compression/lib/openzeppelin-contracts"]
 	path = account-integrations/compression/lib/openzeppelin-contracts
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts
-[submodule "webauthn/lib/forge-std"]
-	path = account-integrations/webauthn/lib/forge-std
+[submodule "plugins/lib/forge-std"]
+	path = account-integrations/plugins/lib/forge-std
 	url = https://github.com/foundry-rs/forge-std
-[submodule "webauthn/lib/openzeppelin-contracts"]
-	path = account-integrations/webauthn/lib/openzeppelin-contracts
+[submodule "plugins/lib/openzeppelin-contracts"]
+	path = account-integrations/plugins/lib/openzeppelin-contracts
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts
-[submodule "webauthn/lib/safe-contracts"]
-	path = account-integrations/webauthn/lib/safe-contracts
+[submodule "plugins/lib/safe-contracts"]
+	path = account-integrations/plugins/lib/safe-contracts
 	url = https://github.com/safe-global/safe-contracts
-[submodule "webauthn/lib/account-abstraction"]
-	path = account-integrations/webauthn/lib/account-abstraction
+[submodule "plugins/lib/account-abstraction"]
+	path = account-integrations/plugins/lib/account-abstraction
 	url = https://github.com/eth-infinitism/account-abstraction
 [submodule "kernel-plugins/lib/forge-std"]
 	path = account-integrations/kernel-plugins/lib/forge-std
