@@ -3,7 +3,7 @@ pragma solidity ^0.8.12;
 
 import "forge-std/Test.sol";
 import {EntryPoint, UserOperation} from "account-abstraction/contracts/core/EntryPoint.sol";
-import {Webauthn} from "../../src/Webauthn.sol";
+import {Webauthn} from "../../../src/safe-plugins/Webauthn.sol";
 
 /* solhint-disable private-vars-leading-underscore */
 

@@ -1,11 +1,10 @@
 import hre from "hardhat";
 import { expect } from "chai";
 import { AddressZero } from "@ethersproject/constants";
-import { getBytes, concat, resolveProperties, ethers } from "ethers";
+import { concat, ethers, BigNumberish } from "ethers";
 import { ethers as ethersV5 } from "ethers-v5";
 import { UserOperationStruct } from "@account-abstraction/contracts";
-import { getUserOpHash } from "@account-abstraction/utils";
-import { calculateProxyAddress } from "../../utils/calculateProxyAddress";
+import { calculateProxyAddress } from "../../../utils/calculateProxyAddress";
 
 const ERC4337_TEST_ENV_VARIABLES_DEFINED =
   typeof process.env.ERC4337_TEST_BUNDLER_URL !== "undefined" &&
@@ -23,7 +22,7 @@ const MNEMONIC = process.env.MNEMONIC;
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-describe("SafeECDSAPlugin", () => {
+describe("SafeWebAuthnPlugin", () => {
   const setupTests = async () => {
     const factory = await hre.ethers.getContractFactory("SafeProxyFactory");
     const singleton = await hre.ethers.getContractFactory("Safe");
@@ -60,6 +59,47 @@ describe("SafeECDSAPlugin", () => {
     };
   };
 
+  const getPublicKeyAndSignature = () => {
+    const publicKey: [BigNumberish, BigNumberish] = [
+      BigInt(
+        "84983235508986227069118519878575107221347312419117152995971180204793547896817"
+      ),
+      BigInt(
+        "65342283463016373417889909198331793507107976344099657471582098851386861908802"
+      ),
+    ];
+
+    const authenticatorData =
+      "0x1584482fdf7a4d0b7eb9d45cf835288cb59e55b8249fff356e33be88ecc546d11d00000000";
+    const authenticatorDataFlagMask = "0x01";
+    const clientData =
+      "0x7b2274797065223a22776562617574686e2e676574222c226368616c6c656e6765223a22efbfbd22efbfbd5f21efbfbd1b113e63efbfbdefbfbd6defbfbd4fefbfbdefbfbd11efbfbd11efbfbd40efbfbdefbfbdefbfbd64efbfbdefbfbd3cefbfbd58222c226f726967696e223a2268747470733a2f2f646576656c6f706d656e742e666f72756d64616f732e636f6d227d";
+    const clientChallengeDataOffset = 36;
+    const signature = [
+      BigInt(
+        "36788204816852931931532076736929768488646494203674172515272861180041446565109"
+      ),
+      BigInt(
+        "60595451626159535380360537025565143491223093262105891867977188941268073626113"
+      ),
+    ];
+
+    const encoder = new ethers.AbiCoder();
+    const userOpSignature = encoder.encode(
+      ["bytes", "bytes1", "bytes", "uint256", "uint256[2]", "uint256[2]"],
+      [
+        authenticatorData,
+        authenticatorDataFlagMask,
+        clientData,
+        clientChallengeDataOffset,
+        signature,
+        publicKey,
+      ]
+    );
+
+    return { publicKey, userOpSignature };
+  };
+
   /**
    * This test verifies a ERC4337 transaction succeeds when sent via a plugin
    * The user operation deploys a Safe with the ERC4337 plugin and a handler
@@ -76,15 +116,16 @@ describe("SafeECDSAPlugin", () => {
       userWallet,
       entryPoints,
     } = await setupTests();
+    const { publicKey, userOpSignature } = getPublicKeyAndSignature();
     const ENTRYPOINT_ADDRESS = entryPoints[0];
 
-    const safeECDSAPluginFactory = (
-      await hre.ethers.getContractFactory("SafeECDSAPlugin")
+    const safeWebAuthnPluginFactory = (
+      await hre.ethers.getContractFactory("SafeWebAuthnPlugin")
     ).connect(userWallet);
-    const safeECDSAPlugin = await safeECDSAPluginFactory.deploy(
+    const safeWebAuthnPlugin = await safeWebAuthnPluginFactory.deploy(
       ENTRYPOINT_ADDRESS,
-      userWallet.address,
-      { gasLimit: 1_000_000 }
+      publicKey,
+      { gasLimit: 2_000_000 }
     );
     // The bundler uses a different node, so we need to allow it sometime to sync
     await sleep(5000);
@@ -99,20 +140,20 @@ describe("SafeECDSAPlugin", () => {
     const maxFeePerGas = "0x" + feeData.maxFeePerGas.toString();
     const maxPriorityFeePerGas = "0x" + feeData.maxPriorityFeePerGas.toString();
 
-    const safeECDSAPluginAddress = await safeECDSAPlugin.getAddress();
+    const safeWebAuthnPluginAddress = await safeWebAuthnPlugin.getAddress();
     const singletonAddress = await singleton.getAddress();
     const factoryAddress = await factory.getAddress();
 
-    const moduleInitializer = safeECDSAPlugin.interface.encodeFunctionData(
+    const moduleInitializer = safeWebAuthnPlugin.interface.encodeFunctionData(
       "enableMyself",
       []
     );
     const encodedInitializer = singleton.interface.encodeFunctionData("setup", [
       [userWallet.address],
       1,
-      safeECDSAPluginAddress,
+      safeWebAuthnPluginAddress,
       moduleInitializer,
-      safeECDSAPluginAddress,
+      safeWebAuthnPluginAddress,
       AddressZero,
       0,
       AddressZero,
@@ -141,7 +182,7 @@ describe("SafeECDSAPlugin", () => {
     const recipientAddress = signer.address;
     const transferAmount = ethers.parseEther("1");
 
-    const userOpCallData = safeECDSAPlugin.interface.encodeFunctionData(
+    const userOpCallData = safeWebAuthnPlugin.interface.encodeFunctionData(
       "execTransaction",
       [recipientAddress, transferAmount, "0x00"]
     );
@@ -154,37 +195,47 @@ describe("SafeECDSAPlugin", () => {
     // The bundler uses a different node, so we need to allow it sometime to sync
     await sleep(5000);
 
-    const unsignedUserOperation: UserOperationStruct = {
+    const userOperationWithoutGasFields = {
       sender: deployedAddress,
       nonce: "0x0",
       initCode,
       callData: userOpCallData,
-      callGasLimit: "0x7A120",
-      verificationGasLimit: "0x7A120",
-      preVerificationGas: "0x186A0",
+      callGasLimit: "0x00",
+      paymasterAndData: "0x",
+      signature: userOpSignature,
+    };
+
+    const gasEstimate = await bundlerProvider.send(
+      "eth_estimateUserOperationGas",
+      [userOperationWithoutGasFields, ENTRYPOINT_ADDRESS]
+    );
+
+    const safeVerificationGasLimit =
+      BigInt(gasEstimate.verificationGasLimit) +
+      BigInt(gasEstimate.verificationGasLimit) / 10n; // + 10%
+
+    const safePreVerificationGas =
+      BigInt(gasEstimate.preVerificationGas) +
+      BigInt(gasEstimate.preVerificationGas) / 50n; // + 2%
+
+    const userOperation: UserOperationStruct = {
+      sender: deployedAddress,
+      nonce: "0x0",
+      initCode,
+      callData: userOpCallData,
+      callGasLimit: gasEstimate.callGasLimit,
+      verificationGasLimit: ethers.toBeHex(safeVerificationGasLimit),
+      preVerificationGas: ethers.toBeHex(safePreVerificationGas),
       maxFeePerGas,
       maxPriorityFeePerGas,
       paymasterAndData: "0x",
-      signature: "",
-    };
-
-    const resolvedUserOp = await resolveProperties(unsignedUserOperation);
-    const userOpHash = getUserOpHash(
-      resolvedUserOp,
-      ENTRYPOINT_ADDRESS,
-      Number(provider._network.chainId)
-    );
-    const userOpSignature = await userWallet.signMessage(getBytes(userOpHash));
-
-    const userOperation = {
-      ...unsignedUserOperation,
       signature: userOpSignature,
     };
 
     const DEBUG_MESSAGE = `
             Using entry point: ${ENTRYPOINT_ADDRESS}
             Deployed Safe address: ${deployedAddress}
-            Module/Handler address: ${safeECDSAPluginAddress}
+            Module/Handler address: ${safeWebAuthnPluginAddress}
             User operation: 
             ${JSON.stringify(userOperation, null, 2)}
         `;

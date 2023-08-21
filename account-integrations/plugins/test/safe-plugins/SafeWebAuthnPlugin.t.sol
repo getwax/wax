@@ -4,7 +4,7 @@ pragma solidity ^0.8.12;
 import "forge-std/Test.sol";
 import {TestHelper} from "./utils/TestHelper.sol";
 import {SafeWebAuthnPluginHarness} from "./utils/SafeWebAuthnPluginHarness.sol";
-import {SafeWebAuthnPlugin} from "../src/SafeWebAuthnPlugin.sol";
+import {SafeWebAuthnPlugin} from "../../src/safe-plugins/SafeWebAuthnPlugin.sol";
 import {UserOperation, UserOperationLib} from "account-abstraction/contracts/interfaces/IEntryPoint.sol";
 
 /* solhint-disable func-name-mixedcase */
