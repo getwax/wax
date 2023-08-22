@@ -32,6 +32,9 @@ const config: HardhatUserConfig = {
       url: "http://localhost:8545",
     },
   },
+  mocha: {
+    timeout: 120000,
+  },
   preprocess: {
     eachLine: (hre) => ({
       transform: (line: string) => {
