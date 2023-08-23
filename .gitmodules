@@ -4,21 +4,21 @@
 [submodule "compression/lib/openzeppelin-contracts"]
 	path = account-integrations/compression/lib/openzeppelin-contracts
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts
-[submodule "webauthn/lib/forge-std"]
+[submodule "account-integrations/safe/lib/forge-std"]
 	path = account-integrations/safe/lib/forge-std
 	url = https://github.com/foundry-rs/forge-std
-[submodule "webauthn/lib/openzeppelin-contracts"]
+[submodule "account-integrations/safe/lib/openzeppelin-contracts"]
 	path = account-integrations/safe/lib/openzeppelin-contracts
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts
-[submodule "webauthn/lib/safe-contracts"]
+[submodule "account-integrations/safe/lib/safe-contracts"]
 	path = account-integrations/safe/lib/safe-contracts
 	url = https://github.com/safe-global/safe-contracts
-[submodule "webauthn/lib/account-abstraction"]
+[submodule "account-integrations/safe/lib/account-abstraction"]
 	path = account-integrations/safe/lib/account-abstraction
 	url = https://github.com/eth-infinitism/account-abstraction
-[submodule "kernel-plugins/lib/forge-std"]
+[submodule "account-integrations/kernel/lib/forge-std"]
 	path = account-integrations/kernel/lib/forge-std
 	url = https://github.com/foundry-rs/forge-std
-[submodule "kernel-plugins/lib/kernel"]
+[submodule "account-integrations/kernel/lib/kernel"]
 	path = account-integrations/kernel/lib/kernel
 	url = https://github.com/zerodevapp/kernel

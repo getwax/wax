@@ -3,7 +3,7 @@ pragma solidity ^0.8.12;
 
 import "forge-std/Test.sol";
 import {TestHelper} from "./utils/TestHelper.sol";
-import {Webauthn} from "../src/Webauthn.sol";
+import {Webauthn} from "../src/WebAuthn.sol";
 
 /* solhint-disable func-name-mixedcase */
 
