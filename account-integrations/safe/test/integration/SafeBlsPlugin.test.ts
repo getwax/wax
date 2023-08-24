@@ -1,39 +1,41 @@
-import hre from "hardhat";
+import { ethers } from "hardhat";
 import { expect } from "chai";
 import { AddressZero } from "@ethersproject/constants";
-import { concat, ethers, BigNumberish, resolveProperties, getBytes } from "ethers";
-import { ethers as ethersV5 } from "ethers-v5";
+import { utils } from "ethers-v5";
 import { UserOperationStruct } from "@account-abstraction/contracts";
 import { calculateProxyAddress } from "../../utils/calculateProxyAddress";
-import { signer as blsSigner, mcl } from '@thehubbleproject/bls';
+import { signer as hubbleBlsSigner } from '@thehubbleproject/bls';
 import { getUserOpHash } from "@account-abstraction/utils";
 
-import { SafeProxyFactory as SafeProxyFactoryType } from "../../typechain-types/lib/safe-contracts/contracts/proxies/SafeProxyFactory";
-import { Safe as SafeType } from "../../typechain-types/lib/safe-contracts/contracts/Safe";
-import { EntryPoint as EntryPointType } from "../../typechain-types/lib/account-abstraction/contracts/core/EntryPoint";
+import { SafeProxyFactory } from "../../typechain-types/lib/safe-contracts/contracts/proxies/SafeProxyFactory";
+import { Safe } from "../../typechain-types/lib/safe-contracts/contracts/Safe";
+import { EntryPoint } from "../../typechain-types/lib/account-abstraction/contracts/core/EntryPoint";
 
-const MNEMONIC = process.env.MNEMONIC;
-const BLS_PRIVATE_KEY =
-'0xdbe3d601b1b25c42c50015a87855fdce00ea9b3a7e33c92d31c69aeb70708e08';
+const BLS_PRIVATE_KEY = '0xdbe3d601b1b25c42c50015a87855fdce00ea9b3a7e33c92d31c69aeb70708e08';
+const MNEMONIC = "test test test test test test test test test test test junk";
 
-let safeProxyFactory: SafeProxyFactoryType;
-let safe: SafeType;
-let entryPoint: EntryPointType;
+let safeProxyFactory: SafeProxyFactory;
+let safe: Safe;
+let entryPoint: EntryPoint;
 
 describe("SafeBlsPlugin", () => {
   const setupTests = async () => {
-    const SafeProxyFactory = await hre.ethers.getContractFactory("SafeProxyFactory");
-    const Safe = await hre.ethers.getContractFactory("Safe");
-    const EntryPoint = await hre.ethers.getContractFactory("EntryPoint");
+    // const SafeProxyFactory = await ethers.getContractFactory("SafeProxyFactory");
+    const Safe = await ethers.getContractFactory("Safe");
+    const EntryPoint = await ethers.getContractFactory("EntryPoint");
 
-    safeProxyFactory = await SafeProxyFactory.deploy();
-    safe = await Safe.deploy();
-    entryPoint = await EntryPoint.deploy();
+    safeProxyFactory = await (
+        await ethers.getContractFactory("SafeProxyFactory")
+    ).deploy();
+    safe = await (
+        await ethers.getContractFactory("Safe")
+    ).deploy();
+    entryPoint = await (
+        await ethers.getContractFactory("EntryPoint")
+    ).deploy();
 
-    // const bundlerProvider = new ethersV5.providers.JsonRpcProvider(BUNDLER_URL);
-    // const provider = new ethers.JsonRpcProvider(NODE_URL);
-    const provider = hre.ethers.provider;
-    const userWallet = ethers.Wallet.fromPhrase(MNEMONIC as string).connect(
+    const provider = ethers.provider;
+    const userWallet = ethers.Wallet.fromPhrase(MNEMONIC).connect(
       provider
     );
 
@@ -61,23 +63,21 @@ describe("SafeBlsPlugin", () => {
         safe,
         safeProxyFactory,
     } = await setupTests();
-    const domain = ethersV5.utils.arrayify(ethersV5.utils.keccak256(Buffer.from('eip4337.bls.domain')));
-    const signerFactory = await blsSigner.BlsSignerFactory.new();
-    const intSigner = signerFactory.getSigner(domain, BLS_PRIVATE_KEY);
 
-    // const { publicKey, userOpSignature } = getPublicKeyAndSignature();
+    const domain = utils.arrayify(utils.keccak256(Buffer.from('eip4337.bls.domain')));
+    const signerFactory = await hubbleBlsSigner.BlsSignerFactory.new();
+    const blsSigner = signerFactory.getSigner(domain, BLS_PRIVATE_KEY);
+
     const ENTRYPOINT_ADDRESS = await entryPoint.getAddress();
 
     const safeBlsPluginFactory = (
-      await hre.ethers.getContractFactory("SafeBlsPlugin")
+      await ethers.getContractFactory("SafeBlsPlugin")
     ).connect(userWallet);
     const safeBlsPlugin = await safeBlsPluginFactory.deploy(
       ENTRYPOINT_ADDRESS,
-      intSigner.pubkey,
+      blsSigner.pubkey,
       { gasLimit: 30_000_000 }
     );
-    // The bundler uses a different node, so we need to allow it sometime to sync
-    // await sleep(5000);
 
     const feeData = await provider.getFeeData();
     if (!feeData.maxFeePerGas || !feeData.maxPriorityFeePerGas) {
@@ -116,7 +116,7 @@ describe("SafeBlsPlugin", () => {
     );
 
     // The initCode contains 20 bytes of the factory address and the rest is the calldata to be forwarded
-    const initCode = concat([
+    const initCode = ethers.concat([
       factoryAddress,
       safeProxyFactory.interface.encodeFunctionData("createProxyWithNonce", [
         singletonAddress,
@@ -156,17 +156,19 @@ describe("SafeBlsPlugin", () => {
       signature: "",
     };
 
-    const resolvedUserOp = await resolveProperties(unsignedUserOperation);
+    const resolvedUserOp = await ethers.resolveProperties(unsignedUserOperation);
     const userOpHash = getUserOpHash(
         resolvedUserOp,
-        await entryPoint.getAddress(),
+        ENTRYPOINT_ADDRESS,
         Number((await provider.getNetwork()).chainId)
     );
-    const userOpSignature = await intSigner.sign(userOpHash);
-    console.log(userOpSignature)
+
+    // Create BLS signature of the userOpHash
+    const userOpSignature = await blsSigner.sign(userOpHash);
+
     const userOperation = {
         ...unsignedUserOperation,
-        signature: ethersV5.utils.solidityPack(["uint256", "uint256"], userOpSignature),
+        signature: utils.solidityPack(["uint256", "uint256"], userOpSignature),
     };
 
     const DEBUG_MESSAGE = `
@@ -183,16 +185,16 @@ describe("SafeBlsPlugin", () => {
     try {
         const rcpt = await entryPoint
             .handleOps(
-            [userOperation],
-            ENTRYPOINT_ADDRESS
+                [userOperation],
+                ENTRYPOINT_ADDRESS
             )
     } catch (e) {
-        console.log('error=', e);
+        console.log('EntryPoint handleOps error=', e);
     }
 
     const recipientBalanceAfter = await provider.getBalance(recipientAddress);
-
     const expectedRecipientBalance = recipientBalanceBefore + transferAmount;
+
     expect(recipientBalanceAfter).to.equal(expectedRecipientBalance);
   });
 });
