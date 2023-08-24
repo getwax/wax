@@ -12,3 +12,4 @@ import {MultiSendCallOnly} from "safe-contracts/contracts/libraries/MultiSendCal
 import {SignMessageLib} from "safe-contracts/contracts/libraries/SignMessageLib.sol";
 import {SafeL2} from "safe-contracts/contracts/SafeL2.sol";
 import {Safe} from "safe-contracts/contracts/Safe.sol";
+import {EntryPoint} from "account-abstraction/contracts/core/EntryPoint.sol";
