@@ -828,6 +828,14 @@
   dependencies:
     antlr4ts "^0.5.0-alpha.4"
 
+"@thehubbleproject/bls@^0.5.1":
+  version "0.5.1"
+  resolved "https://registry.yarnpkg.com/@thehubbleproject/bls/-/bls-0.5.1.tgz#6b0565f56fc9c8896dcf3c8f0e2214b69a06167f"
+  integrity sha512-g5zeMZ8js/yg6MjFoC+pt0eqfCL2jC46yLY1LbKNriyqftB1tE3jpG/FMMDIW3x9/yRg/AgUb8Nluqj15tQs+A==
+  dependencies:
+    ethers "^5.5.3"
+    mcl-wasm "^1.0.0"
+
 "@tsconfig/node10@^1.0.7":
   version "1.0.9"
   resolved "https://registry.yarnpkg.com/@tsconfig/node10/-/node10-1.0.9.tgz#df4907fc07a886922637b15e02d4cebc4c0021b2"
@@ -940,6 +948,11 @@
   version "10.17.60"
   resolved "https://registry.yarnpkg.com/@types/node/-/node-10.17.60.tgz#35f3d6213daed95da7f0f73e75bcc6980e90597b"
   integrity sha512-F0KIgDJfy2nA3zMLmWGKxcH2ZVEtCZXHHdOQs2gSaQ27+lNeEfGxzkIw90aXswATX7AZ33tahPbzy6KAfUreVw==
+
+"@types/node@^20.2.5":
+  version "20.5.3"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-20.5.3.tgz#fa52c147f405d56b2f1dd8780d840aa87ddff629"
+  integrity sha512-ITI7rbWczR8a/S6qjAW7DMqxqFMjjTo61qZVWJ1ubPvbIQsL5D/TvwjYEalM8Kthpe3hTzOGrF2TGbAu2uyqeA==
 
 "@types/node@^8.0.0":
   version "8.10.66"
@@ -2095,7 +2108,7 @@ ethereumjs-util@^7.1.0, ethereumjs-util@^7.1.4:
     ethereum-cryptography "^0.1.3"
     rlp "^2.2.4"
 
-"ethers-v5@npm:ethers@5.7.2", ethers@^5.7.0, ethers@^5.7.1:
+"ethers-v5@npm:ethers@5.7.2", ethers@^5.5.3, ethers@^5.7.0, ethers@^5.7.1:
   version "5.7.2"
   resolved "https://registry.yarnpkg.com/ethers/-/ethers-5.7.2.tgz#3a7deeabbb8c030d4126b24f84e525466145872e"
   integrity sha512-wswUsmWo1aOK8rR7DIKiWSw9DbLWe6x98Jrn8wcTflTVvaXhAMaB5zGAXy0GYQEQp9iO1iSHWVyARQm11zUtyg==
@@ -3320,6 +3333,13 @@ mcl-wasm@^0.7.1:
   version "0.7.9"
   resolved "https://registry.yarnpkg.com/mcl-wasm/-/mcl-wasm-0.7.9.tgz#c1588ce90042a8700c3b60e40efb339fc07ab87f"
   integrity sha512-iJIUcQWA88IJB/5L15GnJVnSQJmf/YaxxV6zRavv83HILHaJQb6y0iFyDMdDO0gN8X37tdxmAOrH/P8B6RB8sQ==
+
+mcl-wasm@^1.0.0:
+  version "1.3.0"
+  resolved "https://registry.yarnpkg.com/mcl-wasm/-/mcl-wasm-1.3.0.tgz#10cd569c8448366a636c312af9207b2ed3f83674"
+  integrity sha512-7nChbr2sBEk9tSp7h8LGJp+bm2UfRzSZCV9LUD00ZPQCynT2W5dPBQcX27Nd++f3zMEl1nrgsT9OdHgxRdu7jw==
+  dependencies:
+    "@types/node" "^20.2.5"
 
 md5.js@^1.3.4:
   version "1.3.5"

@@ -9,6 +9,7 @@ import MultiSendCallOnly from "../artifacts/lib/safe-contracts/contracts/librari
 import SignMessageLib from "../artifacts/lib/safe-contracts/contracts/libraries/SignMessageLib.sol/SignMessageLib.json";
 import SafeL2 from "../artifacts/lib/safe-contracts/contracts/SafeL2.sol/SafeL2.json";
 import Safe from "../artifacts/lib/safe-contracts/contracts/Safe.sol/Safe.json";
+import EntryPoint from "../artifacts/lib/account-abstraction/contracts/core/EntryPoint.sol/EntryPoint.json";
 
 const deploy = async function () {
   const contracts = [
@@ -22,6 +23,7 @@ const deploy = async function () {
     SignMessageLib,
     SafeL2,
     Safe,
+    EntryPoint,
   ];
 
   const provider = new ethers.JsonRpcProvider(process.env.NODE_URL);

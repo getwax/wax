@@ -20,11 +20,16 @@ const config: HardhatUserConfig = {
     settings: {
       optimizer: {
         enabled: true,
-        runs: 200,
+        runs: 1000,
       },
     },
   },
   networks: {
+    hardhat: {
+      allowUnlimitedContractSize: true,
+      blockGasLimit: 10000000000,
+      gas: 10000000000,
+    },
     localhost: {
       allowUnlimitedContractSize: true,
       blockGasLimit: 100000000,

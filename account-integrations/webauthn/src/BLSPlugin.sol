@@ -4,8 +4,7 @@ pragma abicoder v2;
 
 import {BaseAccount} from "account-abstraction/contracts/core/BaseAccount.sol";
 import {IEntryPoint, UserOperation} from "account-abstraction/contracts/interfaces/IEntryPoint.sol";
-import {UserOperation} from "account-abstraction/contracts/interfaces/IEntryPoint.sol";
-import "account-abstraction/contracts/samples/bls/lib/hubble-contracts/contracts/libs/BLS.sol";
+// import "account-abstraction/contracts/samples/bls/lib/hubble-contracts/contracts/libs/BLS.sol";
 
 interface ISafe {
     function enableModule(address module) external;
@@ -18,7 +17,7 @@ interface ISafe {
     ) external returns (bool success);
 }
 
-contract SafeBLSPlugin is BaseAccount {
+contract BLSPlugin is BaseAccount {
 
     bytes32 public constant BLS_DOMAIN = keccak256("eip4337.bls.domain");
     address public immutable myAddress;
@@ -81,22 +80,22 @@ contract SafeBLSPlugin is BaseAccount {
     function _validateSignature(
         UserOperation calldata userOp,
         bytes32 userOpHash
-    ) internal override returns (uint256 validationData) {
+    ) internal view override returns (uint256 validationData) {
         require(userOp.signature.length == 64, "VG: Sig bytes length must be 64");
 
         uint256[2] memory decodedSignature = abi.decode(userOp.signature, (uint256[2]));
 
         bytes memory hashBytes = abi.encodePacked(userOpHash);
-        uint256[2] memory message = BLS.hashToPoint(
-            BLS_DOMAIN,
-            hashBytes
-        );
-        (bool verified, bool callSuccess) = BLS.verifySingle(decodedSignature, _blsPublicKey, message);
+        // uint256[2] memory message = BLS.hashToPoint(
+        //     BLS_DOMAIN,
+        //     hashBytes
+        // );
+        // (bool verified, bool callSuccess) = BLS.verifySingle(decodedSignature, _blsPublicKey, message);
 
-        if (verified && callSuccess) {
-            return 0;
-        }
-        // TODO: check if wallet recovered
+        // if (verified && callSuccess) {
+        //     return 0;
+        // }
+        // // TODO: check if wallet recovered
         return SIG_VALIDATION_FAILED;
     }
 }
