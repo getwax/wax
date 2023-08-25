@@ -18,7 +18,7 @@ interface ISafe {
 }
 
 contract SafeBlsPlugin is BaseAccount {
-
+    // TODO: Use EIP 712 for domain separation
     bytes32 public constant BLS_DOMAIN = keccak256("eip4337.bls.domain");
     address public immutable myAddress;
     uint256[4] private _blsPublicKey;

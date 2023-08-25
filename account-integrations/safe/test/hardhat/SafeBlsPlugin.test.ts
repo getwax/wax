@@ -20,10 +20,6 @@ let entryPoint: EntryPoint;
 
 describe("SafeBlsPlugin", () => {
   const setupTests = async () => {
-    // const SafeProxyFactory = await ethers.getContractFactory("SafeProxyFactory");
-    const Safe = await ethers.getContractFactory("Safe");
-    const EntryPoint = await ethers.getContractFactory("EntryPoint");
-
     safeProxyFactory = await (
         await ethers.getContractFactory("SafeProxyFactory")
     ).deploy();
@@ -171,14 +167,15 @@ describe("SafeBlsPlugin", () => {
         signature: utils.solidityPack(["uint256", "uint256"], userOpSignature),
     };
 
-    const DEBUG_MESSAGE = `
-            Using entry point: ${ENTRYPOINT_ADDRESS}
-            Deployed Safe address: ${deployedAddress}
-            Module/Handler address: ${safeBlsPluginAddress}
-            User operation: 
-            ${JSON.stringify(userOperation, null, 2)}
-        `;
-    console.log(DEBUG_MESSAGE);
+    // Uncomment to get a detailed debug message
+    // const DEBUG_MESSAGE = `
+    //         Using entry point: ${ENTRYPOINT_ADDRESS}
+    //         Deployed Safe address: ${deployedAddress}
+    //         Module/Handler address: ${safeBlsPluginAddress}
+    //         User operation: 
+    //         ${JSON.stringify(userOperation, null, 2)}
+    //     `;
+    // console.log(DEBUG_MESSAGE);
 
     const recipientBalanceBefore = await provider.getBalance(recipientAddress);
 
