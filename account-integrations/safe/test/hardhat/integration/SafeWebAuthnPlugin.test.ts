@@ -232,14 +232,15 @@ describe("SafeWebAuthnPlugin", () => {
       signature: userOpSignature,
     };
 
-    const DEBUG_MESSAGE = `
-            Using entry point: ${ENTRYPOINT_ADDRESS}
-            Deployed Safe address: ${deployedAddress}
-            Module/Handler address: ${safeWebAuthnPluginAddress}
-            User operation: 
-            ${JSON.stringify(userOperation, null, 2)}
-        `;
-    console.log(DEBUG_MESSAGE);
+    // Uncomment to get a detailed debug message
+    // const DEBUG_MESSAGE = `
+    //         Using entry point: ${ENTRYPOINT_ADDRESS}
+    //         Deployed Safe address: ${deployedAddress}
+    //         Module/Handler address: ${safeWebAuthnPluginAddress}
+    //         User operation:
+    //         ${JSON.stringify(userOperation, null, 2)}
+    //     `;
+    // console.log(DEBUG_MESSAGE);
 
     const recipientBalanceBefore = await provider.getBalance(recipientAddress);
 
