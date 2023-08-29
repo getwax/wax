@@ -2,7 +2,13 @@
 
 # Getting Started
 
-To run the integration test:
+1. `cd webauthn`
+2. Run `yarn` to install dependencies
+3. Run `forge install` to install foundry dependencies
+
+## Integration test
+
+To run the integration tests:
 
 1. Start a geth node, fund accounts and deploy Safe contracts:
 
@@ -19,8 +25,8 @@ To run the integration test:
 yarn run bundler
 ```
 
-4. Run the plugin test:
+4. Run the plugin tests:
 
 ```bash
-yarn hardhat test test/integration/SafeWebAuthn.test.ts
+yarn hardhat test
 ```

@@ -19,7 +19,7 @@ interface ISafe {
     ) external returns (bool success);
 }
 
-contract SafeWebAuthnPlugin is BaseAccount {
+contract SafeECDSAPlugin is BaseAccount {
     using ECDSA for bytes32;
 
     address public immutable myAddress;

@@ -23,7 +23,7 @@ const MNEMONIC = process.env.MNEMONIC;
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-describe("Safe.ERC4337", () => {
+describe("SafeECDSAPlugin", () => {
   const setupTests = async () => {
     const factory = await hre.ethers.getContractFactory("SafeProxyFactory");
     const singleton = await hre.ethers.getContractFactory("Safe");
@@ -78,10 +78,10 @@ describe("Safe.ERC4337", () => {
     } = await setupTests();
     const ENTRYPOINT_ADDRESS = entryPoints[0];
 
-    const safeWebAuthnPluginFactory = (
-      await hre.ethers.getContractFactory("SafeWebAuthnPlugin")
+    const safeECDSAPluginFactory = (
+      await hre.ethers.getContractFactory("SafeECDSAPlugin")
     ).connect(userWallet);
-    const safeWebAuthnPlugin = await safeWebAuthnPluginFactory.deploy(
+    const safeECDSAPlugin = await safeECDSAPluginFactory.deploy(
       ENTRYPOINT_ADDRESS,
       userWallet.address,
       { gasLimit: 1_000_000 }
@@ -99,20 +99,20 @@ describe("Safe.ERC4337", () => {
     const maxFeePerGas = "0x" + feeData.maxFeePerGas.toString();
     const maxPriorityFeePerGas = "0x" + feeData.maxPriorityFeePerGas.toString();
 
-    const safeWebAuthnPluginAddress = await safeWebAuthnPlugin.getAddress();
+    const safeECDSAPluginAddress = await safeECDSAPlugin.getAddress();
     const singletonAddress = await singleton.getAddress();
     const factoryAddress = await factory.getAddress();
 
-    const moduleInitializer = safeWebAuthnPlugin.interface.encodeFunctionData(
+    const moduleInitializer = safeECDSAPlugin.interface.encodeFunctionData(
       "enableMyself",
       []
     );
     const encodedInitializer = singleton.interface.encodeFunctionData("setup", [
       [userWallet.address],
       1,
-      safeWebAuthnPluginAddress,
+      safeECDSAPluginAddress,
       moduleInitializer,
-      safeWebAuthnPluginAddress,
+      safeECDSAPluginAddress,
       AddressZero,
       0,
       AddressZero,
@@ -141,7 +141,7 @@ describe("Safe.ERC4337", () => {
     const recipientAddress = signer.address;
     const transferAmount = ethers.parseEther("1");
 
-    const userOpCallData = safeWebAuthnPlugin.interface.encodeFunctionData(
+    const userOpCallData = safeECDSAPlugin.interface.encodeFunctionData(
       "execTransaction",
       [recipientAddress, transferAmount, "0x00"]
     );
@@ -184,7 +184,7 @@ describe("Safe.ERC4337", () => {
     const DEBUG_MESSAGE = `
             Using entry point: ${ENTRYPOINT_ADDRESS}
             Deployed Safe address: ${deployedAddress}
-            Module/Handler address: ${safeWebAuthnPluginAddress}
+            Module/Handler address: ${safeECDSAPluginAddress}
             User operation: 
             ${JSON.stringify(userOperation, null, 2)}
         `;
