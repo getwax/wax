@@ -48,7 +48,7 @@ abstract contract TestHelper is Test {
         );
     }
 
-    function getPublicKey()
+    function getWebAuthnPublicKey()
         internal
         pure
         returns (uint256[2] memory publicKey)
@@ -82,7 +82,7 @@ abstract contract TestHelper is Test {
         ];
     }
 
-    function getUserOpSignature()
+    function getWebAuthnUserOpSignature()
         internal
         pure
         returns (bytes memory userOpSignature)
@@ -95,7 +95,7 @@ abstract contract TestHelper is Test {
             uint256 clientChallengeDataOffset,
             uint256[2] memory signature
         ) = getWebAuthnSignatureValues();
-        uint256[2] memory publicKey = getPublicKey();
+        uint256[2] memory publicKey = getWebAuthnPublicKey();
 
         userOpSignature = abi.encode(
             authenticatorData,

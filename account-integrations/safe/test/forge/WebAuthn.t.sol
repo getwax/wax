@@ -26,7 +26,7 @@ contract WebauthnTest is TestHelper {
             uint256 clientChallengeDataOffset,
             uint256[2] memory signature
         ) = getWebAuthnSignatureValues();
-        uint256[2] memory publicKey = getPublicKey();
+        uint256[2] memory publicKey = getWebAuthnPublicKey();
 
         // Act
         bool verified = webauthn.verifySignature(
