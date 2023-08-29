@@ -16,7 +16,11 @@ To run the integration tests:
 ./script/start.sh
 ```
 
-2. Create a `.env` file and update the Safe address values. For `ERC4337_TEST_SINGLETON_ADDRESS`, use the address outputted as `Safe` in the terminal after running `start.sh`. For `ERC4337_TEST_SAFE_FACTORY_ADDRESS`, use the address outputted as `SafeProxyFactory` in the terminal after running `start.sh`.
+2. Create an `.env` file with the values from `.env.example`:
+
+```bash
+cp .env.example .env
+```
 
 3. Start an external bundler (make sure the values in `.env` match up with the bundler and node you're running).
 
