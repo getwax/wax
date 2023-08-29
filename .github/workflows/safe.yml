@@ -54,6 +54,7 @@ jobs:
         with:
           node-version: "16.x"
           cache: "yarn"
+          cache-dependency-path: account-integrations/safe/yarn.lock
 
       - name: Install Yarn dependencies
         run: yarn install --frozen-lockfile
