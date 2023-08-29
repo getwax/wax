@@ -1,47 +1,45 @@
 import { ethers } from "ethers";
-import SimulateTxAccessor from "../artifacts/lib/safe-contracts/contracts/accessors/SimulateTxAccessor.sol/SimulateTxAccessor.json";
-import SafeProxyFactory from "../artifacts/lib/safe-contracts/contracts/proxies/SafeProxyFactory.sol/SafeProxyFactory.json";
-import TokenCallbackHandler from "../artifacts/lib/safe-contracts/contracts/handler/TokenCallbackHandler.sol/TokenCallbackHandler.json";
-import CompatibilityFallbackHandler from "../artifacts/lib/safe-contracts/contracts/handler/CompatibilityFallbackHandler.sol/CompatibilityFallbackHandler.json";
-import CreateCall from "../artifacts/lib/safe-contracts/contracts/libraries/CreateCall.sol/CreateCall.json";
-import MultiSend from "../artifacts/lib/safe-contracts/contracts/libraries/MultiSend.sol/MultiSend.json";
-import MultiSendCallOnly from "../artifacts/lib/safe-contracts/contracts/libraries/MultiSendCallOnly.sol/MultiSendCallOnly.json";
-import SignMessageLib from "../artifacts/lib/safe-contracts/contracts/libraries/SignMessageLib.sol/SignMessageLib.json";
-import SafeL2 from "../artifacts/lib/safe-contracts/contracts/SafeL2.sol/SafeL2.json";
-import Safe from "../artifacts/lib/safe-contracts/contracts/Safe.sol/Safe.json";
+import SafeSingletonFactory from "../test/hardhat/utils/SafeSingletonFactory";
+import {
+  SimulateTxAccessor__factory,
+  SafeProxyFactory__factory,
+  TokenCallbackHandler__factory,
+  CompatibilityFallbackHandler__factory,
+  CreateCall__factory,
+  MultiSend__factory,
+  MultiSendCallOnly__factory,
+  SignMessageLib__factory,
+  SafeL2__factory,
+  Safe__factory,
+} from "../typechain-types";
 
 const deploy = async function () {
-  const contracts = [
-    SimulateTxAccessor,
-    SafeProxyFactory,
-    TokenCallbackHandler,
-    CompatibilityFallbackHandler,
-    CreateCall,
-    MultiSend,
-    MultiSendCallOnly,
-    SignMessageLib,
-    SafeL2,
-    Safe,
+  const contractFactories = [
+    SimulateTxAccessor__factory,
+    SafeProxyFactory__factory,
+    TokenCallbackHandler__factory,
+    CompatibilityFallbackHandler__factory,
+    CreateCall__factory,
+    MultiSend__factory,
+    MultiSendCallOnly__factory,
+    SignMessageLib__factory,
+    SafeL2__factory,
+    Safe__factory,
   ];
 
   const provider = new ethers.JsonRpcProvider(process.env.NODE_URL);
-  const signer = await provider.getSigner();
+  const hdNode = ethers.HDNodeWallet.fromPhrase(process.env.MNEMONIC!);
+  const wallet = new ethers.Wallet(hdNode.privateKey, provider);
 
-  for (const contract of contracts) {
-    const contractFactory = new ethers.ContractFactory(
-      contract.abi,
-      contract.bytecode
+  const safeSingletonFactory = await SafeSingletonFactory.init(wallet);
+  for (const contractFactory of contractFactories) {
+    const contract = await safeSingletonFactory.connectOrDeploy(
+      contractFactory,
+      []
     );
-    const deployedContract = await contractFactory
-      .connect(signer)
-      .deploy({ gasLimit: 10_000_000 });
-    await deployedContract.waitForDeployment();
 
-    console.log(
-      `deployed ${
-        contract.contractName
-      } to ${await deployedContract.getAddress()}`
-    );
+    const contractName = contractFactory.name.split("_")[0];
+    console.log(`deployed ${contractName} to ${await contract.getAddress()}`);
   }
 };
 
