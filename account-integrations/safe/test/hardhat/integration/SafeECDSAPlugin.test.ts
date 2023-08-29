@@ -5,7 +5,7 @@ import { getBytes, concat, resolveProperties, ethers } from "ethers";
 import { ethers as ethersV5 } from "ethers-v5";
 import { UserOperationStruct } from "@account-abstraction/contracts";
 import { getUserOpHash } from "@account-abstraction/utils";
-import { calculateProxyAddress } from "../../utils/calculateProxyAddress";
+import { calculateProxyAddress } from "../utils/calculateProxyAddress";
 
 const ERC4337_TEST_ENV_VARIABLES_DEFINED =
   typeof process.env.ERC4337_TEST_BUNDLER_URL !== "undefined" &&

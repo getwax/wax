@@ -3,15 +3,16 @@ import { expect } from "chai";
 import { AddressZero } from "@ethersproject/constants";
 import { utils } from "ethers-v5";
 import { UserOperationStruct } from "@account-abstraction/contracts";
-import { calculateProxyAddress } from "../../utils/calculateProxyAddress";
-import { signer as hubbleBlsSigner } from '@thehubbleproject/bls';
+import { calculateProxyAddress } from "./utils/calculateProxyAddress";
+import { signer as hubbleBlsSigner } from "@thehubbleproject/bls";
 import { getUserOpHash } from "@account-abstraction/utils";
 
 import { SafeProxyFactory } from "../../typechain-types/lib/safe-contracts/contracts/proxies/SafeProxyFactory";
 import { Safe } from "../../typechain-types/lib/safe-contracts/contracts/Safe";
 import { EntryPoint } from "../../typechain-types/lib/account-abstraction/contracts/core/EntryPoint";
 
-const BLS_PRIVATE_KEY = '0xdbe3d601b1b25c42c50015a87855fdce00ea9b3a7e33c92d31c69aeb70708e08';
+const BLS_PRIVATE_KEY =
+  "0xdbe3d601b1b25c42c50015a87855fdce00ea9b3a7e33c92d31c69aeb70708e08";
 const MNEMONIC = "test test test test test test test test test test test junk";
 
 let safeProxyFactory: SafeProxyFactory;
@@ -21,26 +22,20 @@ let entryPoint: EntryPoint;
 describe("SafeBlsPlugin", () => {
   const setupTests = async () => {
     safeProxyFactory = await (
-        await ethers.getContractFactory("SafeProxyFactory")
+      await ethers.getContractFactory("SafeProxyFactory")
     ).deploy();
-    safe = await (
-        await ethers.getContractFactory("Safe")
-    ).deploy();
-    entryPoint = await (
-        await ethers.getContractFactory("EntryPoint")
-    ).deploy();
+    safe = await (await ethers.getContractFactory("Safe")).deploy();
+    entryPoint = await (await ethers.getContractFactory("EntryPoint")).deploy();
 
     const provider = ethers.provider;
-    const userWallet = ethers.Wallet.fromPhrase(MNEMONIC).connect(
-      provider
-    );
+    const userWallet = ethers.Wallet.fromPhrase(MNEMONIC).connect(provider);
 
     return {
-        provider,
-        userWallet,
-        entryPoint,
-        safe,
-        safeProxyFactory,
+      provider,
+      userWallet,
+      entryPoint,
+      safe,
+      safeProxyFactory,
     };
   };
 
@@ -52,15 +47,12 @@ describe("SafeBlsPlugin", () => {
    * 2. Executing a transaction is possible
    */
   it("should pass the ERC4337 validation", async () => {
-    const {
-        provider,
-        userWallet,
-        entryPoint,
-        safe,
-        safeProxyFactory,
-    } = await setupTests();
+    const { provider, userWallet, entryPoint, safe, safeProxyFactory } =
+      await setupTests();
 
-    const domain = utils.arrayify(utils.keccak256(Buffer.from('eip4337.bls.domain')));
+    const domain = utils.arrayify(
+      utils.keccak256(Buffer.from("eip4337.bls.domain"))
+    );
     const signerFactory = await hubbleBlsSigner.BlsSignerFactory.new();
     const blsSigner = signerFactory.getSigner(domain, BLS_PRIVATE_KEY);
 
@@ -152,19 +144,21 @@ describe("SafeBlsPlugin", () => {
       signature: "",
     };
 
-    const resolvedUserOp = await ethers.resolveProperties(unsignedUserOperation);
+    const resolvedUserOp = await ethers.resolveProperties(
+      unsignedUserOperation
+    );
     const userOpHash = getUserOpHash(
-        resolvedUserOp,
-        ENTRYPOINT_ADDRESS,
-        Number((await provider.getNetwork()).chainId)
+      resolvedUserOp,
+      ENTRYPOINT_ADDRESS,
+      Number((await provider.getNetwork()).chainId)
     );
 
     // Create BLS signature of the userOpHash
     const userOpSignature = await blsSigner.sign(userOpHash);
 
     const userOperation = {
-        ...unsignedUserOperation,
-        signature: utils.solidityPack(["uint256", "uint256"], userOpSignature),
+      ...unsignedUserOperation,
+      signature: utils.solidityPack(["uint256", "uint256"], userOpSignature),
     };
 
     // Uncomment to get a detailed debug message
@@ -172,7 +166,7 @@ describe("SafeBlsPlugin", () => {
     //         Using entry point: ${ENTRYPOINT_ADDRESS}
     //         Deployed Safe address: ${deployedAddress}
     //         Module/Handler address: ${safeBlsPluginAddress}
-    //         User operation: 
+    //         User operation:
     //         ${JSON.stringify(userOperation, null, 2)}
     //     `;
     // console.log(DEBUG_MESSAGE);
@@ -180,13 +174,12 @@ describe("SafeBlsPlugin", () => {
     const recipientBalanceBefore = await provider.getBalance(recipientAddress);
 
     try {
-        const rcpt = await entryPoint
-            .handleOps(
-                [userOperation],
-                ENTRYPOINT_ADDRESS
-            )
+      const rcpt = await entryPoint.handleOps(
+        [userOperation],
+        ENTRYPOINT_ADDRESS
+      );
     } catch (e) {
-        console.log('EntryPoint handleOps error=', e);
+      console.log("EntryPoint handleOps error=", e);
     }
 
     const recipientBalanceAfter = await provider.getBalance(recipientAddress);
