@@ -32,27 +32,6 @@ contract SafeWebAuthnPlugin is BaseAccount {
         _publicKey = pubKey;
     }
 
-    function validateUserOp(
-        UserOperation calldata userOp,
-        bytes32 userOpHash,
-        uint256 missingAccountFunds
-    ) external override returns (uint256 validationData) {
-        address payable safeAddress = payable(userOp.sender);
-        ISafe senderSafe = ISafe(safeAddress);
-
-        if (missingAccountFunds != 0) {
-            senderSafe.execTransactionFromModule(
-                _entryPoint,
-                missingAccountFunds,
-                "",
-                0
-            );
-        }
-
-        validationData = _validateSignature(userOp, userOpHash);
-        _validateNonce(userOp.nonce);
-    }
-
     function execTransaction(
         address to,
         uint256 value,
@@ -77,6 +56,9 @@ contract SafeWebAuthnPlugin is BaseAccount {
     function publicKey() public view returns (uint256[2] memory) {
         return _publicKey;
     }
+
+    /** @notice validateSignature is called from Safe so the original function will always fail */
+    function _requireFromEntryPoint() internal view override {}
 
     function _validateSignature(
         UserOperation calldata userOp,
@@ -117,6 +99,25 @@ contract SafeWebAuthnPlugin is BaseAccount {
     function _validateNonce(uint256 nonce) internal view override {
         if (nonce >= type(uint64).max) {
             revert NONCE_NOT_SEQUENTIAL();
+        }
+    }
+
+    /**
+     * This function is overridden as this plugin does not hold funds, so the transaction
+     * has to be executed from the sender Safe
+     * @param missingAccountFunds The minimum value this method should send to the entrypoint
+     */
+    function _payPrefund(uint256 missingAccountFunds) internal override {
+        address payable safeAddress = payable(msg.sender);
+        ISafe senderSafe = ISafe(safeAddress);
+
+        if (missingAccountFunds != 0) {
+            senderSafe.execTransactionFromModule(
+                _entryPoint,
+                missingAccountFunds,
+                "",
+                0
+            );
         }
     }
 }
