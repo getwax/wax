@@ -4,7 +4,7 @@ pragma solidity ^0.8.12;
 import "forge-std/Test.sol";
 import {TestHelper} from "./utils/TestHelper.sol";
 import {SafeWebAuthnPluginHarness} from "./utils/SafeWebAuthnPluginHarness.sol";
-import {SafeWebAuthnPlugin} from "../src/SafeWebAuthnPlugin.sol";
+import {SafeWebAuthnPlugin} from "../../src/SafeWebAuthnPlugin.sol";
 import {UserOperation, UserOperationLib} from "account-abstraction/contracts/interfaces/IEntryPoint.sol";
 
 /* solhint-disable func-name-mixedcase */
@@ -16,7 +16,7 @@ contract SafeWebAuthnPluginTest is TestHelper {
     SafeWebAuthnPluginHarness public safeWebAuthnPluginHarness;
 
     function setUp() public {
-        uint256[2] memory publicKey = getPublicKey();
+        uint256[2] memory publicKey = getWebAuthnPublicKey();
         address entryPointAddress = address(1);
         safeWebAuthnPlugin = new SafeWebAuthnPlugin(
             entryPointAddress,
@@ -34,7 +34,7 @@ contract SafeWebAuthnPluginTest is TestHelper {
         bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
         uint256 expectedValidationData = 0;
 
-        bytes memory userOpSignature = getUserOpSignature();
+        bytes memory userOpSignature = getWebAuthnUserOpSignature();
         userOp.signature = userOpSignature;
 
         // Act
@@ -59,7 +59,7 @@ contract SafeWebAuthnPluginTest is TestHelper {
             uint256 clientChallengeDataOffset,
 
         ) = getWebAuthnSignatureValues();
-        uint256[2] memory publicKey = getPublicKey();
+        uint256[2] memory publicKey = getWebAuthnPublicKey();
         uint256[2] memory invalidSignature = [uint256(0), uint256(0)];
 
         bytes memory userOpSignature = abi.encode(
