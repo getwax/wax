@@ -5,6 +5,8 @@ on:
     branches:
       - main
   pull_request:
+    paths:
+      - account-integrations/safe/**
 
 defaults:
   run:
@@ -27,7 +29,7 @@ jobs:
         with:
           version: nightly
 
-      - name: Run forge build
+      - name: Run Forge build
         run: |
           forge --version
           forge build --sizes
