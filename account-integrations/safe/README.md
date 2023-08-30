@@ -3,7 +3,7 @@
 # Getting Started
 
 1. `cd webauthn`
-2. Run `yarn` to install dependencies
+2. Run `yarn` to install hardhat dependencies
 3. Run `forge install` to install foundry dependencies
 
 ## Integration test
