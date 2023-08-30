@@ -24,6 +24,8 @@ contract SafeWebAuthnPlugin is BaseAccount {
 
     address internal constant _SENTINEL_MODULES = address(0x1);
 
+    error NONCE_NOT_SEQUENTIAL();
+
     constructor(address entryPointAddress, uint256[2] memory pubKey) {
         myAddress = address(this);
         _entryPoint = entryPointAddress;
@@ -48,6 +50,7 @@ contract SafeWebAuthnPlugin is BaseAccount {
         }
 
         validationData = _validateSignature(userOp, userOpHash);
+        _validateNonce(userOp.nonce);
     }
 
     function execTransaction(
@@ -103,6 +106,17 @@ contract SafeWebAuthnPlugin is BaseAccount {
             );
             if (!verified) return SIG_VALIDATION_FAILED;
             return 0;
+        }
+    }
+
+    /**
+     * Ensures userOp nonce is sequential. Nonce uniqueness is already managed by the EntryPoint.
+     * This function prevents using a “key” different from the first “zero” key.
+     * @param nonce to validate
+     */
+    function _validateNonce(uint256 nonce) internal view override {
+        if (nonce >= type(uint64).max) {
+            revert NONCE_NOT_SEQUENTIAL();
         }
     }
 }

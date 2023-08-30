@@ -17,4 +17,8 @@ contract SafeWebAuthnPluginHarness is SafeWebAuthnPlugin {
     ) external returns (uint256) {
         return _validateSignature(userOp, userOpHash);
     }
+
+    function exposed_validateNonce(uint256 nonce) external view {
+        _validateNonce(nonce);
+    }
 }

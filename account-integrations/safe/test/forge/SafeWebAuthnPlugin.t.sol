@@ -2,6 +2,7 @@
 pragma solidity ^0.8.12;
 
 import "forge-std/Test.sol";
+import "forge-std/console2.sol";
 import {TestHelper} from "./utils/TestHelper.sol";
 import {SafeWebAuthnPluginHarness} from "./utils/SafeWebAuthnPluginHarness.sol";
 import {SafeWebAuthnPlugin} from "../../src/SafeWebAuthnPlugin.sol";
@@ -17,7 +18,6 @@ contract SafeWebAuthnPluginTest is TestHelper {
 
     function setUp() public {
         uint256[2] memory publicKey = getWebAuthnPublicKey();
-        address entryPointAddress = address(1);
         safeWebAuthnPlugin = new SafeWebAuthnPlugin(
             entryPointAddress,
             publicKey
@@ -78,5 +78,46 @@ contract SafeWebAuthnPluginTest is TestHelper {
 
         // Assert
         assertEq(validationData, expectedValidationData);
+    }
+
+    function test_validateNonce_ValidNonceSequence() public {
+        // Arrange
+        uint256 nonce = 0;
+        uint192 zeroKey = 0;
+
+        // Act & Assert
+        safeWebAuthnPluginHarness.exposed_validateNonce(nonce);
+
+        vm.startPrank(address(safeWebAuthnPluginHarness));
+        entryPoint.incrementNonce(zeroKey);
+        vm.stopPrank();
+
+        safeWebAuthnPluginHarness.exposed_validateNonce(nonce++);
+    }
+
+    function test_validateNonce_ValidNonceLessThanMaxUint64() public view {
+        // Arrange
+        uint256 nonce = uint256(type(uint64).max) - 1;
+
+        // Act & Assert
+        safeWebAuthnPluginHarness.exposed_validateNonce(nonce);
+    }
+
+    function test_validateNonce_InvalidNonceEqualToMaxUint64() public {
+        // Arrange
+        uint256 nonce = type(uint64).max;
+
+        // Act & Assert
+        vm.expectRevert(SafeWebAuthnPlugin.NONCE_NOT_SEQUENTIAL.selector);
+        safeWebAuthnPluginHarness.exposed_validateNonce(nonce);
+    }
+
+    function test_validateNonce_InvalidNonceGreaterThanMaxUint64() public {
+        // Arrange
+        uint256 nonce = uint256(type(uint64).max) + 1;
+
+        // Act & Assert
+        vm.expectRevert(SafeWebAuthnPlugin.NONCE_NOT_SEQUENTIAL.selector);
+        safeWebAuthnPluginHarness.exposed_validateNonce(nonce);
     }
 }
