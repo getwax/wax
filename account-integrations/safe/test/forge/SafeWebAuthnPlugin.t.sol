@@ -13,16 +13,11 @@ import {UserOperation, UserOperationLib} from "account-abstraction/contracts/int
 contract SafeWebAuthnPluginTest is TestHelper {
     constructor() TestHelper() {}
 
-    SafeWebAuthnPlugin public safeWebAuthnPlugin;
-    SafeWebAuthnPluginHarness public safeWebAuthnPluginHarness;
+    SafeWebAuthnPluginHarness public safeWebAuthnPlugin;
 
     function setUp() public {
         uint256[2] memory publicKey = getWebAuthnPublicKey();
-        safeWebAuthnPlugin = new SafeWebAuthnPlugin(
-            entryPointAddress,
-            publicKey
-        );
-        safeWebAuthnPluginHarness = new SafeWebAuthnPluginHarness(
+        safeWebAuthnPlugin = new SafeWebAuthnPluginHarness(
             entryPointAddress,
             publicKey
         );
@@ -38,8 +33,10 @@ contract SafeWebAuthnPluginTest is TestHelper {
         userOp.signature = userOpSignature;
 
         // Act
-        uint256 validationData = safeWebAuthnPluginHarness
-            .exposed_validateSignature(userOp, userOpHash);
+        uint256 validationData = safeWebAuthnPlugin.exposed_validateSignature(
+            userOp,
+            userOpHash
+        );
 
         // Assert
         assertEq(validationData, expectedValidationData);
@@ -73,8 +70,10 @@ contract SafeWebAuthnPluginTest is TestHelper {
         userOp.signature = userOpSignature;
 
         // Act
-        uint256 validationData = safeWebAuthnPluginHarness
-            .exposed_validateSignature(userOp, userOpHash);
+        uint256 validationData = safeWebAuthnPlugin.exposed_validateSignature(
+            userOp,
+            userOpHash
+        );
 
         // Assert
         assertEq(validationData, expectedValidationData);
@@ -86,13 +85,13 @@ contract SafeWebAuthnPluginTest is TestHelper {
         uint192 zeroKey = 0;
 
         // Act & Assert
-        safeWebAuthnPluginHarness.exposed_validateNonce(nonce);
+        safeWebAuthnPlugin.exposed_validateNonce(nonce);
 
-        vm.startPrank(address(safeWebAuthnPluginHarness));
+        vm.startPrank(address(safeWebAuthnPlugin));
         entryPoint.incrementNonce(zeroKey);
         vm.stopPrank();
 
-        safeWebAuthnPluginHarness.exposed_validateNonce(nonce++);
+        safeWebAuthnPlugin.exposed_validateNonce(nonce++);
     }
 
     function test_validateNonce_ValidNonceLessThanMaxUint64() public view {
@@ -100,7 +99,7 @@ contract SafeWebAuthnPluginTest is TestHelper {
         uint256 nonce = uint256(type(uint64).max) - 1;
 
         // Act & Assert
-        safeWebAuthnPluginHarness.exposed_validateNonce(nonce);
+        safeWebAuthnPlugin.exposed_validateNonce(nonce);
     }
 
     function test_validateNonce_InvalidNonceEqualToMaxUint64() public {
@@ -109,7 +108,7 @@ contract SafeWebAuthnPluginTest is TestHelper {
 
         // Act & Assert
         vm.expectRevert(SafeWebAuthnPlugin.NONCE_NOT_SEQUENTIAL.selector);
-        safeWebAuthnPluginHarness.exposed_validateNonce(nonce);
+        safeWebAuthnPlugin.exposed_validateNonce(nonce);
     }
 
     function test_validateNonce_InvalidNonceGreaterThanMaxUint64() public {
@@ -118,6 +117,6 @@ contract SafeWebAuthnPluginTest is TestHelper {
 
         // Act & Assert
         vm.expectRevert(SafeWebAuthnPlugin.NONCE_NOT_SEQUENTIAL.selector);
-        safeWebAuthnPluginHarness.exposed_validateNonce(nonce);
+        safeWebAuthnPlugin.exposed_validateNonce(nonce);
     }
 }
