@@ -1,0 +1,65 @@
+name: account-integrations/safe
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    paths:
+      - account-integrations/safe/**
+
+defaults:
+  run:
+    working-directory: ./account-integrations/safe
+
+jobs:
+  foundry:
+    strategy:
+      fail-fast: true
+
+    name: Foundry project
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: Run Forge build
+        run: |
+          forge --version
+          forge build --sizes
+        id: build
+
+      - name: Run Forge tests
+        run: |
+          forge test -vvv
+        id: test
+
+  hardhat:
+    strategy:
+      fail-fast: true
+
+    name: Hardhat project
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Setup Node 16
+        uses: actions/setup-node@v3
+        with:
+          node-version: "16.x"
+          cache: "yarn"
+          cache-dependency-path: account-integrations/safe/yarn.lock
+
+      - name: Install Yarn dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Run hardhat compile
+        run: yarn hardhat compile
