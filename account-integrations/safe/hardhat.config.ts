@@ -48,6 +48,7 @@ const config: HardhatUserConfig = {
         }
         return line;
       },
+      settings: true,
     }),
   },
   paths: {
