@@ -19,7 +19,7 @@
 // Code is optimized for a=-3 only curves with prime order, constant like -1, -2 shall be replaced
 // if ever used for other curve than sec256R1
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.12;
 
 library FCL_Elliptic_ZZ {
     // Set parameters for curve sec256r1.
@@ -829,6 +829,40 @@ library FCL_Elliptic_ZZ {
 
         assembly {
             x1 := addmod(x1, sub(n, calldataload(rs)), n)
+        }
+        //return true;
+        return x1 == 0;
+    }
+
+
+    /**
+     * @dev ECDSA verification, given , signature, and public key.
+     * @notice Modified from "ecdsa_verify" to use memory instead of calldata
+     */
+    function ecdsa_verify_memory(
+        bytes32 message,
+        uint256[2] memory rs,
+        uint256[2] memory Q
+    ) internal returns (bool) {
+        if (rs[0] == 0 || rs[0] >= n || rs[1] == 0 || rs[1] >= n) {
+            return false;
+        }
+
+        if (!ecAff_isOnCurve(Q[0], Q[1])) {
+            return false;
+        }
+
+        uint256 sInv = FCL_nModInv(rs[1]);
+
+        uint256 scalar_u = mulmod(uint256(message), sInv, n);
+        uint256 scalar_v = mulmod(rs[0], sInv, n);
+        uint256 x1;
+
+        x1 = ecZZ_mulmuladd_S_asm(Q[0], Q[1], scalar_u, scalar_v);
+
+        uint256 rs0 = rs[0];
+        assembly {
+            x1 := addmod(x1, sub(n, rs0), n)
         }
         //return true;
         return x1 == 0;

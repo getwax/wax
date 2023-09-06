@@ -18,7 +18,7 @@
 // Code is optimized for a=-3 only curves with prime order, constant like -1, -2 shall be replaced
 // if ever used for other curve than sec256R1
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.12;
 
 import {Base64} from "openzeppelin-contracts/contracts/utils/Base64.sol";
 import {FCL_Elliptic_ZZ} from "./FCL_elliptic.sol";
@@ -28,13 +28,14 @@ library FCL_WebAuthn {
     error InvalidClientData();
     error InvalidSignature();
 
+    /** @notice Modified from original Fresh Crypto Lib code to use memory instead of calldata */
     function WebAuthn_format(
-        bytes calldata authenticatorData,
+        bytes memory authenticatorData,
         bytes1 authenticatorDataFlagMask,
-        bytes calldata clientData,
+        bytes memory clientData,
         bytes32 clientChallenge,
         uint256 clientChallengeDataOffset,
-        uint256[2] calldata // rs
+        uint256[2] memory // rs
     ) internal pure returns (bytes32 result) {
         // Let the caller check if User Presence (0x01) or User Verification (0x04) are set
         {
@@ -47,47 +48,41 @@ library FCL_WebAuthn {
             bytes(challengeEncoded).length
         );
 
-            assembly {
-                calldatacopy(
-                    add(challengeExtracted, 32),
-                    add(clientData.offset, clientChallengeDataOffset),
-                    mload(challengeExtracted)
-                )
-            }
+            // TODO: wax#44 Extract webauthn challenge from clientData and compare to clientChallenge
+            // assembly {
+            //     calldatacopy(
+            //         add(challengeExtracted, 32),
+            //         add(clientData.offset, clientChallengeDataOffset),
+            //         mload(challengeExtracted)
+            //     )
+            // }
 
-            bytes32 moreData; //=keccak256(abi.encodePacked(challengeExtracted));
-            assembly {
-                moreData := keccak256(add(challengeExtracted, 32), mload(challengeExtracted))
-            }
+            // bytes32 moreData; //=keccak256(abi.encodePacked(challengeExtracted));
+            // assembly {
+            //     moreData := keccak256(add(challengeExtracted, 32), mload(challengeExtracted))
+            // }
 
-            if (keccak256(abi.encodePacked(bytes(challengeEncoded))) != moreData) {
-                revert InvalidClientData();
-            }
+            // if (keccak256(abi.encodePacked(bytes(challengeEncoded))) != moreData) {
+            //     revert InvalidClientData();
+            // }
         } //avoid stack full
 
         // Verify the signature over sha256(authenticatorData || sha256(clientData))
-        bytes memory verifyData = new bytes(authenticatorData.length + 32);
-
-        assembly {
-            calldatacopy(add(verifyData, 32), authenticatorData.offset, authenticatorData.length)
-        }
-
         bytes32 more = sha256(clientData);
-        assembly {
-            mstore(add(verifyData, add(authenticatorData.length, 32)), more)
-        }
+        bytes memory verifyData = abi.encodePacked(authenticatorData, more);
 
         return sha256(verifyData);
     }
 
+    /** @notice Modified from original Fresh Crypto Lib code to use memory instead of calldata */
     function checkSignature(
-        bytes calldata authenticatorData,
+        bytes memory authenticatorData,
         bytes1 authenticatorDataFlagMask,
-        bytes calldata clientData,
+        bytes memory clientData,
         bytes32 clientChallenge,
         uint256 clientChallengeDataOffset,
-        uint256[2] calldata rs,
-        uint256[2] calldata Q
+        uint256[2] memory rs,
+        uint256[2] memory Q
     ) internal returns (bool) {
         // Let the caller check if User Presence (0x01) or User Verification (0x04) are set
 
@@ -95,7 +90,7 @@ library FCL_WebAuthn {
             authenticatorData, authenticatorDataFlagMask, clientData, clientChallenge, clientChallengeDataOffset, rs
         );
 
-        bool result = FCL_Elliptic_ZZ.ecdsa_verify(message, rs, Q);
+        bool result = FCL_Elliptic_ZZ.ecdsa_verify_memory(message, rs, Q);
 
         return result;
     }
