@@ -175,7 +175,19 @@ export default class EthereumApi {
 
       const granted = await this.#waxInPage.requestPermission(
         <pre style={{ overflowX: 'auto', maxWidth: '100%', fontSize: '1em' }}>
-          {question} {JSON.stringify(txData, null, 2)}
+          {question}{' '}
+          {JSON.stringify(
+            txData,
+            (_key, value) => {
+              if (typeof value === 'bigint') {
+                return `0x${value.toString(16)}`;
+              }
+
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+              return value;
+            },
+            2,
+          )}
         </pre>,
       );
 
@@ -186,25 +198,50 @@ export default class EthereumApi {
         });
       }
 
-      const actions = txs.map((tx) => {
-        const parsedTx = z
-          .object({
-            to: z.string(),
-            gas: z.string(), // TODO: should be optional (calculate gas here)
-            data: z.optional(z.string()),
-            value: z.optional(z.string()),
-          })
-          .safeParse(tx);
+      const actions = await Promise.all(
+        txs.map(async (tx) => {
+          const parsedTx = z
+            .object({
+              // TODO: Shouldn't this be optional? (contract deployment)
+              to: z.string(),
 
-        if (!parsedTx.success) {
-          throw new JsonRpcError({
-            code: -32602,
-            message: `Failed to parse tx: ${parsedTx.error.toString()}`,
-          });
-        }
+              gas: z.optional(z.string()),
+              data: z.optional(z.string()),
+              value: z.optional(EthereumRpc.BigNumberish),
+            })
+            .safeParse(tx);
 
-        return parsedTx.data;
-      });
+          if (!parsedTx.success) {
+            throw new JsonRpcError({
+              code: -32601,
+              message: `Failed to parse tx: ${parsedTx.error.toString()}`,
+            });
+          }
+
+          let { value } = parsedTx.data;
+
+          if (typeof value === 'number' || typeof value === 'bigint') {
+            value = `0x${value.toString(16)}`;
+          }
+
+          return {
+            to: parsedTx.data.to,
+            gas:
+              parsedTx.data.gas ??
+              (await this.request({
+                method: 'eth_estimateGas',
+                params: [
+                  {
+                    ...parsedTx.data,
+                    value,
+                  },
+                ],
+              })),
+            data: parsedTx.data.data ?? '0x',
+            value: parsedTx.data.value ?? 0n,
+          };
+        }),
+      );
 
       const simpleAccount = SimpleAccount__factory.connect(
         account.address,
@@ -218,7 +255,7 @@ export default class EthereumApi {
 
         callData = simpleAccount.interface.encodeFunctionData('execute', [
           action.to,
-          action.value ?? 0n,
+          action.value,
           action.data ?? '0x',
         ]);
       } else {
