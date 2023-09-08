@@ -36,6 +36,16 @@ contract SafeECDSAPlugin is BaseAccount {
         _entryPoint = entryPointAddress;
     }
 
+    function validateUserOp(
+        UserOperation calldata userOp,
+        bytes32 userOpHash,
+        uint256 missingAccountFunds
+    ) external override returns (uint256 validationData) {
+        _validateNonce(userOp.nonce);
+        validationData = _validateSignature(userOp, userOpHash);
+        _payPrefund(missingAccountFunds);
+    }
+
     function execTransaction(
         address to,
         uint256 value,
@@ -60,9 +70,6 @@ contract SafeECDSAPlugin is BaseAccount {
     function owner() public view returns (address) {
         return _owner;
     }
-
-    /** @notice validateSignature is called from Safe so the original function will always fail */
-    function _requireFromEntryPoint() internal view override {}
 
     function _validateSignature(
         UserOperation calldata userOp,

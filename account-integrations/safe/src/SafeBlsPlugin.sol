@@ -34,6 +34,16 @@ contract SafeBlsPlugin is BaseAccount {
         _entryPoint = entryPointAddress;
     }
 
+    function validateUserOp(
+        UserOperation calldata userOp,
+        bytes32 userOpHash,
+        uint256 missingAccountFunds
+    ) external override returns (uint256 validationData) {
+        _validateNonce(userOp.nonce);
+        validationData = _validateSignature(userOp, userOpHash);
+        _payPrefund(missingAccountFunds);
+    }
+
     function execTransaction(
         address to,
         uint256 value,
@@ -58,9 +68,6 @@ contract SafeBlsPlugin is BaseAccount {
     function owner() public pure returns (uint256[4] memory _blsPublicKey) {
         return _blsPublicKey;
     }
-
-    /** @notice validateSignature is called from Safe so the original function will always fail */
-    function _requireFromEntryPoint() internal view override {}
 
     function _validateSignature(
         UserOperation calldata userOp,

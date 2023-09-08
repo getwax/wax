@@ -32,6 +32,16 @@ contract SafeWebAuthnPlugin is BaseAccount {
         _publicKey = pubKey;
     }
 
+    function validateUserOp(
+        UserOperation calldata userOp,
+        bytes32 userOpHash,
+        uint256 missingAccountFunds
+    ) external override returns (uint256 validationData) {
+        _validateNonce(userOp.nonce);
+        validationData = _validateSignature(userOp, userOpHash);
+        _payPrefund(missingAccountFunds);
+    }
+
     function execTransaction(
         address to,
         uint256 value,
@@ -56,9 +66,6 @@ contract SafeWebAuthnPlugin is BaseAccount {
     function publicKey() public view returns (uint256[2] memory) {
         return _publicKey;
     }
-
-    /** @notice validateSignature is called from Safe so the original function will always fail */
-    function _requireFromEntryPoint() internal view override {}
 
     function _validateSignature(
         UserOperation calldata userOp,
