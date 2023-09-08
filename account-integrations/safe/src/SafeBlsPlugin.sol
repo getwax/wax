@@ -26,6 +26,8 @@ contract SafeBlsPlugin is BaseAccount {
 
     address internal constant _SENTINEL_MODULES = address(0x1);
 
+    error NONCE_NOT_SEQUENTIAL();
+
     constructor(address entryPointAddress, uint256[4] memory blsPublicKey) {
         myAddress = address(this);
         _blsPublicKey = blsPublicKey;
@@ -37,19 +39,9 @@ contract SafeBlsPlugin is BaseAccount {
         bytes32 userOpHash,
         uint256 missingAccountFunds
     ) external override returns (uint256 validationData) {
-        address payable safeAddress = payable(userOp.sender);
-        ISafe senderSafe = ISafe(safeAddress);
-
-        if (missingAccountFunds != 0) {
-            senderSafe.execTransactionFromModule(
-                _entryPoint,
-                missingAccountFunds,
-                "",
-                0
-            );
-        }
-
+        _validateNonce(userOp.nonce);
         validationData = _validateSignature(userOp, userOpHash);
+        _payPrefund(missingAccountFunds);
     }
 
     function execTransaction(
@@ -97,5 +89,35 @@ contract SafeBlsPlugin is BaseAccount {
         }
         // TODO: check if wallet recovered
         return SIG_VALIDATION_FAILED;
+    }
+
+    /**
+     * Ensures userOp nonce is sequential. Nonce uniqueness is already managed by the EntryPoint.
+     * This function prevents using a “key” different from the first “zero” key.
+     * @param nonce to validate
+     */
+    function _validateNonce(uint256 nonce) internal view override {
+        if (nonce >= type(uint64).max) {
+            revert NONCE_NOT_SEQUENTIAL();
+        }
+    }
+
+    /**
+     * This function is overridden as this plugin does not hold funds, so the transaction
+     * has to be executed from the sender Safe
+     * @param missingAccountFunds The minimum value this method should send to the entrypoint
+     */
+    function _payPrefund(uint256 missingAccountFunds) internal override {
+        address payable safeAddress = payable(msg.sender);
+        ISafe senderSafe = ISafe(safeAddress);
+
+        if (missingAccountFunds != 0) {
+            senderSafe.execTransactionFromModule(
+                _entryPoint,
+                missingAccountFunds,
+                "",
+                0
+            );
+        }
     }
 }
