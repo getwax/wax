@@ -43,6 +43,8 @@ test test test test test test test test test test test absent
 0xe8250207B79D7396631bb3aE38a7b457261ae0B6
 ```
 
+Send some ETH to this address.
+
 6. Get the entry point address using these commands in the dev console of the
    demo:
 
