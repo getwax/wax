@@ -29,6 +29,10 @@ if (config.pollingInterval !== undefined) {
   });
 }
 
+waxInPage.setConfig({
+  logRequests: config.logRequests,
+});
+
 const demoContext = new DemoContext(waxInPage);
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

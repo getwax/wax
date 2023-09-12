@@ -1,4 +1,5 @@
 type ConfigType = {
+  logRequests?: boolean;
   rpcUrl: string;
   bundlerRpcUrl?: string;
   pollingInterval?: number;

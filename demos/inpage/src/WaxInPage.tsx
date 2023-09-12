@@ -25,6 +25,7 @@ import NetworkBundler from './bundlers/NetworkBundler';
 import IBundler from './bundlers/IBundler';
 
 type Config = {
+  logRequests?: boolean;
   requirePermission: boolean;
   deployContractsIfNeeded: boolean;
   ethersPollingInterval?: number;
@@ -107,6 +108,10 @@ export default class WaxInPage {
       this.ethersProvider.pollingInterval =
         newConfig.ethersPollingInterval ?? ethersDefaultPollingInterval;
     }
+  }
+
+  getConfig<K extends keyof Config>(key: K): Config[K] {
+    return structuredClone(this.#config[key]);
   }
 
   async requestPermission(message: ReactNode) {

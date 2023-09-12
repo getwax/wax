@@ -73,6 +73,28 @@ export default class EthereumApi {
   }: {
     method: M;
   } & EthereumRpc.RequestParams<M>): Promise<EthereumRpc.Response<M>> {
+    const res = await this.#requestImpl({ method, params } as {
+      method: M;
+    } & EthereumRpc.RequestParams<M>);
+
+    if (this.#waxInPage.getConfig('logRequests')) {
+      // eslint-disable-next-line no-console
+      console.log('ethereum.request', {
+        method,
+        params,
+        response: res,
+      });
+    }
+
+    return res as EthereumRpc.Response<M>;
+  }
+
+  async #requestImpl<M extends string>({
+    method,
+    params,
+  }: {
+    method: M;
+  } & EthereumRpc.RequestParams<M>): Promise<EthereumRpc.Response<M>> {
     if (!(method in EthereumRpc.schema)) {
       return await ethereumRequest({
         url: this.#rpcUrl,
