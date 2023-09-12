@@ -151,6 +151,11 @@ export default class EthereumApi {
     return response;
   }
 
+  async #getEntryPointAddress() {
+    const contracts = await this.#waxInPage.getContracts();
+    return await contracts.entryPoint.getAddress();
+  }
+
   #customHandlers: Partial<EthereumRpc.Handlers> = {
     eth_chainId: () => this.#chainIdPromise,
 
@@ -379,7 +384,7 @@ export default class EthereumApi {
 
       const { verificationGasLimit, preVerificationGas } = await this.request({
         method: 'eth_estimateUserOperationGas',
-        params: [userOp],
+        params: [userOp, await contracts.entryPoint.getAddress()],
       });
 
       userOp.verificationGasLimit = verificationGasLimit;
@@ -393,7 +398,7 @@ export default class EthereumApi {
 
       await this.request({
         method: 'eth_sendUserOperation',
-        params: [userOp],
+        params: [userOp, await contracts.entryPoint.getAddress()],
       });
 
       this.#userOps.set(userOpHash, {
@@ -465,11 +470,17 @@ export default class EthereumApi {
       } satisfies EthereumRpc.TransactionReceipt;
     },
 
-    eth_sendUserOperation: (userOp) =>
-      this.#bundler.eth_sendUserOperation(userOp),
+    eth_sendUserOperation: async (userOp) =>
+      this.#bundler.eth_sendUserOperation(
+        userOp,
+        await this.#getEntryPointAddress(),
+      ),
 
-    eth_estimateUserOperationGas: (userOp) =>
-      this.#bundler.eth_estimateUserOperationGas(userOp),
+    eth_estimateUserOperationGas: async (userOp) =>
+      this.#bundler.eth_estimateUserOperationGas(
+        userOp,
+        await this.#getEntryPointAddress(),
+      ),
 
     eth_getUserOperationReceipt: (userOpHash) =>
       this.#bundler.eth_getUserOperationReceipt(userOpHash),

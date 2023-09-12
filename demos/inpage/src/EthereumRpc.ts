@@ -114,11 +114,11 @@ namespace EthereumRpc {
       output: z.string(),
     },
     eth_sendUserOperation: {
-      params: z.tuple([UserOperation]),
+      params: z.tuple([UserOperation, z.string()]),
       output: z.string(),
     },
     eth_estimateUserOperationGas: {
-      params: z.tuple([UserOperation]),
+      params: z.tuple([UserOperation, z.string()]),
       output: z.object({
         preVerificationGas: z.string(),
         verificationGasLimit: z.string(),

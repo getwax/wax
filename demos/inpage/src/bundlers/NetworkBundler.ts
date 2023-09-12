@@ -11,21 +11,23 @@ export default class NetworkBundler implements IBundler {
 
   async eth_sendUserOperation(
     userOp: EthereumRpc.UserOperation,
+    entryPoint: string,
   ): Promise<string> {
     return await ethereumRequest({
       url: this.#rpcUrl,
       method: 'eth_sendUserOperation',
-      params: [userOp],
+      params: [userOp, entryPoint],
     });
   }
 
   async eth_estimateUserOperationGas(
     userOp: EthereumRpc.UserOperation,
+    entryPoint: string,
   ): Promise<EthereumRpc.UserOperationGasEstimate> {
     return await ethereumRequest({
       url: this.#rpcUrl,
       method: 'eth_estimateUserOperationGas',
-      params: [userOp],
+      params: [userOp, entryPoint],
     });
   }
 
