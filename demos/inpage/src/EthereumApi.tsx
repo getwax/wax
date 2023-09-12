@@ -382,6 +382,12 @@ export default class EthereumApi {
         signature: temporarySignature,
       } satisfies UserOperationStruct;
 
+      let userOpHash = await contracts.entryPoint.getUserOpHash(userOp);
+
+      userOp.signature = await ownerWallet.signMessage(
+        ethers.getBytes(userOpHash),
+      );
+
       const { verificationGasLimit, preVerificationGas } = await this.request({
         method: 'eth_estimateUserOperationGas',
         params: [userOp, await contracts.entryPoint.getAddress()],
@@ -390,7 +396,7 @@ export default class EthereumApi {
       userOp.verificationGasLimit = verificationGasLimit;
       userOp.preVerificationGas = preVerificationGas;
 
-      const userOpHash = await contracts.entryPoint.getUserOpHash(userOp);
+      userOpHash = await contracts.entryPoint.getUserOpHash(userOp);
 
       userOp.signature = await ownerWallet.signMessage(
         ethers.getBytes(userOpHash),
