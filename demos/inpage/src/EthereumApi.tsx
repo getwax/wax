@@ -20,6 +20,8 @@ const temporarySignature = [
   '95170906b11c6f30dcc74e463e1e6990c68a3998a7271b728b123456',
 ].join('');
 
+const extraGasForTransferToNewAddress = 20_000n;
+
 type StrictUserOperation = {
   sender: string;
   nonce: string;
@@ -224,11 +226,12 @@ export default class EthereumApi {
             value = `0x${value.toString(16)}`;
           }
 
-          return {
-            to: parsedTx.data.to,
-            gas:
-              parsedTx.data.gas ??
-              (await this.request({
+          // eslint-disable-next-line prefer-destructuring
+          let gas: string | bigint | undefined = parsedTx.data.gas;
+
+          if (gas === undefined) {
+            gas = BigInt(
+              await this.request({
                 method: 'eth_estimateGas',
                 params: [
                   {
@@ -236,7 +239,24 @@ export default class EthereumApi {
                     value,
                   },
                 ],
-              })),
+              }),
+            );
+
+            if (BigInt(value ?? 0) !== 0n) {
+              const recipientBalance =
+                await this.#waxInPage.ethersProvider.getBalance(
+                  parsedTx.data.to,
+                );
+
+              if (recipientBalance === 0n) {
+                gas += extraGasForTransferToNewAddress;
+              }
+            }
+          }
+
+          return {
+            to: parsedTx.data.to,
+            gas,
             data: parsedTx.data.data ?? '0x',
             value: parsedTx.data.value ?? 0n,
           };
