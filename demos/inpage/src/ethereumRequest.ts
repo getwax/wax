@@ -18,12 +18,22 @@ export default async function ethereumRequest<M extends string>({
     headers: {
       'content-type': 'application/json',
     },
-    body: JSON.stringify({
-      jsonrpc: '2.0',
-      method,
-      params,
-      id: randomId(),
-    }),
+    body: JSON.stringify(
+      {
+        jsonrpc: '2.0',
+        method,
+        params,
+        id: randomId(),
+      },
+      (_key, value) => {
+        if (typeof value === 'bigint') {
+          return `0x${value.toString(16)}`;
+        }
+
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+        return value;
+      },
+    ),
   });
 
   const json = z
