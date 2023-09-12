@@ -141,7 +141,7 @@ export default class SimulatedBundler implements IBundler {
       actualGasUsed: `0x${event.args.actualGasUsed.toString(16)}`,
       success: event.args.success,
       reason: revertReason,
-      logs: '0x', // TODO: Logs
+      logs: [], // TODO: Logs
       receipt: txReceipt,
     } satisfies EthereumRpc.UserOperationReceipt;
   }
