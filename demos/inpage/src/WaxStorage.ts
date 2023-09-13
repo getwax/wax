@@ -1,26 +1,21 @@
 /* eslint-disable @typescript-eslint/require-await */
 import { mapValues } from '@s-libs/micro-dash';
 import z from 'zod';
+import AccountData from './accounts/AccountData';
 
 const defaultField = <T>(type: z.ZodType<T>, default_: T) => ({
   type,
   default_,
 });
 
-const optionalField = <T>(type: z.ZodType<T>) => ({
+const _optionalField = <T>(type: z.ZodType<T>) => ({
   type: z.union([z.undefined(), type]),
   default_: undefined,
 });
 
 const schema = {
   connectedAccounts: defaultField(z.array(z.string()), []),
-  account: optionalField(
-    z.object({
-      privateKey: z.string(),
-      ownerAddress: z.string(),
-      address: z.string(),
-    }),
-  ),
+  accounts: defaultField(z.array(AccountData), []),
 };
 
 type Field<T> = {

@@ -23,6 +23,9 @@ import waxPrivate from './waxPrivate';
 import SimulatedBundler from './bundlers/SimulatedBundler';
 import NetworkBundler from './bundlers/NetworkBundler';
 import IBundler from './bundlers/IBundler';
+import IAccount from './accounts/IAccount';
+import { makeAccountWrapper } from './accounts/AccountData';
+import SimpleAccountWrapper from './accounts/SimpleAccountWrapper';
 
 type Config = {
   logRequests?: boolean;
@@ -301,32 +304,21 @@ export default class WaxInPage {
     await this.storage.connectedAccounts.clear();
   }
 
-  async _getAccount(waxPrivateParam: symbol) {
+  async _getAccount(waxPrivateParam: symbol): Promise<IAccount> {
     if (waxPrivateParam !== waxPrivate) {
       throw new Error('This method is private to the waxInPage library');
     }
 
-    let account = await this.storage.account.get();
+    const existingAccounts = await this.storage.accounts.get();
 
-    if (account) {
-      return account;
+    if (existingAccounts.length > 0) {
+      return await makeAccountWrapper(existingAccounts[0], this);
     }
 
-    const contracts = await this.getContracts();
+    const simpleAccount = await SimpleAccountWrapper.createRandom(this);
 
-    const wallet = ethers.Wallet.createRandom();
+    await this.storage.accounts.set([simpleAccount.toData()]);
 
-    account = {
-      privateKey: wallet.privateKey,
-      ownerAddress: wallet.address,
-      address: await contracts.simpleAccountFactory.createAccount.staticCall(
-        wallet.address,
-        0,
-      ),
-    };
-
-    await this.storage.account.set(account);
-
-    return account;
+    return simpleAccount;
   }
 }

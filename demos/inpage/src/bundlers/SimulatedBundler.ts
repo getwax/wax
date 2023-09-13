@@ -1,6 +1,5 @@
 import WaxInPage from '..';
 import EthereumRpc from '../EthereumRpc';
-import assert from '../helpers/assert';
 import measureCalldataGas from '../measureCalldataGas';
 import waxPrivate from '../waxPrivate';
 import IBundler from './IBundler';
@@ -9,9 +8,6 @@ import IBundler from './IBundler';
 // that are difficult to attribute directly to each user op. It should be
 // calibrated so that the bundler makes a small profit overall.
 const basePreVerificationGas = 50_000n;
-
-// Cost of validating a signature or whatever verification method is in place.
-const baseVerificationGas = 100_000n;
 
 export default class SimulatedBundler implements IBundler {
   #waxInPage: WaxInPage;
@@ -61,17 +57,7 @@ export default class SimulatedBundler implements IBundler {
     const calldataGas =
       measureCalldataGas(data) - measureCalldataGas(baselineData);
 
-    let verificationGasLimit = baseVerificationGas;
-
-    assert(userOp.sender.toLowerCase() === account.address.toLowerCase());
-
-    if (BigInt(userOp.nonce) === 0n) {
-      verificationGasLimit +=
-        await contracts.simpleAccountFactory.createAccount.estimateGas(
-          account.ownerAddress,
-          0,
-        );
-    }
+    const verificationGasLimit = await account.estimateVerificationGas(userOp);
 
     const callGasLimit = await this.#waxInPage.ethereum.request({
       method: 'eth_estimateGas',
