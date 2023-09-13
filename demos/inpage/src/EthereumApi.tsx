@@ -2,15 +2,25 @@ import z from 'zod';
 
 import { ethers } from 'ethers';
 import JsonRpcError from './JsonRpcError';
-import randomId from './helpers/randomId';
 import WaxInPage from '.';
 import EthereumRpc from './EthereumRpc';
-import ZodNotUndefined from './helpers/ZodNotUndefined';
 import { UserOperationStruct } from '../hardhat/typechain-types/@account-abstraction/contracts/interfaces/IEntryPoint';
 import { SimpleAccount__factory } from '../hardhat/typechain-types';
 import assert from './helpers/assert';
+import IBundler from './bundlers/IBundler';
+import waxPrivate from './waxPrivate';
+import ethereumRequest from './ethereumRequest';
 
-const baseVerificationGas = 100_000n;
+// We need a UserOperation in order to estimate the gas fields of a
+// UserOperation, so we use these values as placeholders.
+const temporaryEstimationGas = '0x012345';
+const temporarySignature = [
+  '0x',
+  '123456fe2807660c417ca1a38760342fa70135fcab89a8c7c879a77da8ce7a0b5a3805735e',
+  '95170906b11c6f30dcc74e463e1e6990c68a3998a7271b728b123456',
+].join('');
+
+const extraGasForTransferToNewAddress = 20_000n;
 
 type StrictUserOperation = {
   sender: string;
@@ -18,8 +28,8 @@ type StrictUserOperation = {
   initCode: string;
   callData: string;
   callGasLimit: bigint;
-  verificationGasLimit: bigint;
-  preVerificationGas: bigint;
+  verificationGasLimit: string;
+  preVerificationGas: string;
   maxFeePerGas: bigint;
   maxPriorityFeePerGas: bigint;
   paymasterAndData: string;
@@ -27,8 +37,9 @@ type StrictUserOperation = {
 };
 
 export default class EthereumApi {
-  #waxInPage: WaxInPage;
   #rpcUrl: string;
+  #waxInPage: WaxInPage;
+  #bundler: IBundler;
   #chainIdPromise: Promise<string>;
 
   #userOps = new Map<
@@ -45,13 +56,15 @@ export default class EthereumApi {
     }
   >();
 
-  constructor(rpcUrl: string, waxInPage: WaxInPage) {
+  constructor(rpcUrl: string, waxInPage: WaxInPage, bundler: IBundler) {
     this.#rpcUrl = rpcUrl;
     this.#waxInPage = waxInPage;
+    this.#bundler = bundler;
 
-    this.#chainIdPromise = this.#networkRequest({ method: 'eth_chainId' }).then(
-      (res) => z.string().parse(res),
-    );
+    this.#chainIdPromise = ethereumRequest({
+      url: this.#rpcUrl,
+      method: 'eth_chainId',
+    }).then((res) => z.string().parse(res));
   }
 
   async request<M extends string>({
@@ -60,11 +73,52 @@ export default class EthereumApi {
   }: {
     method: M;
   } & EthereumRpc.RequestParams<M>): Promise<EthereumRpc.Response<M>> {
-    if (!(method in EthereumRpc.schema)) {
-      return (await this.#requestImpl({
+    let res;
+
+    try {
+      res = await this.#requestImpl({ method, params } as {
+        method: M;
+      } & EthereumRpc.RequestParams<M>);
+    } catch (error) {
+      if (this.#waxInPage.getConfig('logRequests')) {
+        // eslint-disable-next-line no-console
+        console.log('ethereum.request', {
+          method,
+          params,
+          error,
+        });
+      }
+
+      throw error;
+    }
+
+    if (this.#waxInPage.getConfig('logRequests')) {
+      // eslint-disable-next-line no-console
+      console.log('ethereum.request', {
         method,
         params,
-      })) as EthereumRpc.Response<M>;
+        response: res,
+      });
+    }
+
+    return res as EthereumRpc.Response<M>;
+  }
+
+  async #requestImpl<M extends string>({
+    method,
+    params,
+  }: {
+    method: M;
+  } & EthereumRpc.RequestParams<M>): Promise<EthereumRpc.Response<M>> {
+    if (!(method in EthereumRpc.schema)) {
+      return await ethereumRequest({
+        url: this.#rpcUrl,
+        method,
+        params,
+      } as {
+        url: string;
+        method: M;
+      } & EthereumRpc.RequestParams<M>);
     }
 
     const methodSchema = EthereumRpc.schema[method as keyof EthereumRpc.Schema];
@@ -78,33 +132,28 @@ export default class EthereumApi {
       });
     }
 
-    const response = await this.#requestImpl({ method, params });
+    let response: EthereumRpc.Response<M>;
 
-    const parsedResponse = methodSchema.output.safeParse(response);
-
-    if (!parsedResponse.success) {
-      throw new JsonRpcError({
-        code: -32602,
-        message: parsedResponse.error.toString(),
-      });
-    }
-
-    return parsedResponse.data as EthereumRpc.Response<M>;
-  }
-
-  async #requestImpl({
-    method,
-    params,
-  }: {
-    method: string;
-    params?: unknown[];
-  }): Promise<unknown> {
     if (method in this.#customHandlers) {
       // eslint-disable-next-line
-      return await (this.#customHandlers as any)[method](...(params ?? []));
+      response = await (this.#customHandlers as any)[method](...(params ?? []));
+    } else {
+      response = await ethereumRequest({
+        url: this.#rpcUrl,
+        method,
+        params,
+      } as {
+        url: string;
+        method: M;
+      } & EthereumRpc.RequestParams<M>);
     }
 
-    return await this.#networkRequest({ method, params });
+    return response;
+  }
+
+  async #getEntryPointAddress() {
+    const contracts = await this.#waxInPage.getContracts();
+    return await contracts.entryPoint.getAddress();
   }
 
   #customHandlers: Partial<EthereumRpc.Handlers> = {
@@ -129,7 +178,7 @@ export default class EthereumApi {
         });
       }
 
-      const account = await this.#getAccount();
+      const account = await this.#waxInPage._getAccount(waxPrivate);
 
       connectedAccounts = [account.address];
 
@@ -142,12 +191,22 @@ export default class EthereumApi {
       await this.#waxInPage.storage.connectedAccounts.get(),
 
     eth_sendTransaction: async (...txs) => {
-      const sender = txs[0].from;
+      const account = await this.#waxInPage._getAccount(waxPrivate);
+      const contracts = await this.#waxInPage.getContracts();
 
-      if (txs.find((tx) => tx.from !== sender)) {
+      const sender = txs[0].from ?? account.address;
+
+      if (txs.find((tx) => tx.from !== txs[0].from)) {
         throw new JsonRpcError({
           code: -32602,
           message: 'All txs must have the same sender (aka `.from`)',
+        });
+      }
+
+      if (sender.toLowerCase() !== account.address.toLowerCase()) {
+        throw new JsonRpcError({
+          code: -32000,
+          message: `unknown account ${sender}`,
         });
       }
 
@@ -160,7 +219,19 @@ export default class EthereumApi {
 
       const granted = await this.#waxInPage.requestPermission(
         <pre style={{ overflowX: 'auto', maxWidth: '100%', fontSize: '1em' }}>
-          {question} {JSON.stringify(txData, null, 2)}
+          {question}{' '}
+          {JSON.stringify(
+            txData,
+            (_key, value) => {
+              if (typeof value === 'bigint') {
+                return `0x${value.toString(16)}`;
+              }
+
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+              return value;
+            },
+            2,
+          )}
         </pre>,
       );
 
@@ -171,28 +242,68 @@ export default class EthereumApi {
         });
       }
 
-      const account = await this.#getAccount();
-      const contracts = await this.#waxInPage.getContracts();
+      const actions = await Promise.all(
+        txs.map(async (tx) => {
+          const parsedTx = z
+            .object({
+              // TODO: Shouldn't this be optional? (contract deployment)
+              to: z.string(),
 
-      const actions = txs.map((tx) => {
-        const parsedTx = z
-          .object({
-            to: z.string(),
-            gas: z.string(), // TODO: should be optional (calculate gas here)
-            data: z.optional(z.string()),
-            value: z.optional(z.string()),
-          })
-          .safeParse(tx);
+              gas: z.optional(z.string()),
+              data: z.optional(z.string()),
+              value: z.optional(EthereumRpc.BigNumberish),
+            })
+            .safeParse(tx);
 
-        if (!parsedTx.success) {
-          throw new JsonRpcError({
-            code: -32602,
-            message: `Failed to parse tx: ${parsedTx.error.toString()}`,
-          });
-        }
+          if (!parsedTx.success) {
+            throw new JsonRpcError({
+              code: -32601,
+              message: `Failed to parse tx: ${parsedTx.error.toString()}`,
+            });
+          }
 
-        return parsedTx.data;
-      });
+          let { value } = parsedTx.data;
+
+          if (typeof value === 'number' || typeof value === 'bigint') {
+            value = `0x${value.toString(16)}`;
+          }
+
+          // eslint-disable-next-line prefer-destructuring
+          let gas: string | bigint | undefined = parsedTx.data.gas;
+
+          if (gas === undefined) {
+            gas = BigInt(
+              await this.request({
+                method: 'eth_estimateGas',
+                params: [
+                  {
+                    ...parsedTx.data,
+                    value,
+                  },
+                ],
+              }),
+            );
+
+            if (BigInt(value ?? 0) !== 0n) {
+              const recipientBalance =
+                await this.#waxInPage.ethersProvider.getBalance(
+                  parsedTx.data.to,
+                );
+
+              if (recipientBalance === 0n) {
+                gas += extraGasForTransferToNewAddress;
+              }
+            }
+          }
+
+          return {
+            to: parsedTx.data.to,
+            gas,
+            data: parsedTx.data.data ?? '0x',
+            value: parsedTx.data.value ?? 0n,
+          };
+        }),
+      );
 
       const simpleAccount = SimpleAccount__factory.connect(
         account.address,
@@ -206,7 +317,7 @@ export default class EthereumApi {
 
         callData = simpleAccount.interface.encodeFunctionData('execute', [
           action.to,
-          action.value ?? 0n,
+          action.value,
           action.data ?? '0x',
         ]);
       } else {
@@ -237,7 +348,6 @@ export default class EthereumApi {
       );
 
       let initCode: string;
-      let verificationGasLimit = baseVerificationGas;
 
       if (accountBytecode === '0x') {
         nonce = 0n;
@@ -247,12 +357,6 @@ export default class EthereumApi {
         initCode += contracts.simpleAccountFactory.interface
           .encodeFunctionData('createAccount', [account.ownerAddress, 0])
           .slice(2);
-
-        verificationGasLimit +=
-          await contracts.simpleAccountFactory.createAccount.estimateGas(
-            account.ownerAddress,
-            0,
-          );
       } else {
         nonce = await simpleAccount.getNonce();
         initCode = '0x';
@@ -270,29 +374,38 @@ export default class EthereumApi {
         initCode,
         callData,
         callGasLimit: actions.map((a) => BigInt(a.gas)).reduce((a, b) => a + b),
-        verificationGasLimit,
-        preVerificationGas: 0n, // TODO
+        verificationGasLimit: temporaryEstimationGas,
+        preVerificationGas: temporaryEstimationGas,
         maxFeePerGas: feeData.maxFeePerGas,
         maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
         paymasterAndData: '0x',
-        signature: '0x',
+        signature: temporarySignature,
       } satisfies UserOperationStruct;
 
-      const userOpHash = await contracts.entryPoint.getUserOpHash(userOp);
+      let userOpHash = await contracts.entryPoint.getUserOpHash(userOp);
 
       userOp.signature = await ownerWallet.signMessage(
         ethers.getBytes(userOpHash),
       );
 
-      const adminAccount = await this.#waxInPage.requestAdminAccount(
-        'simulate-bundler',
+      const { verificationGasLimit, preVerificationGas } = await this.request({
+        method: 'eth_estimateUserOperationGas',
+        params: [userOp, await contracts.entryPoint.getAddress()],
+      });
+
+      userOp.verificationGasLimit = verificationGasLimit;
+      userOp.preVerificationGas = preVerificationGas;
+
+      userOpHash = await contracts.entryPoint.getUserOpHash(userOp);
+
+      userOp.signature = await ownerWallet.signMessage(
+        ethers.getBytes(userOpHash),
       );
 
-      // *not* the confirmation, just the response (don't add .wait(), that's
-      // wrong).
-      await contracts.entryPoint
-        .connect(adminAccount)
-        .handleOps([userOp], adminAccount.getAddress());
+      await this.request({
+        method: 'eth_sendUserOperation',
+        params: [userOp, await contracts.entryPoint.getAddress()],
+      });
 
       this.#userOps.set(userOpHash, {
         chainId: BigInt(await this.request({ method: 'eth_chainId' })),
@@ -312,23 +425,21 @@ export default class EthereumApi {
       const opInfo = this.#userOps.get(txHash);
 
       if (opInfo === undefined) {
-        return (await this.#networkRequest({
+        return await ethereumRequest({
+          url: this.#rpcUrl,
           method: 'eth_getTransactionByHash',
           params: [txHash],
-        })) as EthereumRpc.Transaction | null;
+        });
       }
 
-      const contracts = await this.#waxInPage.getContracts();
+      const receipt = await this.request({
+        method: 'eth_getUserOperationReceipt',
+        params: [txHash],
+      });
 
-      const events = await contracts.entryPoint.queryFilter(
-        contracts.entryPoint.filters.UserOperationEvent(txHash),
-      );
-
-      if (events.length === 0) {
+      if (receipt === null) {
         return null;
       }
-
-      const event = events[0];
 
       const { userOp } = opInfo;
 
@@ -339,15 +450,15 @@ export default class EthereumApi {
       const action = opInfo.actions[0];
 
       return {
-        blockHash: event.blockHash,
-        blockNumber: `0x${event.blockNumber.toString(16)}`,
-        from: userOp.sender,
-        gas: `0x${event.args.actualGasUsed.toString(16)}`,
-        hash: txHash,
+        blockHash: receipt.receipt.blockHash,
+        blockNumber: receipt.receipt.blockNumber,
+        from: receipt.sender,
+        gas: receipt.actualGasUsed,
+        hash: receipt.userOpHash,
         input: userOp.callData,
-        nonce: userOp.nonce,
+        nonce: receipt.nonce,
         to: action.to,
-        transactionIndex: `0x${event.transactionIndex.toString(16)}`,
+        transactionIndex: receipt.receipt.transactionIndex,
         value: `0x${action.value.toString(16)}`,
         accessList: [],
 
@@ -359,70 +470,27 @@ export default class EthereumApi {
         v: '0x0',
 
         chainId: `0x${opInfo.chainId.toString(16)}`,
-        gasPrice: `0x${event.args.actualGasCost.toString(16)}`,
+        gasPrice: receipt.actualGasCost,
         maxFeePerGas: `0x${userOp.maxFeePerGas.toString(16)}`,
         maxPriorityFeePerGas: `0x${userOp.maxPriorityFeePerGas.toString(16)}`,
-      } satisfies EthereumRpc.Transaction;
+      } satisfies EthereumRpc.TransactionReceipt;
     },
-  };
 
-  async #networkRequest({
-    method,
-    params = [],
-  }: {
-    method: string;
-    params?: unknown[];
-  }) {
-    const res = await fetch(this.#rpcUrl, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        jsonrpc: '2.0',
-        method,
-        params,
-        id: randomId(),
-      }),
-    });
-
-    const json = z
-      .union([
-        z.object({ result: ZodNotUndefined() }),
-        z.object({ error: ZodNotUndefined() }),
-      ])
-      .parse(await res.json());
-
-    if ('result' in json) {
-      return json.result;
-    }
-
-    assert('error' in json);
-    throw JsonRpcError.parse(json.error);
-  }
-
-  async #getAccount() {
-    let account = await this.#waxInPage.storage.account.get();
-
-    if (account) {
-      return account;
-    }
-
-    const contracts = await this.#waxInPage.getContracts();
-
-    const wallet = ethers.Wallet.createRandom();
-
-    account = {
-      privateKey: wallet.privateKey,
-      ownerAddress: wallet.address,
-      address: await contracts.simpleAccountFactory.createAccount.staticCall(
-        wallet.address,
-        0,
+    eth_sendUserOperation: async (userOp) =>
+      this.#bundler.eth_sendUserOperation(
+        userOp,
+        await this.#getEntryPointAddress(),
       ),
-    };
 
-    await this.#waxInPage.storage.account.set(account);
+    eth_estimateUserOperationGas: async (userOp) =>
+      this.#bundler.eth_estimateUserOperationGas(
+        userOp,
+        await this.#getEntryPointAddress(),
+      ),
 
-    return account;
-  }
+    eth_getUserOperationReceipt: (userOpHash) =>
+      this.#bundler.eth_getUserOperationReceipt(userOpHash),
+
+    eth_supportedEntryPoints: () => this.#bundler.eth_supportedEntryPoints(),
+  };
 }

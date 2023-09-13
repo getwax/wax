@@ -11,6 +11,7 @@ WaxInPage.addStylesheet();
 
 const waxInPage = new WaxInPage({
   rpcUrl: config.rpcUrl,
+  bundlerRpcUrl: config.bundlerRpcUrl,
 });
 
 waxInPage.attachGlobals();
@@ -27,6 +28,10 @@ if (config.pollingInterval !== undefined) {
     ethersPollingInterval: 500,
   });
 }
+
+waxInPage.setConfig({
+  logRequests: config.logRequests,
+});
 
 const demoContext = new DemoContext(waxInPage);
 

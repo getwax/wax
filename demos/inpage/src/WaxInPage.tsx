@@ -19,8 +19,13 @@ import SafeSingletonFactory, {
 } from './SafeSingletonFactory';
 import ReusablePopup from './ReusablePopup';
 import AdminPopup, { AdminPurpose } from './AdminPopup';
+import waxPrivate from './waxPrivate';
+import SimulatedBundler from './bundlers/SimulatedBundler';
+import NetworkBundler from './bundlers/NetworkBundler';
+import IBundler from './bundlers/IBundler';
 
 type Config = {
+  logRequests?: boolean;
   requirePermission: boolean;
   deployContractsIfNeeded: boolean;
   ethersPollingInterval?: number;
@@ -35,6 +40,7 @@ let ethersDefaultPollingInterval = 4000;
 
 type ConstructorOptions = {
   rpcUrl: string;
+  bundlerRpcUrl?: string;
   storage?: WaxStorage;
 };
 
@@ -54,8 +60,20 @@ export default class WaxInPage {
   storage: WaxStorage;
   ethersProvider: ethers.BrowserProvider;
 
-  constructor({ rpcUrl, storage = makeLocalWaxStorage() }: ConstructorOptions) {
-    this.ethereum = new EthereumApi(rpcUrl, this);
+  constructor({
+    rpcUrl,
+    bundlerRpcUrl,
+    storage = makeLocalWaxStorage(),
+  }: ConstructorOptions) {
+    let bundler: IBundler;
+
+    if (bundlerRpcUrl === undefined) {
+      bundler = new SimulatedBundler(this);
+    } else {
+      bundler = new NetworkBundler(bundlerRpcUrl);
+    }
+
+    this.ethereum = new EthereumApi(rpcUrl, this, bundler);
     this.storage = storage;
     this.ethersProvider = new ethers.BrowserProvider(this.ethereum);
     ethersDefaultPollingInterval = this.ethersProvider.pollingInterval;
@@ -90,6 +108,10 @@ export default class WaxInPage {
       this.ethersProvider.pollingInterval =
         newConfig.ethersPollingInterval ?? ethersDefaultPollingInterval;
     }
+  }
+
+  getConfig<K extends keyof Config>(key: K): Config[K] {
+    return structuredClone(this.#config[key]);
   }
 
   async requestPermission(message: ReactNode) {
@@ -277,5 +299,34 @@ export default class WaxInPage {
 
   async disconnect() {
     await this.storage.connectedAccounts.clear();
+  }
+
+  async _getAccount(waxPrivateParam: symbol) {
+    if (waxPrivateParam !== waxPrivate) {
+      throw new Error('This method is private to the waxInPage library');
+    }
+
+    let account = await this.storage.account.get();
+
+    if (account) {
+      return account;
+    }
+
+    const contracts = await this.getContracts();
+
+    const wallet = ethers.Wallet.createRandom();
+
+    account = {
+      privateKey: wallet.privateKey,
+      ownerAddress: wallet.address,
+      address: await contracts.simpleAccountFactory.createAccount.staticCall(
+        wallet.address,
+        0,
+      ),
+    };
+
+    await this.storage.account.set(account);
+
+    return account;
   }
 }
