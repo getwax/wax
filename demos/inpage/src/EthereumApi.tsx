@@ -290,7 +290,12 @@ export default class EthereumApi {
                   parsedTx.data.to,
                 );
 
-              if (recipientBalance === 0n) {
+              const txCount =
+                await this.#waxInPage.ethersProvider.getTransactionCount(
+                  parsedTx.data.to,
+                );
+
+              if (recipientBalance === 0n && txCount === 0) {
                 gas += extraGasForTransferToNewAddress;
               }
             }
