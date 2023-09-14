@@ -22,7 +22,7 @@ contract WebauthnTest is TestHelper {
             bytes memory authenticatorData,
             bytes1 authenticatorDataFlagMask,
             bytes memory clientData,
-            bytes32 messageHash,
+            bytes32 clientChallenge,
             uint256 clientChallengeDataOffset,
             uint256[2] memory signature
         ) = getWebAuthnSignatureValues();
@@ -33,7 +33,7 @@ contract WebauthnTest is TestHelper {
             authenticatorData,
             authenticatorDataFlagMask,
             clientData,
-            messageHash,
+            clientChallenge,
             clientChallengeDataOffset,
             signature,
             publicKey

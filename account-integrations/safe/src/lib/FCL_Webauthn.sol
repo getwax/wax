@@ -20,7 +20,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.12;
 
-import {Base64} from "openzeppelin-contracts/contracts/utils/Base64.sol";
+import {Base64URL} from "./Base64URL.sol";
 import {FCL_Elliptic_ZZ} from "./FCL_elliptic.sol";
 
 library FCL_WebAuthn {
@@ -43,12 +43,13 @@ library FCL_WebAuthn {
                 revert InvalidAuthenticatorData();
             }
             // Verify that clientData commits to the expected client challenge
-            string memory challengeEncoded = Base64.encode(abi.encodePacked(clientChallenge));
+            string memory challengeEncoded = Base64URL.encode32(abi.encodePacked(clientChallenge));
             bytes memory challengeExtracted = new bytes(
             bytes(challengeEncoded).length
         );
 
-            // TODO: wax#44 Extract webauthn challenge from clientData and compare to clientChallenge
+            // TODO: wax#68 Calldata decoding and stack limit
+            // Remove use of copyBytes function, and use commented inline assembly instead to extract the client challenge
             // assembly {
             //     calldatacopy(
             //         add(challengeExtracted, 32),
@@ -65,6 +66,21 @@ library FCL_WebAuthn {
             // if (keccak256(abi.encodePacked(bytes(challengeEncoded))) != moreData) {
             //     revert InvalidClientData();
             // }
+
+            copyBytes(
+                clientData,
+                clientChallengeDataOffset,
+                challengeExtracted.length,
+                challengeExtracted,
+                0
+            );
+
+            if (
+                keccak256(abi.encodePacked(bytes(challengeEncoded))) !=
+                keccak256(abi.encodePacked(challengeExtracted))
+            ) {
+                revert InvalidClientData();
+            }
         } //avoid stack full
 
         // Verify the signature over sha256(authenticatorData || sha256(clientData))
@@ -72,6 +88,30 @@ library FCL_WebAuthn {
         bytes memory verifyData = abi.encodePacked(authenticatorData, more);
 
         return sha256(verifyData);
+    }
+
+    // TODO: wax#68 Calldata decoding and stack limit - remove this function once #68 is complete
+    /* The following function has been written by Alex Beregszaszi (@axic), use it under the terms of the MIT license */
+    function copyBytes(
+        bytes memory _from,
+        uint _fromOffset,
+        uint _length,
+        bytes memory _to,
+        uint _toOffset
+    ) internal pure returns (bytes memory _copiedBytes) {
+        uint minLength = _length + _toOffset;
+        require(_to.length >= minLength); // Buffer too small. Should be a better way?
+        uint i = 32 + _fromOffset; // NOTE: the offset 32 is added to skip the `size` field of both bytes variables
+        uint j = 32 + _toOffset;
+        while (i < (32 + _fromOffset + _length)) {
+            assembly {
+                let tmp := mload(add(_from, i))
+                mstore(add(_to, j), tmp)
+            }
+            i += 32;
+            j += 32;
+        }
+        return _to;
     }
 
     /** @notice Modified from original Fresh Crypto Lib code to use memory instead of calldata */
