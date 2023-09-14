@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 pragma solidity >=0.8.0 <0.9.0;
 
-// import "forge-std/Test.sol";
+import "forge-std/Test.sol";
 
 import {BaseAccount} from "account-abstraction/contracts/core/BaseAccount.sol";
 import {IEntryPoint, UserOperation} from "account-abstraction/contracts/interfaces/IEntryPoint.sol";
@@ -69,40 +69,41 @@ contract SafeWebAuthnPlugin is BaseAccount {
         return _publicKey;
     }
 
+    struct LocalVarStruct {
+        bytes1 authenticatorDataFlagMask;
+        uint256 clientChallengeDataOffset;
+    }
+
     function _validateSignature(
         UserOperation calldata userOp,
         bytes32 userOpHash
     ) internal override returns (uint256 validationData) {
-        // console2.logBytes(userOp.signature);
+        console2.logString("SIG");
+        console2.logBytes(userOp.signature);
         bytes calldata authenticatorData;
-        bytes1 authenticatorDataFlagMask;
         bytes calldata clientData;
-        uint256 clientChallengeDataOffset;
         uint256[2] calldata signature;
         uint256[2] calldata pubKey;
+        LocalVarStruct memory s;
 
-        {
-            uint256 i = 0;
-            uint256 dataLen;
-            uint256 paramLen;
-
+        {            
             // parse length of all fixed-length params (including length)
-            dataLen = 32;
-            paramLen = abi.decode(userOp.signature[i:i+dataLen+1], (uint256));
-            // console2.logString("PARAM LEN");
-            // console2.logUint(paramLen);
+            uint i = 0;
+            uint dataLen = 32;
+            uint256 paramLen = abi.decode(userOp.signature[i:i+dataLen], (uint256));
+            console2.logString("PARAM LEN");
+            console2.logUint(paramLen);
             // Fixed-length params (bytes1, (uint256?), uint256, uint256[2], uint256[2]). Expect 8 slots = 256 bytes
             i += dataLen; // advance index
-
 
             // decode fixed length params (values to memory)
             dataLen = 3 * 32; //lenFixedParams - 32; // -32 already read length
             (
-                authenticatorDataFlagMask,
+                s.authenticatorDataFlagMask,
                 , // some number
-                clientChallengeDataOffset
+                s.clientChallengeDataOffset
             ) = abi.decode(
-                userOp.signature[i:i+dataLen+1],
+                userOp.signature[i:i+dataLen],
                 (
                     bytes1,
                     uint256, //not sure what is encoded here
@@ -110,52 +111,61 @@ contract SafeWebAuthnPlugin is BaseAccount {
                 )
             );
             i += dataLen; // advance index
-            // console2.logString("FIXED COPY");
-            // console2.log(uint8(authenticatorDataFlagMask));
-            // console2.log("%x", clientChallengeDataOffset);
+            console2.logString("FIXED COPY");
+            console2.log(uint8(s.authenticatorDataFlagMask));
+            console2.log("%x", s.clientChallengeDataOffset);
 
 
             bytes calldata calldataLocation;
             // load fixed length array params (pointers to calldata)
             dataLen = 2 * 32;
-            calldataLocation = userOp.signature[i:i+dataLen+1];
+            calldataLocation = userOp.signature[i:i+dataLen];
             assembly{
                 signature := calldataLocation.offset
             }
             i += dataLen; // advance index
 
-            calldataLocation = userOp.signature[i:i+dataLen+1];
+            calldataLocation = userOp.signature[i:i+dataLen];
             assembly{
                 pubKey := calldataLocation.offset
             }
             i += dataLen; // advance index
-            // console2.logString("FIXED CALLDATA");
-            // console2.log("%x, %x", signature[0], signature[1]);
-            // console2.log("%x, %x", pubKey[0], pubKey[1]);
+            console2.logString("FIXED CALLDATA");
+            console2.log("%x, %x", signature[0], signature[1]);
+            console2.log("%x, %x", pubKey[0], pubKey[1]);
 
             // parse length of authenticatorData
             dataLen = 32;
-            paramLen = abi.decode(userOp.signature[i:i+dataLen+1], (uint256));
+            paramLen = abi.decode(userOp.signature[i:i+dataLen], (uint256));
+            console2.logString("AUTH LEN");
+            console2.log(paramLen);
             // i += dataLen; // advance index
             // assign authenticatorData to sig splice
-            // dataLen = paramLen;
             dataLen = ((paramLen >> 5) + 1) << 5; // (round up to next slot)
-            authenticatorData = userOp.signature[i:i+dataLen+1];
-            // console2.logString("auth data");
-            // console2.logBytes(authenticatorData);
+            dataLen += 32; //include index
+            console2.logString("AUTH DATALEN");
+            console2.log(dataLen);
+
+            authenticatorData = userOp.signature[i:i+dataLen];
+            console2.logString("AUTH DATA");
+            console2.logBytes(authenticatorData);
             // i += ((dataLen >> 5) + 1) << 5; // advance index (round up to next slot)
             i += dataLen;
 
             // parse length of clientData
             dataLen = 32;
-            paramLen = abi.decode(userOp.signature[i:i+dataLen+1], (uint256));
+            paramLen = abi.decode(userOp.signature[i:i+dataLen], (uint256));
+            console2.logString("CLIENT LEN");
+            console2.log(paramLen);
             // i += dataLen; // advance index
             // assign clientData to sig splice
-            // dataLen = paramLen;
             dataLen = ((paramLen >> 5) + 1) << 5; // (round up to next slot)
-            clientData = userOp.signature[i:i+dataLen+1];
-            // console2.logString("client data");
-            // console2.logBytes(clientData);
+            dataLen += 32;
+            console2.logString("CLIENT DATALEN");
+            console2.log(dataLen);
+            clientData = userOp.signature[i:i+dataLen];
+            console2.logString("CLIENT DATA");
+            console2.logBytes(clientData);
             // i += ((dataLen >> 5) + 1) << 5; // advance index (round up to next slot)
             i += dataLen;
         }
@@ -214,14 +224,13 @@ contract SafeWebAuthnPlugin is BaseAccount {
 
         bool verified = FCL_WebAuthn.checkSignature(
             authenticatorData,
-            authenticatorDataFlagMask,
+            s.authenticatorDataFlagMask,
             clientData,
             userOpHash,
-            clientChallengeDataOffset,
+            s.clientChallengeDataOffset,
             signature,
             pubKey
         );
-        // bool verified = true;
         if (!verified) return SIG_VALIDATION_FAILED;
         return 0;
     }
