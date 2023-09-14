@@ -17,6 +17,8 @@ interface ISafe {
     ) external returns (bool success);
 }
 
+error IncorrectSignatureLength(uint256 length);
+
 contract SafeBlsPlugin is BaseAccount {
     // TODO: Use EIP 712 for domain separation
     bytes32 public constant BLS_DOMAIN = keccak256("eip4337.bls.domain");
@@ -73,7 +75,9 @@ contract SafeBlsPlugin is BaseAccount {
         UserOperation calldata userOp,
         bytes32 userOpHash
     ) internal view override returns (uint256 validationData) {
-        require(userOp.signature.length == 64, "VG: Sig bytes length must be 64");
+        if (userOp.signature.length != 64) {
+            revert IncorrectSignatureLength(userOp.signature.length);
+        }
 
         uint256[2] memory decodedSignature = abi.decode(userOp.signature, (uint256[2]));
 
