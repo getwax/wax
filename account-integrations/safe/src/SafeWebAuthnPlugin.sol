@@ -139,35 +139,31 @@ contract SafeWebAuthnPlugin is BaseAccount {
             paramLen = abi.decode(userOp.signature[i:i+dataLen], (uint256));
             console2.logString("AUTH LEN");
             console2.log(paramLen);
-            // i += dataLen; // advance index
+            i += dataLen; // advance index
             // assign authenticatorData to sig splice
-            dataLen = ((paramLen >> 5) + 1) << 5; // (round up to next slot)
-            dataLen += 32; //include index
+            dataLen = paramLen;//((paramLen >> 5) + 1) << 5; // (round up to next slot)
             console2.logString("AUTH DATALEN");
             console2.log(dataLen);
 
             authenticatorData = userOp.signature[i:i+dataLen];
             console2.logString("AUTH DATA");
             console2.logBytes(authenticatorData);
-            // i += ((dataLen >> 5) + 1) << 5; // advance index (round up to next slot)
-            i += dataLen;
+            i += ((dataLen >> 5) + 1) << 5; // advance index (round up to next slot)
 
             // parse length of clientData
             dataLen = 32;
             paramLen = abi.decode(userOp.signature[i:i+dataLen], (uint256));
             console2.logString("CLIENT LEN");
             console2.log(paramLen);
-            // i += dataLen; // advance index
+            i += dataLen; // advance index
             // assign clientData to sig splice
-            dataLen = ((paramLen >> 5) + 1) << 5; // (round up to next slot)
-            dataLen += 32;
+            dataLen = paramLen;// ((paramLen >> 5) + 1) << 5; // (round up to next slot)
             console2.logString("CLIENT DATALEN");
             console2.log(dataLen);
             clientData = userOp.signature[i:i+dataLen];
             console2.logString("CLIENT DATA");
             console2.logBytes(clientData);
-            // i += ((dataLen >> 5) + 1) << 5; // advance index (round up to next slot)
-            i += dataLen;
+            i += ((dataLen >> 5) + 1) << 5; // advance index (round up to next slot)
         }
 /*
             0000000000000000000000000000000000000000000000000000000000000100 // 256 = 8 x 32 slots
