@@ -1,7 +1,7 @@
 import { ethers } from "hardhat";
 import { expect } from "chai";
 import { AddressZero } from "@ethersproject/constants";
-import { utils } from "ethers-v5";
+import { getBytes, keccak256, solidityPacked } from "ethers";
 import { UserOperationStruct } from "@account-abstraction/contracts";
 import { calculateProxyAddress } from "./utils/calculateProxyAddress";
 import { signer as hubbleBlsSigner } from "@thehubbleproject/bls";
@@ -33,9 +33,6 @@ describe("SafeBlsPlugin", () => {
     return {
       provider,
       userWallet,
-      entryPoint,
-      safe,
-      safeProxyFactory,
     };
   };
 
@@ -47,11 +44,11 @@ describe("SafeBlsPlugin", () => {
    * 2. Executing a transaction is possible
    */
   it("should pass the ERC4337 validation", async () => {
-    const { provider, userWallet, entryPoint, safe, safeProxyFactory } =
+    const { provider, userWallet } =
       await setupTests();
 
-    const domain = utils.arrayify(
-      utils.keccak256(Buffer.from("eip4337.bls.domain"))
+    const domain = getBytes(
+      keccak256(Buffer.from("eip4337.bls.domain"))
     );
     const signerFactory = await hubbleBlsSigner.BlsSignerFactory.new();
     const blsSigner = signerFactory.getSigner(domain, BLS_PRIVATE_KEY);
@@ -82,6 +79,7 @@ describe("SafeBlsPlugin", () => {
     const factoryAddress = await safeProxyFactory.getAddress();
 
     const moduleInitializer = safeBlsPlugin.interface.encodeFunctionData(
+      // @ts-ignore Typescript linting isn't recognizing this function for some reason (Build still works fine)
       "enableMyself",
       []
     );
@@ -158,7 +156,7 @@ describe("SafeBlsPlugin", () => {
 
     const userOperation = {
       ...unsignedUserOperation,
-      signature: utils.solidityPack(["uint256", "uint256"], userOpSignature),
+      signature: solidityPacked(["uint256", "uint256"], userOpSignature),
     };
 
     // Uncomment to get a detailed debug message
@@ -175,6 +173,7 @@ describe("SafeBlsPlugin", () => {
 
     try {
       const rcpt = await entryPoint.handleOps(
+        // @ts-ignore Typescript linting is showing an error for some reason (Build still works fine)
         [userOperation],
         ENTRYPOINT_ADDRESS
       );
