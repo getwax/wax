@@ -15,12 +15,12 @@ import { EntryPoint } from "../../typechain-types/lib/account-abstraction/contra
 
 const MNEMONIC = "test test test test test test test test test test test junk";
 
-let safeProxyFactory: SafeProxyFactory;
-let safe: Safe;
-let entryPoint: EntryPoint;
-
 describe("RecoveryPlugin", () => {
   const setupTests = async () => {
+    let safeProxyFactory: SafeProxyFactory;
+    let safe: Safe;
+    let entryPoint: EntryPoint;
+
     safeProxyFactory = await (
       await ethers.getContractFactory("SafeProxyFactory")
     ).deploy();
@@ -33,6 +33,9 @@ describe("RecoveryPlugin", () => {
     return {
       provider,
       userWallet,
+      safeProxyFactory,
+      safe,
+      entryPoint,
     };
   };
 
@@ -44,7 +47,14 @@ describe("RecoveryPlugin", () => {
    * 2. Executing a transaction is possible
    */
   it("should pass the ERC4337 validation", async () => {
-    const { provider, userWallet } = await setupTests();
+    const {
+      provider,
+      userWallet,
+      safeProxyFactory,
+      safe,
+      entryPoint
+    } = await setupTests();
+
     const ENTRYPOINT_ADDRESS = await entryPoint.getAddress();
 
     const safeECDSAPluginFactory = (
