@@ -1,5 +1,7 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
 
-import {EntryPoint} from "@account-abstraction/contracts/core/EntryPoint.sol";
-import {SimpleAccountFactory} from "@account-abstraction/contracts/samples/SimpleAccountFactory.sol";
+import {EntryPoint} from "account-abstraction/contracts/core/EntryPoint.sol";
+import {SimpleAccountFactory} from "account-abstraction/contracts/samples/SimpleAccountFactory.sol";
+
+import {SafeECDSAPlugin} from "../lib/account-integrations/safe/src/SafeECDSAPlugin.sol";

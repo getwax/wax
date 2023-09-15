@@ -1,10 +1,9 @@
 import z from 'zod';
 
-import { ethers } from 'ethers';
 import JsonRpcError from './JsonRpcError';
 import WaxInPage from '.';
 import EthereumRpc from './EthereumRpc';
-import { UserOperationStruct } from '../hardhat/typechain-types/@account-abstraction/contracts/interfaces/IEntryPoint';
+import { UserOperationStruct } from '../hardhat/typechain-types/account-abstraction/contracts/interfaces/IEntryPoint';
 import assert from './helpers/assert';
 import IBundler from './bundlers/IBundler';
 import waxPrivate from './waxPrivate';
