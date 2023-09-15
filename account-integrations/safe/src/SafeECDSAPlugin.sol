@@ -8,6 +8,8 @@ import {UserOperation} from "account-abstraction/contracts/interfaces/IEntryPoin
 
 import {ECDSA} from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
 
+import "hardhat/console.sol";
+
 interface ISafe {
     function enableModule(address module) external;
 
@@ -17,13 +19,15 @@ interface ISafe {
         bytes memory data,
         uint8 operation
     ) external returns (bool success);
+
+    function isModuleEnabled(address module) external view returns (bool);
 }
 
 contract SafeECDSAPlugin is BaseAccount {
     using ECDSA for bytes32;
 
-    address public immutable myAddress;
-    address private immutable _owner;
+    address public immutable myAddress; // Module address
+    address private _owner; // Safe address
     address private immutable _entryPoint;
 
     address internal constant _SENTINEL_MODULES = address(0x1);
@@ -69,6 +73,20 @@ contract SafeECDSAPlugin is BaseAccount {
 
     function owner() public view returns (address) {
         return _owner;
+    }
+
+    function updateOwner(address newOwner) public {
+        console.log("ecdsa - message.sender:        ", msg.sender);
+        console.log("ecdsa - owner (key address):  ", _owner);
+        console.log("ecdsa - myAddress (module):    ", myAddress);
+        console.log("ecdsa - entrypoint:            ", _entryPoint);
+        console.log("ecdsa - address(this):         ", address(this));
+        bool isModuleEnabled = ISafe(msg.sender).isModuleEnabled(address(this));
+        console.log("ecdsa - moduleEnabled:         ", isModuleEnabled);
+        console.log("here");
+        // require(msg.sender == _owner, "Only the safe can update the owner"); // todo this doesn't work
+        _owner = newOwner;
+        // Todo fire event
     }
 
     function _validateSignature(
