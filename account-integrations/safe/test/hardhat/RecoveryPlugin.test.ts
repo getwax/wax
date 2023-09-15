@@ -305,7 +305,7 @@ describe("RecoveryPlugin", () => {
     const recoveryPluginAsRecoverySigner = recoveryPlugin.connect(recoverySigner);
     const recoveryPluginAsRecoverySignerAddress = await recoveryPluginAsRecoverySigner.getAddress();
     console.log('recoveryPluginAsRecoverySignerAddress=', recoveryPluginAsRecoverySignerAddress);
-    await recoveryPluginAsRecoverySigner.getData(
+    await recoveryPluginAsRecoverySigner.resetEcdsaAddress(
         await testSafe.getAddress(),
         ecdsaaddress,
         newSigner.address

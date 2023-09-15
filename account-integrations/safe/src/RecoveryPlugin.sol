@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+// TODO: remove logs
 import "hardhat/console.sol";
 
 contract Enum {
@@ -25,34 +26,39 @@ interface ISafe {
 }
 
 contract RecoveryPlugin {
-    address public storedEOA;
-    address public safe;
+    address private immutable storedEOA;
+    address public storedSafe;
+
+    error SENDER_NOT_STORED_EOA(address sender);
+    error ATTEMPTING_RESET_ON_WRONG_SAFE(address attemptedSafe);
 
     constructor(address _safe, address _eoa) {
-        safe = _safe;
+        storedSafe = _safe;
         storedEOA = _eoa;
     }
 
-    function getData(address testSafe, address ecdsaaddress, address newAddress) external {
-        require(msg.sender == storedEOA, "Only the current EOA can set a new EOA");
-        require(testSafe == safe, "Only attempt tx on safed safe");
+    modifier onlyStoredEOA {
+        if (msg.sender != storedEOA) {
+            revert SENDER_NOT_STORED_EOA(msg.sender);
+        }
+        _;
+    }
 
-        console.log("rp - safe address: ", safe);
+    function resetEcdsaAddress(
+        address safe,
+        address ecdsaPluginAddress,
+        address newValidatingEcdsaAddress
+    ) external onlyStoredEOA {
+        if (safe != storedSafe) {
+            revert ATTEMPTING_RESET_ON_WRONG_SAFE(safe);
+        }
+
+        // Logging for testing
+        console.log("rp - safe address: ", storedSafe);
         console.log("rp - msg.sender: ", msg.sender);
         console.log("rp - storedEOA: ", storedEOA);
 
-        bytes memory data = abi.encodeWithSignature("updateOwner(address)", newAddress);
-        ISafe(testSafe).execTransactionFromModule(ecdsaaddress, 0, data, Enum.Operation.Call);
+        bytes memory data = abi.encodeWithSignature("updateOwner(address)", newValidatingEcdsaAddress);
+        ISafe(safe).execTransactionFromModule(ecdsaPluginAddress, 0, data, Enum.Operation.Call);
     }
-
-    // TODO: consider checking a message hash instead of the address of the module
-    // function recoverSafeIfSigned(bytes memory signature) external {
-    //     // This message is what you sign: the address of this module
-    //     bytes32 message = prefixed(keccak256(abi.encodePacked(address(this))));
-        
-    //     require(recoverSigner(message, signature) == storedEOA, "Invalid signature");
-
-    //     // Calling recover on the safe
-    //     ISafe(safe).recover();
-    // }
 }
