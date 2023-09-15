@@ -8,6 +8,7 @@ import {UserOperation} from "account-abstraction/contracts/interfaces/IEntryPoin
 
 import {ECDSA} from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
 
+// TODO: remove console logs
 import "hardhat/console.sol";
 
 interface ISafe {
@@ -33,6 +34,8 @@ contract SafeECDSAPlugin is BaseAccount {
     address internal constant _SENTINEL_MODULES = address(0x1);
 
     error NONCE_NOT_SEQUENTIAL();
+    error MODULE_NOT_ENABLED();
+    event OWNER_UPDATED(address indexed oldOwner, address indexed newOwner);
 
     constructor(address entryPointAddress, address ownerAddress) {
         myAddress = address(this);
@@ -76,17 +79,25 @@ contract SafeECDSAPlugin is BaseAccount {
     }
 
     function updateOwner(address newOwner) public {
+        // TODO: Is this check all that's needed?  Would be niced to check if the sender
+        // is the safe address but we don't know the safe address here since we deploy the plugin
+        // at the same time as the safe.
+        bool isModuleEnabled = ISafe(msg.sender).isModuleEnabled(address(this));
+        if(!isModuleEnabled) {
+            revert MODULE_NOT_ENABLED();
+        }
+        _owner = newOwner;
+
+        emit OWNER_UPDATED(_owner, newOwner);
+
+        // Loging for testing
         console.log("ecdsa - message.sender:        ", msg.sender);
         console.log("ecdsa - owner (key address):  ", _owner);
         console.log("ecdsa - myAddress (module):    ", myAddress);
         console.log("ecdsa - entrypoint:            ", _entryPoint);
         console.log("ecdsa - address(this):         ", address(this));
-        bool isModuleEnabled = ISafe(msg.sender).isModuleEnabled(address(this));
         console.log("ecdsa - moduleEnabled:         ", isModuleEnabled);
         console.log("here");
-        // require(msg.sender == _owner, "Only the safe can update the owner"); // todo this doesn't work
-        _owner = newOwner;
-        // Todo fire event
     }
 
     function _validateSignature(
