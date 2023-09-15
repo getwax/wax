@@ -118,5 +118,11 @@ abstract contract TestHelper is Test {
             signature,
             publicKey
         );
+        // console2.logString("authenticatorData");
+        // console2.logBytes(authenticatorData);
+        // console2.logString("flagMask");
+        // console2.logBytes1(authenticatorDataFlagMask);
+        // console2.logString("userOp");
+        // console2.logBytes(userOpSignature);
     }
 }

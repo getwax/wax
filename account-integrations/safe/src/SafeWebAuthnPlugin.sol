@@ -67,35 +67,92 @@ contract SafeWebAuthnPlugin is BaseAccount {
         return _publicKey;
     }
 
+    struct LocalVarStruct {
+        bytes1 authenticatorDataFlagMask;
+        uint256 clientChallengeDataOffset;
+    }
+
     function _validateSignature(
         UserOperation calldata userOp,
         bytes32 userOpHash
     ) internal override returns (uint256 validationData) {
-        {
-            (
-                bytes memory authenticatorData,
-                bytes1 authenticatorDataFlagMask,
-                bytes memory clientData,
-                uint256 clientChallengeDataOffset,
-                uint256[2] memory signature,
-                uint256[2] memory pubKey
-            ) = abi.decode(
-                    userOp.signature,
-                    (bytes, bytes1, bytes, uint256, uint256[2], uint256[2])
-                );
+        bytes calldata authenticatorData;
+        bytes calldata clientData;
+        uint256[2] calldata signature;
+        uint256[2] calldata pubKey;
+        LocalVarStruct memory s;
 
-            bool verified = FCL_WebAuthn.checkSignature(
-                authenticatorData,
-                authenticatorDataFlagMask,
-                clientData,
-                userOpHash,
-                clientChallengeDataOffset,
-                signature,
-                pubKey
+        {            
+            // parse length of all fixed-length params (including length)
+            uint i = 0;
+            uint dataLen = 32;
+            uint256 paramLen = abi.decode(userOp.signature[i:i+dataLen], (uint256));
+            // Fixed-length params (bytes1, (uint256?), uint256, uint256[2], uint256[2]). Expect 8 slots = 256 bytes
+            i += dataLen; // advance index
+
+            // decode fixed length params (values to memory)
+            dataLen = 3 * 32; //lenFixedParams - 32; // -32 already read length
+            (
+                s.authenticatorDataFlagMask,
+                , // some number
+                s.clientChallengeDataOffset
+            ) = abi.decode(
+                userOp.signature[i:i+dataLen],
+                (
+                    bytes1,
+                    uint256, //not sure what is encoded here
+                    uint256
+                )
             );
-            if (!verified) return SIG_VALIDATION_FAILED;
-            return 0;
+            i += dataLen; // advance index
+
+
+            bytes calldata calldataLocation;
+            // load fixed length array params (pointers to calldata)
+            dataLen = 2 * 32;
+            calldataLocation = userOp.signature[i:i+dataLen];
+            assembly{
+                signature := calldataLocation.offset
+            }
+            i += dataLen; // advance index
+
+            calldataLocation = userOp.signature[i:i+dataLen];
+            assembly{
+                pubKey := calldataLocation.offset
+            }
+            i += dataLen; // advance index
+
+            // parse length of authenticatorData
+            dataLen = 32;
+            paramLen = abi.decode(userOp.signature[i:i+dataLen], (uint256));
+            i += dataLen; // advance index
+            // assign authenticatorData to sig splice
+            dataLen = paramLen;//((paramLen >> 5) + 1) << 5; // (round up to next slot)
+
+            authenticatorData = userOp.signature[i:i+dataLen];
+            i += ((dataLen >> 5) + 1) << 5; // advance index (round up to next slot)
+
+            // parse length of clientData
+            dataLen = 32;
+            paramLen = abi.decode(userOp.signature[i:i+dataLen], (uint256));
+            i += dataLen; // advance index
+            // assign clientData to sig splice
+            dataLen = paramLen;// ((paramLen >> 5) + 1) << 5; // (round up to next slot)
+            clientData = userOp.signature[i:i+dataLen];
+            i += ((dataLen >> 5) + 1) << 5; // advance index (round up to next slot)
         }
+
+        bool verified = FCL_WebAuthn.checkSignature(
+            authenticatorData,
+            s.authenticatorDataFlagMask,
+            clientData,
+            userOpHash,
+            s.clientChallengeDataOffset,
+            signature,
+            pubKey
+        );
+        if (!verified) return SIG_VALIDATION_FAILED;
+        return 0;
     }
 
     /**

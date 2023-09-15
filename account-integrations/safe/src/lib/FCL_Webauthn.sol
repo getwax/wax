@@ -76,13 +76,13 @@ library FCL_WebAuthn {
 
     /** @notice Modified from original Fresh Crypto Lib code to use memory instead of calldata */
     function checkSignature(
-        bytes memory authenticatorData,
+        bytes calldata authenticatorData,
         bytes1 authenticatorDataFlagMask,
-        bytes memory clientData,
+        bytes calldata clientData,
         bytes32 clientChallenge,
         uint256 clientChallengeDataOffset,
-        uint256[2] memory rs,
-        uint256[2] memory Q
+        uint256[2] calldata rs,
+        uint256[2] calldata Q
     ) internal returns (bool) {
         // Let the caller check if User Presence (0x01) or User Verification (0x04) are set
 

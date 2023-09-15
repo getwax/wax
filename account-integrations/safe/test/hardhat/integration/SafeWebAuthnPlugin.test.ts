@@ -75,7 +75,7 @@ describe("SafeWebAuthnPlugin", () => {
     const clientData =
       "0x7b2274797065223a22776562617574686e2e676574222c226368616c6c656e6765223a22efbfbd22efbfbd5f21efbfbd1b113e63efbfbdefbfbd6defbfbd4fefbfbdefbfbd11efbfbd11efbfbd40efbfbdefbfbdefbfbd64efbfbdefbfbd3cefbfbd58222c226f726967696e223a2268747470733a2f2f646576656c6f706d656e742e666f72756d64616f732e636f6d227d";
     const clientChallengeDataOffset = 36;
-    const signature = [
+    const signature: [BigNumberish, BigNumberish] = [
       BigInt(
         "36788204816852931931532076736929768488646494203674172515272861180041446565109"
       ),
