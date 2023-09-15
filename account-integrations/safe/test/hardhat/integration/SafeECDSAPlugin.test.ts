@@ -104,8 +104,7 @@ describe("SafeECDSAPlugin", () => {
     const factoryAddress = await factory.getAddress();
 
     const moduleInitializer = safeECDSAPlugin.interface.encodeFunctionData(
-      "enableMyself",
-      []
+      "enableMyself"
     );
     const encodedInitializer = singleton.interface.encodeFunctionData("setup", [
       [userWallet.address],

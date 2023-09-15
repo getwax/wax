@@ -81,7 +81,6 @@ describe("SafeBlsPlugin", () => {
     const moduleInitializer = safeBlsPlugin.interface.encodeFunctionData(
       // @ts-ignore Typescript linting isn't recognizing this function for some reason (Build still works fine)
       "enableMyself",
-      []
     );
     const encodedInitializer = safe.interface.encodeFunctionData("setup", [
       [userWallet.address],
@@ -128,7 +127,7 @@ describe("SafeBlsPlugin", () => {
       value: ethers.parseEther("100"),
     });
 
-    const unsignedUserOperation: UserOperationStruct = {
+    const unsignedUserOperation = {
       sender: deployedAddress,
       nonce: "0x0",
       initCode,
@@ -140,7 +139,7 @@ describe("SafeBlsPlugin", () => {
       maxPriorityFeePerGas,
       paymasterAndData: "0x",
       signature: "",
-    };
+    } satisfies UserOperationStruct;
 
     const resolvedUserOp = await ethers.resolveProperties(
       unsignedUserOperation

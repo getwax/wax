@@ -146,7 +146,6 @@ describe("SafeWebAuthnPlugin", () => {
 
     const moduleInitializer = safeWebAuthnPlugin.interface.encodeFunctionData(
       "enableMyself",
-      []
     );
     const encodedInitializer = singleton.interface.encodeFunctionData("setup", [
       [userWallet.address],
