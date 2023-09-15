@@ -92,7 +92,7 @@ contract SafeECDSAPlugin is BaseAccount {
     function _validateSignature(
         UserOperation calldata userOp,
         bytes32 userOpHash
-    ) internal override returns (uint256 validationData) {
+    ) internal view override returns (uint256 validationData) {
         bytes32 hash = userOpHash.toEthSignedMessageHash();
         if (_owner != hash.recover(userOp.signature))
             return SIG_VALIDATION_FAILED;
@@ -104,7 +104,7 @@ contract SafeECDSAPlugin is BaseAccount {
      * This function prevents using a “key” different from the first “zero” key.
      * @param nonce to validate
      */
-    function _validateNonce(uint256 nonce) internal view override {
+    function _validateNonce(uint256 nonce) internal pure override {
         if (nonce >= type(uint64).max) {
             revert NONCE_NOT_SEQUENTIAL();
         }
