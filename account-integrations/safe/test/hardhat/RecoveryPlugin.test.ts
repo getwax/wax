@@ -1,22 +1,18 @@
 import { ethers } from "hardhat";
-import { expect, use } from "chai";
+import { expect } from "chai";
 import { AddressZero } from "@ethersproject/constants";
-import { getBytes, keccak256, ContractFactory } from "ethers";
+import { getBytes } from "ethers";
 import { ethers as ethersV5 } from "ethers-v5";
 import { UserOperationStruct } from "@account-abstraction/contracts";
 import { calculateProxyAddress } from "./utils/calculateProxyAddress";
-import { signer as hubbleBlsSigner } from "@thehubbleproject/bls";
 import { getUserOpHash } from "@account-abstraction/utils";
 
 import { executeContractCallWithSigners } from "./utils/execution";
-// import { executeContractCallWithSigners } from "../../lib/safe-contracts/src";
 
 import { SafeProxyFactory } from "../../typechain-types/lib/safe-contracts/contracts/proxies/SafeProxyFactory";
 import { Safe } from "../../typechain-types/lib/safe-contracts/contracts/Safe";
 import { EntryPoint } from "../../typechain-types/lib/account-abstraction/contracts/core/EntryPoint";
 
-const BLS_PRIVATE_KEY =
-  "0xdbe3d601b1b25c42c50015a87855fdce00ea9b3a7e33c92d31c69aeb70708e08";
 const MNEMONIC = "test test test test test test test test test test test junk";
 
 let safeProxyFactory: SafeProxyFactory;
@@ -32,7 +28,6 @@ describe("RecoveryPlugin", () => {
     entryPoint = await (await ethers.getContractFactory("EntryPoint")).deploy();
 
     const provider = ethers.provider;
-    // use ethersV5 to create a wallet
     const userWallet = ethers.Wallet.fromPhrase(MNEMONIC).connect(provider);
 
     return {
@@ -49,27 +44,18 @@ describe("RecoveryPlugin", () => {
    * 2. Executing a transaction is possible
    */
   it("should pass the ERC4337 validation", async () => {
-    const { provider, userWallet } =
-      await setupTests();
-
+    const { provider, userWallet } = await setupTests();
     const ENTRYPOINT_ADDRESS = await entryPoint.getAddress();
 
     const safeECDSAPluginFactory = (
-        await ethers.getContractFactory("SafeECDSAPlugin")
-      ).connect(userWallet);
-      const safeECDSAPlugin = await safeECDSAPluginFactory.deploy(
-        ENTRYPOINT_ADDRESS,
-        userWallet.address,
-        { gasLimit: 10_000_000 }
+      await ethers.getContractFactory("SafeECDSAPlugin")
+    ).connect(userWallet);
+
+    const safeECDSAPlugin = await safeECDSAPluginFactory.deploy(
+      ENTRYPOINT_ADDRESS,
+      userWallet.address,
+      { gasLimit: 10_000_000 }
     );
-    // const safeBlsPluginFactory = (
-    //   await ethers.getContractFactory("SafeBlsPlugin")
-    // ).connect(userWallet);
-    // const safeBlsPlugin = await safeBlsPluginFactory.deploy(
-    //   ENTRYPOINT_ADDRESS,
-    //   blsSigner.pubkey,
-    //   { gasLimit: 30_000_000 }
-    // );
 
     const feeData = await provider.getFeeData();
     if (!feeData.maxFeePerGas || !feeData.maxPriorityFeePerGas) {
@@ -165,16 +151,6 @@ describe("RecoveryPlugin", () => {
       signature: userOpSignature,
     };
 
-    // Uncomment to get a detailed debug message
-    // const DEBUG_MESSAGE = `
-    //         Using entry point: ${ENTRYPOINT_ADDRESS}
-    //         Deployed Safe address: ${deployedAddress}
-    //         Module/Handler address: ${safeBlsPluginAddress}
-    //         User operation:
-    //         ${JSON.stringify(userOperation, null, 2)}
-    //     `;
-    // console.log(DEBUG_MESSAGE);
-
     const recipientBalanceBefore = await provider.getBalance(recipientAddress);
 
     try {
@@ -192,11 +168,8 @@ describe("RecoveryPlugin", () => {
 
     expect(recipientBalanceAfter).to.equal(expectedRecipientBalance);
 
-    // test call new function
-    // const safe_execTxCallData = manager.interface.encodeFunctionData(
-    //     'executeAndRevert',
-    //     [to, value, data, 0],
-    // );
+    // TODO: update owner directly - probably shouldn't be able to do this
+
     const twoUserOpCallData = safeECDSAPlugin.interface.encodeFunctionData(
         "updateOwner",
         [recipientAddress]
@@ -233,8 +206,6 @@ describe("RecoveryPlugin", () => {
         signature: twoUserOpSignature,
     };
 
-
-    // update owner directly
     try {
         const rcpt = await entryPoint.handleOps(
             // @ts-ignore
@@ -247,8 +218,8 @@ describe("RecoveryPlugin", () => {
 
     // try to deploy the recovery plugin
     // const recoverySigner = ethers.Wallet.createRandom().connect(provider);
-    const [asdff, adf, recoverySigner] = await ethers.getSigners();
-    console.log("RECOVERY SIGNER ADDRESS: ", recoverySigner.address);
+    const [,, recoverySigner] = await ethers.getSigners();
+
     const recoveryPlugin = await (
         await ethers.getContractFactory("RecoveryPlugin")
     ).deploy(
@@ -260,57 +231,37 @@ describe("RecoveryPlugin", () => {
 
     // add module to safe
 
-    // const Safe = await ethers.getContractFactory("Safe");
-    // const safe = await Safe.attach(deployedAddress);
-        // console.log('deployed safe address: ', deployedAddress);
-    // console.log("safe address: ", await testSafe.getAddress());
-
-    const testSafe = await ethers.getContractAt("Safe", deployedAddress);
-    // const baseContract = testSafe.attach(deployedAddress) as any
+    const safeObj = await ethers.getContractAt("Safe", deployedAddress);
     
     const v5Provider = new ethersV5.providers.JsonRpcProvider(
         "http://127.0.0.1:8545"
     );
     const userWallet2 = ethersV5.Wallet.fromMnemonic(MNEMONIC).connect(v5Provider);
-    const isModuleEnabledBefore = await testSafe.isModuleEnabled(recoveryPluginAddress);
-    console.log('Test - recovery plugin:    ', recoveryPluginAddress)
-    console.log('Test - safe:               ', await testSafe.getAddress());
-    console.log('Is module enabled before:  ', isModuleEnabledBefore);
-    // @ts-ignore userWalet2 doesn't have all properties for some reason
-    await executeContractCallWithSigners(testSafe, testSafe, "enableModule", [recoveryPluginAddress], [userWallet2]);
+    const isModuleEnabledBefore = await safeObj.isModuleEnabled(recoveryPluginAddress);
 
-    const isModuleEnabled = await testSafe.isModuleEnabled(recoveryPluginAddress);
+    // logging for testing
+    console.log('Test - recovery plugin:    ', recoveryPluginAddress)
+    console.log('Test - safe:               ', await safeObj.getAddress());
+    console.log('Is module enabled before:  ', isModuleEnabledBefore);
+
+    // @ts-ignore userWalet2 doesn't have all properties for some reason
+    await executeContractCallWithSigners(safeObj, safeObj, "enableModule", [recoveryPluginAddress], [userWallet2]);
+
+    const isModuleEnabled = await safeObj.isModuleEnabled(recoveryPluginAddress);
     console.log('Is module enabled:         ', isModuleEnabled);
 
     // ****** make call from recovery plugin
 
-    // const connectedModule = testSafe.connect(recoveryPlugin);
-    // const asdf = await testSafe.execTransactionFromModuleReturnData(recoveryPluginAddress, 0, data, 0)
-    // console.log('asdf=', asdf);
-
-    // await execSafeTransaction(
-    //     testSafe,
-    //     await recoveryPlugin.getData.populateTransaction(),
-    //     userWallet2
-    // )
-    // @ts-ignore
     const ecdsaaddress = await safeECDSAPlugin.getAddress();
-    // @ts-ignore
-    // await executeContractCallWithSigners(testSafe, recoveryPlugin as any, "getData", [testSafe, ecdsaaddress, data], [userWallet2]);
-    // await executeContractCallWithSigners(testSafe, recoveryPlugin as any, "getData", [await testSafe.getAddress(), ecdsaaddress], [userWallet2]);
-    
-    const newSigner = ethers.Wallet.createRandom().connect(provider);
+    const newEcdsaPluginSigner = ethers.Wallet.createRandom().connect(provider);
 
-    // Call the "get" of the recovery plugin using the recoverySigner
-    const recoveryPluginAsRecoverySigner = recoveryPlugin.connect(recoverySigner);
-    const recoveryPluginAsRecoverySignerAddress = await recoveryPluginAsRecoverySigner.getAddress();
-    console.log('recoveryPluginAsRecoverySignerAddress=', recoveryPluginAsRecoverySignerAddress);
-    await recoveryPluginAsRecoverySigner.resetEcdsaAddress(
-        await testSafe.getAddress(),
+    const recoveryPluginSinger = recoveryPlugin.connect(recoverySigner);
+
+    await recoveryPluginSinger.resetEcdsaAddress(
+        await safeObj.getAddress(),
         ecdsaaddress,
-        newSigner.address
+        newEcdsaPluginSigner.address
     );
-    console.log("done! ");
 
     // ***** Send tx with new key
 
@@ -343,7 +294,7 @@ describe("RecoveryPlugin", () => {
         Number((await provider.getNetwork()).chainId)
     );
 
-    const threeUserOpSignature = await newSigner.signMessage(getBytes(threeUserOpHash));
+    const threeUserOpSignature = await newEcdsaPluginSigner.signMessage(getBytes(threeUserOpHash));
 
     const threeUserOperation = {
         ...threeUnsignedUserOperation,
@@ -369,35 +320,3 @@ describe("RecoveryPlugin", () => {
 
   });
 });
-
-// async function execSafeTransaction(
-//     safe: Safe,
-//     { to, data, value = 0 }: TransactionRequest,
-//     signer: SignerWithAddress
-//   ) {
-//     const address = await safe.getAddress()
-//     const chainId = await safe.getChainId()
-//     const nonce = await safe.nonce()
-  
-//     const { domain, types, message } = paramsToSign(
-//       address,
-//       chainId,
-//       { to, data, value },
-//       nonce
-//     )
-  
-//     const signature = await signer.signTypedData(domain, types, message)
-  
-//     return safe.execTransaction(
-//       to as string,
-//       value as number | bigint,
-//       data as string,
-//       0, // operation
-//       0,
-//       0,
-//       0,
-//       ZeroAddress,
-//       ZeroAddress,
-//       signature
-//     )
-//   }
