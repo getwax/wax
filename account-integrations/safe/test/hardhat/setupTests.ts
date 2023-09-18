@@ -12,33 +12,42 @@ import { EntryPoint } from "../../typechain-types/lib/account-abstraction/contra
 const MNEMONIC = "test test test test test test test test test test test junk";
 
 export async function setupTests() {
-    let safeProxyFactory: SafeProxyFactory;
-    let safeContract: Safe;
-    let entryPointContract: EntryPoint;
+  const safeProxyFactory = await (
+    await ethers.getContractFactory("SafeProxyFactory")
+  ).deploy();
+  const safeContract = await (await ethers.getContractFactory("Safe")).deploy();
+  const entryPointContract = await (
+    await ethers.getContractFactory("EntryPoint")
+  ).deploy();
 
-    safeProxyFactory = await (
-      await ethers.getContractFactory("SafeProxyFactory")
-    ).deploy();
-    safeContract = await (await ethers.getContractFactory("Safe")).deploy();
-    entryPointContract = await (await ethers.getContractFactory("EntryPoint")).deploy();
+  const provider = ethers.provider;
+  const safeOwner = ethers.Wallet.fromPhrase(MNEMONIC).connect(provider);
 
-    const provider = ethers.provider;
-    const safeOwner = ethers.Wallet.fromPhrase(MNEMONIC).connect(provider);
-
-    const { safeEcdsaPluginContract, counterfactualAddress } = await deploySafeAndECDSAPlugin(safeOwner, entryPointContract, safeContract, safeProxyFactory);
-
-    return {
-      provider,
+  const { safeEcdsaPluginContract, counterfactualAddress } =
+    await deploySafeAndECDSAPlugin(
       safeOwner,
-      safeProxyFactory,
-      safeContract,
       entryPointContract,
-      safeEcdsaPluginContract,
-      counterfactualAddress
-    };
+      safeContract,
+      safeProxyFactory,
+    );
+
+  return {
+    provider,
+    safeOwner,
+    safeProxyFactory,
+    safeContract,
+    entryPointContract,
+    safeEcdsaPluginContract,
+    counterfactualAddress,
+  };
 }
 
-async function deploySafeAndECDSAPlugin(wallet: HDNodeWallet, entryPoint: EntryPoint, safe: Safe, safeProxyFactory: SafeProxyFactory) {
+async function deploySafeAndECDSAPlugin(
+  wallet: HDNodeWallet,
+  entryPoint: EntryPoint,
+  safe: Safe,
+  safeProxyFactory: SafeProxyFactory,
+) {
   const ENTRYPOINT_ADDRESS = await entryPoint.getAddress();
 
   const safeECDSAPluginFactory = (
@@ -48,18 +57,15 @@ async function deploySafeAndECDSAPlugin(wallet: HDNodeWallet, entryPoint: EntryP
   const safeEcdsaPluginContract = await safeECDSAPluginFactory.deploy(
     ENTRYPOINT_ADDRESS,
     wallet.address,
-    { gasLimit: 10_000_000 }
+    { gasLimit: 10_000_000 },
   );
 
   const safeECDSAPluginAddress = await safeEcdsaPluginContract.getAddress();
   const singletonAddress = await safe.getAddress();
   const factoryAddress = await safeProxyFactory.getAddress();
 
-  const moduleInitializer = safeEcdsaPluginContract.interface.encodeFunctionData(
-    // @ts-ignore
-    "enableMyself",
-    []
-  );
+  const moduleInitializer =
+    safeEcdsaPluginContract.interface.encodeFunctionData("enableMyself");
   const encodedInitializer = safe.interface.encodeFunctionData("setup", [
     [wallet.address],
     1,
@@ -72,10 +78,10 @@ async function deploySafeAndECDSAPlugin(wallet: HDNodeWallet, entryPoint: EntryP
   ]);
 
   const counterfactualAddress = await calculateProxyAddress(
-    safeProxyFactory as any,
+    safeProxyFactory,
     singletonAddress,
     encodedInitializer,
-    73
+    73,
   );
 
   // The initCode contains 20 bytes of the factory address and the rest is the calldata to be forwarded
@@ -94,17 +100,31 @@ async function deploySafeAndECDSAPlugin(wallet: HDNodeWallet, entryPoint: EntryP
     value: ethers.parseEther("100"),
   });
 
-  await sendTx(wallet, entryPoint, counterfactualAddress, "0x0", initCode, "0x");
+  await sendTx(
+    wallet,
+    entryPoint,
+    counterfactualAddress,
+    "0x0",
+    initCode,
+    "0x",
+  );
 
   return { safeEcdsaPluginContract, counterfactualAddress };
 }
 
-export async function sendTx(signer: HDNodeWallet, entryPoint: EntryPoint, sender: string, nonce: string, initCode?: string, callData?: string) {
+export async function sendTx(
+  signer: HDNodeWallet,
+  entryPoint: EntryPoint,
+  sender: string,
+  nonce: string,
+  initCode?: string,
+  callData?: string,
+) {
   const provider = ethers.provider;
   const { maxFeePerGas, maxPriorityFeePerGas } = await getFeeData();
   const entryPointAddress = await entryPoint.getAddress();
 
-  const unsignedUserOperation: UserOperationStruct = {
+  const unsignedUserOperation = {
     sender,
     nonce,
     initCode: initCode ?? "0x",
@@ -116,15 +136,13 @@ export async function sendTx(signer: HDNodeWallet, entryPoint: EntryPoint, sende
     maxPriorityFeePerGas,
     paymasterAndData: "0x",
     signature: "",
-  };
+  } satisfies UserOperationStruct;
 
-  const resolvedUserOp = await ethers.resolveProperties(
-    unsignedUserOperation
-  );
+  const resolvedUserOp = await ethers.resolveProperties(unsignedUserOperation);
   const userOpHash = getUserOpHash(
     resolvedUserOp,
     entryPointAddress,
-    Number((await provider.getNetwork()).chainId)
+    Number((await provider.getNetwork()).chainId),
   );
 
   const userOpSignature = await signer.signMessage(getBytes(userOpHash));
@@ -135,10 +153,9 @@ export async function sendTx(signer: HDNodeWallet, entryPoint: EntryPoint, sende
   };
 
   try {
-    const rcpt = await entryPoint.handleOps(
-      // @ts-ignore
+    const _rcpt = await entryPoint.handleOps(
       [userOperation],
-      entryPointAddress
+      entryPointAddress,
     );
   } catch (e) {
     console.log("EntryPoint handleOps error=", e);
@@ -149,12 +166,12 @@ async function getFeeData() {
   const feeData = await ethers.provider.getFeeData();
   if (!feeData.maxFeePerGas || !feeData.maxPriorityFeePerGas) {
     throw new Error(
-      "maxFeePerGas or maxPriorityFeePerGas is null or undefined"
+      "maxFeePerGas or maxPriorityFeePerGas is null or undefined",
     );
   }
 
   const maxFeePerGas = "0x" + feeData.maxFeePerGas.toString();
   const maxPriorityFeePerGas = "0x" + feeData.maxPriorityFeePerGas.toString();
 
-  return { maxFeePerGas, maxPriorityFeePerGas }
+  return { maxFeePerGas, maxPriorityFeePerGas };
 }

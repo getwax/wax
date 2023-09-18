@@ -1,6 +1,6 @@
 import { ethers } from "hardhat";
 import { expect } from "chai";
-import { HDNodeWallet, Provider, getBytes } from "ethers";
+import { HDNodeWallet, Provider } from "ethers";
 import { setupTests, sendTx } from "./setupTests";
 
 import { executeContractCallWithSigners } from "./utils/execution";
@@ -22,7 +22,7 @@ describe("RecoveryPlugin", () => {
       safeOwner,
       entryPointContract,
       safeEcdsaPluginContract,
-      counterfactualAddress
+      counterfactualAddress,
     } = await setupTests();
 
     provider = ethers.provider;
@@ -31,27 +31,37 @@ describe("RecoveryPlugin", () => {
     safeECDSAPlugin = safeEcdsaPluginContract;
     safeCounterfactualAddress = counterfactualAddress;
   });
-  
+
   it("Should enable a recovery plugin on a safe.", async () => {
-    const [,, recoverySigner] = await ethers.getSigners();
+    const [, , recoverySigner] = await ethers.getSigners();
 
     const recoveryPlugin = await (
-        await ethers.getContractFactory("RecoveryPlugin")
-    ).deploy(
-        safeCounterfactualAddress,
-        recoverySigner.address,
-    );
+      await ethers.getContractFactory("RecoveryPlugin")
+    ).deploy(safeCounterfactualAddress, recoverySigner.address);
     const recoveryPluginAddress = await recoveryPlugin.getAddress();
 
     // Enable recovery plugin on safe
 
-    const deployedSafe = await ethers.getContractAt("Safe", safeCounterfactualAddress);
-    const isModuleEnabledBefore = await deployedSafe.isModuleEnabled(recoveryPluginAddress);
+    const deployedSafe = await ethers.getContractAt(
+      "Safe",
+      safeCounterfactualAddress,
+    );
+    const isModuleEnabledBefore = await deployedSafe.isModuleEnabled(
+      recoveryPluginAddress,
+    );
 
-    // @ts-ignore userWalet2 doesn't have all properties for some reason
-    await executeContractCallWithSigners(deployedSafe, deployedSafe, "enableModule", [recoveryPluginAddress], [safeSigner]);
+    await executeContractCallWithSigners(
+      deployedSafe,
+      deployedSafe,
+      "enableModule",
+      [recoveryPluginAddress],
+      // @ts-expect-error safeSigner doesn't have all properties for some reason
+      [safeSigner],
+    );
 
-    const isModuleEnabledAfter = await deployedSafe.isModuleEnabled(recoveryPluginAddress);
+    const isModuleEnabledAfter = await deployedSafe.isModuleEnabled(
+      recoveryPluginAddress,
+    );
 
     expect(isModuleEnabledBefore).to.equal(false);
     expect(isModuleEnabledAfter).to.equal(true);
@@ -60,23 +70,32 @@ describe("RecoveryPlugin", () => {
   it("Should use recovery plugin to reset signing key and then send tx with new key.", async () => {
     // Setup recovery plugin
 
-    const [,,, recoverySigner] = await ethers.getSigners();
+    const [, , , recoverySigner] = await ethers.getSigners();
 
     const recoveryPlugin = await (
       await ethers.getContractFactory("RecoveryPlugin")
-    ).deploy(
-        safeCounterfactualAddress,
-        recoverySigner.address,
-    );
+    ).deploy(safeCounterfactualAddress, recoverySigner.address);
     const recoveryPluginAddress = await recoveryPlugin.getAddress();
 
-    const deployedSafe = await ethers.getContractAt("Safe", safeCounterfactualAddress);
+    const deployedSafe = await ethers.getContractAt(
+      "Safe",
+      safeCounterfactualAddress,
+    );
 
     // Enable recovery plugin
-    // @ts-ignore userWalet2 doesn't have all properties for some reason
-    await executeContractCallWithSigners(deployedSafe, deployedSafe, "enableModule", [recoveryPluginAddress], [safeSigner]);
 
-    const isModuleEnabled = await deployedSafe.isModuleEnabled(recoveryPluginAddress);
+    await executeContractCallWithSigners(
+      deployedSafe,
+      deployedSafe,
+      "enableModule",
+      [recoveryPluginAddress],
+      // @ts-expect-error safeSigner doesn't have all properties for some reason
+      [safeSigner],
+    );
+
+    const isModuleEnabled = await deployedSafe.isModuleEnabled(
+      recoveryPluginAddress,
+    );
     expect(isModuleEnabled).to.equal(true);
 
     // Reset ecdsa address
@@ -87,9 +106,9 @@ describe("RecoveryPlugin", () => {
     const recoveryPluginSinger = recoveryPlugin.connect(recoverySigner);
 
     await recoveryPluginSinger.resetEcdsaAddress(
-        await deployedSafe.getAddress(),
-        ecdsaPluginAddress,
-        newEcdsaPluginSigner.address
+      await deployedSafe.getAddress(),
+      ecdsaPluginAddress,
+      newEcdsaPluginSigner.address,
     );
 
     // Send tx with new key
@@ -97,15 +116,21 @@ describe("RecoveryPlugin", () => {
     const recipientAddress = ethers.Wallet.createRandom().address;
     const transferAmount = ethers.parseEther("1");
     const userOpCallData = safeECDSAPlugin.interface.encodeFunctionData(
-        "execTransaction",
-        [recipientAddress, transferAmount, "0x00"]
+      "execTransaction",
+      [recipientAddress, transferAmount, "0x00"],
     );
     const recipientBalanceBefore = await provider.getBalance(recipientAddress);
-    await sendTx(newEcdsaPluginSigner, entryPoint, safeCounterfactualAddress, "0x1", "0x", userOpCallData);
+    await sendTx(
+      newEcdsaPluginSigner,
+      entryPoint,
+      safeCounterfactualAddress,
+      "0x1",
+      "0x",
+      userOpCallData,
+    );
 
     const recipientBalanceAfter = await provider.getBalance(recipientAddress);
     const expectedRecipientBalance = recipientBalanceBefore + transferAmount;
     expect(recipientBalanceAfter).to.equal(expectedRecipientBalance);
-
   });
 });
