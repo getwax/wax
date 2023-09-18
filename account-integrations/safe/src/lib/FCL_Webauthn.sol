@@ -95,7 +95,7 @@ library FCL_WebAuthn {
             authenticatorData, authenticatorDataFlagMask, clientData, clientChallenge, clientChallengeDataOffset, rs
         );
 
-        bool result = FCL_Elliptic_ZZ.ecdsa_verify_memory(message, rs, Q);
+        bool result = FCL_Elliptic_ZZ.ecdsa_verify(message, rs, Q);
 
         return result;
     }

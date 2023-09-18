@@ -834,40 +834,6 @@ library FCL_Elliptic_ZZ {
         return x1 == 0;
     }
 
-
-    /**
-     * @dev ECDSA verification, given , signature, and public key.
-     * @notice Modified from "ecdsa_verify" to use memory instead of calldata
-     */
-    function ecdsa_verify_memory(
-        bytes32 message,
-        uint256[2] memory rs,
-        uint256[2] memory Q
-    ) internal returns (bool) {
-        if (rs[0] == 0 || rs[0] >= n || rs[1] == 0 || rs[1] >= n) {
-            return false;
-        }
-
-        if (!ecAff_isOnCurve(Q[0], Q[1])) {
-            return false;
-        }
-
-        uint256 sInv = FCL_nModInv(rs[1]);
-
-        uint256 scalar_u = mulmod(uint256(message), sInv, n);
-        uint256 scalar_v = mulmod(rs[0], sInv, n);
-        uint256 x1;
-
-        x1 = ecZZ_mulmuladd_S_asm(Q[0], Q[1], scalar_u, scalar_v);
-
-        uint256 rs0 = rs[0];
-        assembly {
-            x1 := addmod(x1, sub(n, rs0), n)
-        }
-        //return true;
-        return x1 == 0;
-    }
-
     /**
      * @dev ECDSA verification using a precomputed table of multiples of P and Q stored in contract at address Shamir8
      *     generation of contract bytecode for precomputations is done using sagemath code
