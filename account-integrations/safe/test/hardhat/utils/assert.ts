@@ -1,6 +1,6 @@
 export default function assert(
   condition: unknown,
-  msg = "Assertion failed"
+  msg = "Assertion failed",
 ): asserts condition {
   if (!condition) {
     throw new AssertionError(msg);

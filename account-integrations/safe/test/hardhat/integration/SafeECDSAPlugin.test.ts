@@ -6,6 +6,11 @@ import { ethers as ethersV5 } from "ethers-v5";
 import { UserOperationStruct } from "@account-abstraction/contracts";
 import { getUserOpHash } from "@account-abstraction/utils";
 import { calculateProxyAddress } from "../utils/calculateProxyAddress";
+import {
+  SafeProxyFactory__factory,
+  Safe__factory,
+} from "../../../typechain-types";
+import sleep from "../utils/sleep";
 
 const ERC4337_TEST_ENV_VARIABLES_DEFINED =
   typeof process.env.ERC4337_TEST_BUNDLER_URL !== "undefined" &&
@@ -21,23 +26,16 @@ const BUNDLER_URL = process.env.ERC4337_TEST_BUNDLER_URL;
 const NODE_URL = process.env.ERC4337_TEST_NODE_URL;
 const MNEMONIC = process.env.MNEMONIC;
 
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
 describe("SafeECDSAPlugin", () => {
   const setupTests = async () => {
-    const factory = await hre.ethers.getContractFactory("SafeProxyFactory");
-    const singleton = await hre.ethers.getContractFactory("Safe");
-
     const bundlerProvider = new ethersV5.providers.JsonRpcProvider(BUNDLER_URL);
     const provider = new ethers.JsonRpcProvider(NODE_URL);
-    const userWallet = ethers.Wallet.fromPhrase(MNEMONIC as string).connect(
-      provider
-    );
+    const userWallet = ethers.Wallet.fromPhrase(MNEMONIC!).connect(provider);
 
-    const entryPoints = await bundlerProvider.send(
+    const entryPoints = (await bundlerProvider.send(
       "eth_supportedEntryPoints",
-      []
-    );
+      [],
+    )) as string[];
     if (entryPoints.length === 0) {
       throw new Error("No entry points found");
     }
@@ -51,8 +49,11 @@ describe("SafeECDSAPlugin", () => {
     }
 
     return {
-      factory: factory.attach(SAFE_FACTORY_ADDRESS).connect(userWallet),
-      singleton: singleton.attach(SINGLETON_ADDRESS).connect(provider),
+      factory: SafeProxyFactory__factory.connect(
+        SAFE_FACTORY_ADDRESS,
+        userWallet,
+      ),
+      singleton: Safe__factory.connect(SINGLETON_ADDRESS, provider),
       bundlerProvider,
       provider,
       userWallet,
@@ -84,7 +85,7 @@ describe("SafeECDSAPlugin", () => {
     const safeECDSAPlugin = await safeECDSAPluginFactory.deploy(
       ENTRYPOINT_ADDRESS,
       userWallet.address,
-      { gasLimit: 1_000_000 }
+      { gasLimit: 1_000_000 },
     );
     // The bundler uses a different node, so we need to allow it sometime to sync
     await sleep(5000);
@@ -92,21 +93,19 @@ describe("SafeECDSAPlugin", () => {
     const feeData = await provider.getFeeData();
     if (!feeData.maxFeePerGas || !feeData.maxPriorityFeePerGas) {
       throw new Error(
-        "maxFeePerGas or maxPriorityFeePerGas is null or undefined"
+        "maxFeePerGas or maxPriorityFeePerGas is null or undefined",
       );
     }
 
-    const maxFeePerGas = "0x" + feeData.maxFeePerGas.toString();
-    const maxPriorityFeePerGas = "0x" + feeData.maxPriorityFeePerGas.toString();
+    const maxFeePerGas = `0x${feeData.maxFeePerGas.toString()}`;
+    const maxPriorityFeePerGas = `0x${feeData.maxPriorityFeePerGas.toString()}`;
 
     const safeECDSAPluginAddress = await safeECDSAPlugin.getAddress();
     const singletonAddress = await singleton.getAddress();
     const factoryAddress = await factory.getAddress();
 
-    const moduleInitializer = safeECDSAPlugin.interface.encodeFunctionData(
-      "enableMyself",
-      []
-    );
+    const moduleInitializer =
+      safeECDSAPlugin.interface.encodeFunctionData("enableMyself");
     const encodedInitializer = singleton.interface.encodeFunctionData("setup", [
       [userWallet.address],
       1,
@@ -119,13 +118,14 @@ describe("SafeECDSAPlugin", () => {
     ]);
 
     const deployedAddress = await calculateProxyAddress(
-      factory as any,
+      factory,
       singletonAddress,
       encodedInitializer,
-      73
+      73,
     );
 
-    // The initCode contains 20 bytes of the factory address and the rest is the calldata to be forwarded
+    // The initCode contains 20 bytes of the factory address and the rest is the
+    // calldata to be forwarded
     const initCode = concat([
       factoryAddress,
       factory.interface.encodeFunctionData("createProxyWithNonce", [
@@ -136,14 +136,14 @@ describe("SafeECDSAPlugin", () => {
     ]);
 
     const signer = new ethers.Wallet(
-      "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"
+      "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d",
     );
     const recipientAddress = signer.address;
     const transferAmount = ethers.parseEther("1");
 
     const userOpCallData = safeECDSAPlugin.interface.encodeFunctionData(
       "execTransaction",
-      [recipientAddress, transferAmount, "0x00"]
+      [recipientAddress, transferAmount, "0x00"],
     );
 
     // Native tokens for the pre-fund 💸
@@ -172,7 +172,7 @@ describe("SafeECDSAPlugin", () => {
     const userOpHash = getUserOpHash(
       resolvedUserOp,
       ENTRYPOINT_ADDRESS,
-      Number(provider._network.chainId)
+      Number(provider._network.chainId),
     );
     const userOpSignature = await userWallet.signMessage(getBytes(userOpHash));
 
