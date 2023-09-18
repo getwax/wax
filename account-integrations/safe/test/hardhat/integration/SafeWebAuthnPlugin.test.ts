@@ -2,14 +2,14 @@ import hre from "hardhat";
 import { expect } from "chai";
 import { AddressZero } from "@ethersproject/constants";
 import { concat, ethers, BigNumberish } from "ethers";
-import { ethers as ethersV5 } from "ethers-v5";
 import { UserOperationStruct } from "@account-abstraction/contracts";
 import { calculateProxyAddress } from "../utils/calculateProxyAddress";
 import {
   SafeProxyFactory__factory,
   Safe__factory,
 } from "../../../typechain-types";
-import sleep from "../utils/sleep";
+import sendUserOpAndWait from "../utils/sendUserOpAndWait";
+import receiptOf from "../utils/receiptOf";
 
 const ERC4337_TEST_ENV_VARIABLES_DEFINED =
   typeof process.env.ERC4337_TEST_BUNDLER_URL !== "undefined" &&
@@ -27,7 +27,7 @@ const MNEMONIC = process.env.MNEMONIC;
 
 describe("SafeWebAuthnPlugin", () => {
   const setupTests = async () => {
-    const bundlerProvider = new ethersV5.providers.JsonRpcProvider(BUNDLER_URL);
+    const bundlerProvider = new ethers.JsonRpcProvider(BUNDLER_URL);
     const provider = new ethers.JsonRpcProvider(NODE_URL);
     const userWallet = ethers.Wallet.fromPhrase(MNEMONIC!).connect(provider);
 
@@ -139,8 +139,7 @@ describe("SafeWebAuthnPlugin", () => {
       publicKey,
       { gasLimit: 2_000_000 },
     );
-    // The bundler uses a different node, so we need to allow it sometime to sync
-    await sleep(5000);
+    await safeWebAuthnPlugin.deploymentTransaction()?.wait();
 
     const feeData = await provider.getFeeData();
     if (!feeData.maxFeePerGas || !feeData.maxPriorityFeePerGas) {
@@ -199,12 +198,12 @@ describe("SafeWebAuthnPlugin", () => {
     );
 
     // Native tokens for the pre-fund 💸
-    await userWallet.sendTransaction({
-      to: deployedAddress,
-      value: ethers.parseEther("100"),
-    });
-    // The bundler uses a different node, so we need to allow it sometime to sync
-    await sleep(5000);
+    await receiptOf(
+      userWallet.sendTransaction({
+        to: deployedAddress,
+        value: ethers.parseEther("100"),
+      }),
+    );
 
     const userOperationWithoutGasFields = {
       sender: deployedAddress,
@@ -259,12 +258,7 @@ describe("SafeWebAuthnPlugin", () => {
 
     const recipientBalanceBefore = await provider.getBalance(recipientAddress);
 
-    await bundlerProvider.send("eth_sendUserOperation", [
-      userOperation,
-      ENTRYPOINT_ADDRESS,
-    ]);
-    // The bundler uses a different node, so we need to allow it sometime to sync
-    await sleep(5000);
+    await sendUserOpAndWait(userOperation, ENTRYPOINT_ADDRESS, bundlerProvider);
 
     const recipientBalanceAfter = await provider.getBalance(recipientAddress);
 
