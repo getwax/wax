@@ -1,30 +1,32 @@
-/* eslint-env node */
-
 module.exports = {
-  root: true,
-  env: { node: true, es2020: true, mocha: true },
-  extends: [
-    'eslint:recommended',
-    'plugin:@typescript-eslint/recommended',
-    'plugin:@typescript-eslint/recommended-requiring-type-checking',
-    'airbnb',
-  ],
-  parser: '@typescript-eslint/parser',
+  env: {
+    node: true,
+    es2021: true,
+  },
+  parser: "@typescript-eslint/parser",
   parserOptions: {
-    ecmaVersion: 'latest',
-    sourceType: 'module',
-    project: true,
+    ecmaVersion: "latest",
+    sourceType: "module",
     tsconfigRootDir: __dirname,
   },
-  plugins: ['prettier', '@typescript-eslint', 'import'],
-  settings: {
-    react: {
-      version: "detect",
+  plugins: ["prettier", "@typescript-eslint", "import"],
+  extends: "xo-typescript",
+  overrides: [
+    {
+      env: {
+        node: true,
+      },
+      files: [".eslintrc.{js,cjs}"],
+      parserOptions: {
+        sourceType: "script",
+      },
     },
-  },
+  ],
   rules: {
-    'prettier/prettier': [
-      'error',
+    indent: "off",
+    "@typescript-eslint/indent": "off",
+    "prettier/prettier": [
+      "error",
       {
         bracketSpacing: true,
         bracketSameLine: false,
@@ -32,69 +34,36 @@ module.exports = {
         semi: true,
         singleQuote: false,
         tabWidth: 2,
-        trailingComma: 'all',
+        trailingComma: "all",
         useTabs: false,
-        proseWrap: 'always',
+        proseWrap: "always",
       },
     ],
-    'quotes': ['error', 'double'],
-    'no-unused-vars': 'off',
-    '@typescript-eslint/no-unused-vars': [
-      'error',
+    quotes: ["error", "double"],
+    "@typescript-eslint/quotes": "off",
+    "@typescript-eslint/naming-convention": [
+      "error",
       {
-        varsIgnorePattern: '^_',
-        argsIgnorePattern: '^_',
-        destructuredArrayIgnorePattern: '^_',
-        caughtErrorsIgnorePattern: '^_',
+        selector: "variable",
+        format: ["camelCase", "UPPER_CASE"],
+        leadingUnderscore: "allow",
+        trailingUnderscore: "allow",
       },
-    ],
-    'import/extensions': 'off',
-    'import/no-unresolved': 'off',
-    'import/no-extraneous-dependencies': 'off',
-    'import/no-absolute-path': 'off',
-    'no-useless-constructor': 'off',
-    '@typescript-eslint/no-useless-constructor': 'error',
-    'no-empty-function': 'off',
-    'object-curly-newline': 'off',
-    'no-return-await': 'off',
-    'max-classes-per-file': 'off',
-    'lines-between-class-members': [
-      'error',
-      'always',
       {
-        exceptAfterSingleLine: true,
+        selector: "typeLike",
+        format: ["PascalCase"],
       },
     ],
-    'no-use-before-define': 'off',
-    'no-redeclare': 'off',
-    'brace-style': 'off',
-    'no-restricted-syntax': 'off',
-    'operator-linebreak': 'off',
-
-    // Found false positive with these. Maybe the typescript used for linting is
-    // out of date.
-    '@typescript-eslint/no-unsafe-call': 'off',
-    '@typescript-eslint/no-unsafe-member-access': 'off',
-
-    'no-shadow': 'off',
-    '@typescript-eslint/no-shadow': 'error',
-
-    camelcase: [
-      'error',
-      {
-        allow: ['^[a-zA-Z]+__factory$', '^eth_[a-zA-Z]+$'],
-      },
+    "@typescript-eslint/object-curly-spacing": ["error", "always"],
+    "@typescript-eslint/consistent-type-imports": "off",
+    "@typescript-eslint/padding-line-between-statements": "off",
+    "@typescript-eslint/prefer-regexp-exec": "off",
+    "@typescript-eslint/ban-types": [
+      "error",
+      { types: { null: false, "[]": false } },
     ],
-
-    'implicit-arrow-linebreak': 'off',
-    'function-paren-newline': 'off',
-    'react/jsx-wrap-multilines': 'off',
-    'no-void': 'off',
-    'react/jsx-curly-newline': 'off',
-    'no-await-in-loop': 'off',
-    'no-continue': 'off',
-    'no-constant-condition': 'off',
-    'no-underscore-dangle': 'off',
-    'prefer-destructuring': 'off',
+    "@typescript-eslint/member-ordering": "off",
+    "@typescript-eslint/return-await": "off",
+    "no-constant-condition": "off",
   },
 };

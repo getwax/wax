@@ -22,17 +22,16 @@
     "@types/chai": "^4.2.0",
     "@types/mocha": ">=9.1.0",
     "@types/node": ">=16.0.0",
-    "@typescript-eslint/eslint-plugin": "^6.7.0",
-    "@typescript-eslint/parser": "^6.7.0",
+    "@typescript-eslint/eslint-plugin": ">=6.0.0",
+    "@typescript-eslint/parser": ">=6.0.0",
     "chai": "^4.2.0",
     "dotenv": "^16.3.1",
-    "eslint": "^8.49.0",
-    "eslint-config-airbnb": "^19.0.4",
+    "eslint": ">=8.0.0",
     "eslint-config-prettier": "^9.0.0",
+    "eslint-config-xo": "^0.43.1",
+    "eslint-config-xo-typescript": "^1.0.1",
     "eslint-plugin-import": "^2.28.1",
-    "eslint-plugin-jsx-a11y": "^6.7.1",
     "eslint-plugin-prettier": "^5.0.0",
-    "eslint-plugin-react": "^7.33.2",
     "ethers": "^6.4.0",
     "ethers-v5": "npm:ethers@5.7.2",
     "hardhat": "^2.17.1",
@@ -42,6 +41,6 @@
     "solidity-coverage": "^0.8.0",
     "ts-node": ">=8.0.0",
     "typechain": "^8.1.0",
-    "typescript": ">=4.5.0"
+    "typescript": ">=4.7"
   }
 }

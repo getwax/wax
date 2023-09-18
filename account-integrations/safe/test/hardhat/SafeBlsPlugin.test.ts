@@ -170,7 +170,6 @@ describe("SafeBlsPlugin", () => {
         ENTRYPOINT_ADDRESS,
       );
     } catch (e) {
-      // eslint-disable-next-line no-console
       console.log("EntryPoint handleOps error=", e);
     }
 

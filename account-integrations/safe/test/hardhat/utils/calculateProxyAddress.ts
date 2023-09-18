@@ -1,7 +1,6 @@
 import { ethers } from "ethers";
 import { SafeProxyFactory } from "../../../typechain-types";
 
-// eslint-disable-next-line import/prefer-default-export
 export const calculateProxyAddress = async (
   factory: SafeProxyFactory,
   singleton: string,

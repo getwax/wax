@@ -9,6 +9,7 @@ import {
   SafeProxyFactory__factory,
   Safe__factory,
 } from "../../../typechain-types";
+import sleep from "../utils/sleep";
 
 const ERC4337_TEST_ENV_VARIABLES_DEFINED =
   typeof process.env.ERC4337_TEST_BUNDLER_URL !== "undefined" &&
@@ -24,18 +25,11 @@ const BUNDLER_URL = process.env.ERC4337_TEST_BUNDLER_URL;
 const NODE_URL = process.env.ERC4337_TEST_NODE_URL;
 const MNEMONIC = process.env.MNEMONIC;
 
-const sleep = (ms: number) =>
-  new Promise((resolve) => {
-    setTimeout(resolve, ms);
-  });
-
 describe("SafeWebAuthnPlugin", () => {
   const setupTests = async () => {
     const bundlerProvider = new ethersV5.providers.JsonRpcProvider(BUNDLER_URL);
     const provider = new ethers.JsonRpcProvider(NODE_URL);
-    const userWallet = ethers.Wallet.fromPhrase(MNEMONIC as string).connect(
-      provider,
-    );
+    const userWallet = ethers.Wallet.fromPhrase(MNEMONIC!).connect(provider);
 
     const entryPoints = (await bundlerProvider.send(
       "eth_supportedEntryPoints",

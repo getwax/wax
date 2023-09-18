@@ -69,8 +69,6 @@ export default class SafeSingletonFactory {
   };
 
   provider: ethers.Provider;
-
-  // eslint-disable-next-line no-use-before-define
   viewer: SafeSingletonFactoryViewer;
 
   private constructor(
