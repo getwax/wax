@@ -1,3 +1,6 @@
+// Note: most of this code is copied from https://github.com/safe-global/safe-contracts with 
+// small modifications to work with Hardhat ethers.
+
 import { Contract, Wallet, BigNumberish, Signer } from "ethers";
 import { BigNumber } from "ethers-v5";
 import { TypedDataSigner } from "@ethersproject/abstract-signer";
@@ -138,8 +141,7 @@ export const safeSignTypedData = async (
   const signerAddress = await signer.getAddress();
   return {
       signer: signerAddress,
-      // @ts-ignore
-      data: await signer._signTypedData({ verifyingContract: await safe.getAddress(), chainId: cid }, EIP712_SAFE_TX_TYPE, safeTx),
+      data: await signer.signTypedData({ verifyingContract: await safe.getAddress(), chainId: cid }, EIP712_SAFE_TX_TYPE, safeTx),
   };
 };
 

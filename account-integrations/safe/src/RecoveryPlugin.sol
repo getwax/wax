@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-// TODO: remove logs
-import "hardhat/console.sol";
-
 contract Enum {
     enum Operation {
         Call,
@@ -52,11 +49,6 @@ contract RecoveryPlugin {
         if (safe != storedSafe) {
             revert ATTEMPTING_RESET_ON_WRONG_SAFE(safe);
         }
-
-        // Logging for testing
-        console.log("rp - safe address: ", storedSafe);
-        console.log("rp - msg.sender: ", msg.sender);
-        console.log("rp - storedEOA: ", storedEOA);
 
         bytes memory data = abi.encodeWithSignature("updateOwner(address)", newValidatingEcdsaAddress);
         ISafe(safe).execTransactionFromModule(ecdsaPluginAddress, 0, data, Enum.Operation.Call);

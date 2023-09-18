@@ -8,9 +8,6 @@ import {UserOperation} from "account-abstraction/contracts/interfaces/IEntryPoin
 
 import {ECDSA} from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
 
-// TODO: remove console logs
-import "hardhat/console.sol";
-
 interface ISafe {
     function enableModule(address module) external;
 
@@ -28,7 +25,7 @@ contract SafeECDSAPlugin is BaseAccount {
     using ECDSA for bytes32;
 
     address public immutable myAddress; // Module address
-    address private _owner; // Safe address
+    address private _owner; // Key address
     address private immutable _entryPoint;
 
     address internal constant _SENTINEL_MODULES = address(0x1);
@@ -86,18 +83,8 @@ contract SafeECDSAPlugin is BaseAccount {
         if(!isModuleEnabled) {
             revert MODULE_NOT_ENABLED();
         }
-        _owner = newOwner;
-
         emit OWNER_UPDATED(_owner, newOwner);
-
-        // Loging for testing
-        console.log("ecdsa - message.sender:        ", msg.sender);
-        console.log("ecdsa - owner (key address):  ", _owner);
-        console.log("ecdsa - myAddress (module):    ", myAddress);
-        console.log("ecdsa - entrypoint:            ", _entryPoint);
-        console.log("ecdsa - address(this):         ", address(this));
-        console.log("ecdsa - moduleEnabled:         ", isModuleEnabled);
-        console.log("here");
+        _owner = newOwner;
     }
 
     function _validateSignature(
