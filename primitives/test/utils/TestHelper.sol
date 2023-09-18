@@ -2,7 +2,7 @@
 pragma solidity ^0.8.12;
 
 import "forge-std/Test.sol";
-import {Webauthn} from "../../src/WebAuthn.sol";
+import {WebAuthn} from "../../src/WebAuthn.sol";
 
 /* solhint-disable private-vars-leading-underscore */
 

@@ -10,10 +10,10 @@ import {WebAuthn} from "../src/WebAuthn.sol";
 contract WebauthnTest is TestHelper {
     constructor() TestHelper() {}
 
-    Webauthn public webauthn;
+    WebAuthn public webauthn;
 
     function setUp() public {
-        webauthn = new Webauthn();
+        webauthn = new WebAuthn();
     }
 
     function test_verifySignature_ValidSignature() public {
