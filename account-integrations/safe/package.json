@@ -33,7 +33,6 @@
     "eslint-plugin-import": "^2.28.1",
     "eslint-plugin-prettier": "^5.0.0",
     "ethers": "^6.4.0",
-    "ethers-v5": "npm:ethers@5.7.2",
     "hardhat": "^2.17.1",
     "hardhat-gas-reporter": "^1.0.8",
     "hardhat-preprocessor": "^0.1.5",
