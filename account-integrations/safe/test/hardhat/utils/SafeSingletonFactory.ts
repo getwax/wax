@@ -1,5 +1,5 @@
 import { ethers, Signer } from "ethers";
-import SignerOrProvider from ".//SignerOrProvider";
+import SignerOrProvider from "./SignerOrProvider";
 import assert from "./assert";
 
 /**
@@ -8,7 +8,7 @@ import assert from "./assert";
  */
 type NonOptionalElementsOf<A extends unknown[]> = A extends [
   infer First,
-  ...infer Tail
+  ...infer Tail,
 ]
   ? [First, ...NonOptionalElementsOf<Tail>]
   : A extends [opt?: unknown]
@@ -19,7 +19,7 @@ export type ContractFactoryConstructor = {
   new (): ethers.ContractFactory;
   connect(
     address: string,
-    runner?: ethers.ContractRunner | null
+    runner?: ethers.ContractRunner | null,
   ): Pick<ethers.Contract, "getAddress">;
 };
 
@@ -76,7 +76,7 @@ export default class SafeSingletonFactory {
   private constructor(
     public signer: ethers.Signer,
     public chainId: bigint,
-    public address: string
+    public address: string,
   ) {
     if (!signer.provider) {
       throw new Error("Expected signer with provider");
@@ -111,7 +111,7 @@ export default class SafeSingletonFactory {
           "Cannot get deployment for SafeSingletonFactory (check",
           "https://github.com/safe-global/safe-singleton-factory/tree/main/artifacts",
           `for chain id ${chainId})`,
-        ].join(" ")
+        ].join(" "),
       );
     }
 
@@ -142,36 +142,36 @@ export default class SafeSingletonFactory {
   calculateAddress<CFC extends ContractFactoryConstructor>(
     ContractFactoryConstructor: CFC,
     deployParams: DeployParams<CFC>,
-    salt: ethers.BytesLike = ethers.solidityPacked(["uint256"], [0])
+    salt: ethers.BytesLike = ethers.solidityPacked(["uint256"], [0]),
   ) {
     return this.viewer.calculateAddress(
       ContractFactoryConstructor,
       deployParams,
-      salt
+      salt,
     );
   }
 
   async isDeployed<CFC extends ContractFactoryConstructor>(
     ContractFactoryConstructor: CFC,
     deployParams: DeployParams<CFC>,
-    salt: ethers.BytesLike = ethers.solidityPacked(["uint256"], [0])
+    salt: ethers.BytesLike = ethers.solidityPacked(["uint256"], [0]),
   ): Promise<boolean> {
     return this.viewer.isDeployed(
       ContractFactoryConstructor,
       deployParams,
-      salt
+      salt,
     );
   }
 
   async connectIfDeployed<CFC extends ContractFactoryConstructor>(
     ContractFactoryConstructor: CFC,
     deployParams: DeployParams<CFC>,
-    salt: ethers.BytesLike = ethers.solidityPacked(["uint256"], [0])
+    salt: ethers.BytesLike = ethers.solidityPacked(["uint256"], [0]),
   ): Promise<ReturnType<CFC["connect"]> | undefined> {
     const contract = await this.viewer.connectIfDeployed(
       ContractFactoryConstructor,
       deployParams,
-      salt
+      salt,
     );
 
     return contract;
@@ -180,7 +180,7 @@ export default class SafeSingletonFactory {
   async connectOrDeploy<CFC extends ContractFactoryConstructor>(
     ContractFactoryConstructor: CFC,
     deployParams: DeployParams<CFC>,
-    salt: ethers.BytesLike = ethers.solidityPacked(["uint256"], [0])
+    salt: ethers.BytesLike = ethers.solidityPacked(["uint256"], [0]),
   ): Promise<ReturnType<CFC["connect"]>> {
     const contractFactory = new ContractFactoryConstructor();
 
@@ -191,7 +191,7 @@ export default class SafeSingletonFactory {
     const address = this.calculateAddress(
       ContractFactoryConstructor,
       deployParams,
-      salt
+      salt,
     );
 
     const existingCode = await this.provider.getCode(address);
@@ -199,7 +199,7 @@ export default class SafeSingletonFactory {
     if (existingCode !== "0x") {
       return ContractFactoryConstructor.connect(
         address,
-        this.signer
+        this.signer,
       ) as ReturnType<CFC["connect"]>;
     }
 
@@ -237,7 +237,7 @@ export default class SafeSingletonFactory {
           }
 
           const balance = await this.provider.getBalance(
-            this.signer.getAddress()
+            this.signer.getAddress(),
           );
 
           throw new Error(
@@ -249,7 +249,7 @@ export default class SafeSingletonFactory {
               "ETH, need (approx):",
               ethers.formatEther(gasEstimate * gasPrice),
               "ETH",
-            ].join(" ")
+            ].join(" "),
           );
         }
 
@@ -263,14 +263,14 @@ export default class SafeSingletonFactory {
 
     const deployedCode = await this.provider.getCode(
       address,
-      receipt.blockNumber
+      receipt.blockNumber,
     );
 
     assert(deployedCode !== "0x", "Failed to deploy to expected address");
 
     return ContractFactoryConstructor.connect(
       address,
-      this.signer
+      this.signer,
     ) as ReturnType<CFC["connect"]>;
   }
 }
@@ -282,7 +282,7 @@ export class SafeSingletonFactoryViewer {
 
   constructor(
     public signerOrProvider: SignerOrProvider,
-    public chainId: bigint
+    public chainId: bigint,
   ) {
     this.safeSingletonFactoryAddress =
       SafeSingletonFactory.deployments[Number(chainId)]?.address ??
@@ -323,7 +323,7 @@ export class SafeSingletonFactoryViewer {
   calculateAddress<CFC extends ContractFactoryConstructor>(
     ContractFactoryConstructor: CFC,
     deployParams: DeployParams<CFC>,
-    salt: ethers.BytesLike = ethers.solidityPacked(["uint256"], [0])
+    salt: ethers.BytesLike = ethers.solidityPacked(["uint256"], [0]),
   ) {
     const contractFactory = new ContractFactoryConstructor();
 
@@ -334,19 +334,19 @@ export class SafeSingletonFactoryViewer {
     return ethers.getCreate2Address(
       this.safeSingletonFactoryAddress,
       salt,
-      ethers.keccak256(initCode)
+      ethers.keccak256(initCode),
     );
   }
 
   async isDeployed<CFC extends ContractFactoryConstructor>(
     ContractFactoryConstructor: CFC,
     deployParams: DeployParams<CFC>,
-    salt: ethers.BytesLike = ethers.solidityPacked(["uint256"], [0])
+    salt: ethers.BytesLike = ethers.solidityPacked(["uint256"], [0]),
   ) {
     const address = this.calculateAddress(
       ContractFactoryConstructor,
       deployParams,
-      salt
+      salt,
     );
 
     const existingCode = await this.provider.getCode(address);
@@ -357,17 +357,17 @@ export class SafeSingletonFactoryViewer {
   connectAssume<CFC extends ContractFactoryConstructor>(
     ContractFactoryConstructor: CFC,
     deployParams: DeployParams<CFC>,
-    salt: ethers.BytesLike = ethers.solidityPacked(["uint256"], [0])
+    salt: ethers.BytesLike = ethers.solidityPacked(["uint256"], [0]),
   ): ReturnType<CFC["connect"]> {
     const address = this.calculateAddress(
       ContractFactoryConstructor,
       deployParams,
-      salt
+      salt,
     );
 
     const contract = ContractFactoryConstructor.connect(
       address,
-      this.signer ?? this.provider
+      this.signer ?? this.provider,
     ) as ReturnType<CFC["connect"]>;
 
     return contract;
@@ -376,12 +376,12 @@ export class SafeSingletonFactoryViewer {
   async connectIfDeployed<CFC extends ContractFactoryConstructor>(
     ContractFactoryConstructor: CFC,
     deployParams: DeployParams<CFC>,
-    salt: ethers.BytesLike = ethers.solidityPacked(["uint256"], [0])
+    salt: ethers.BytesLike = ethers.solidityPacked(["uint256"], [0]),
   ): Promise<ReturnType<CFC["connect"]> | undefined> {
     const contract = this.connectAssume(
       ContractFactoryConstructor,
       deployParams,
-      salt
+      salt,
     );
 
     const existingCode = await this.provider.getCode(contract.getAddress());
@@ -396,12 +396,12 @@ export class SafeSingletonFactoryViewer {
   async connectOrThrow<CFC extends ContractFactoryConstructor>(
     ContractFactoryConstructor: CFC,
     deployParams: DeployParams<CFC>,
-    salt: ethers.BytesLike = ethers.solidityPacked(["uint256"], [0])
+    salt: ethers.BytesLike = ethers.solidityPacked(["uint256"], [0]),
   ): Promise<ReturnType<CFC["connect"]>> {
     const contract = await this.connectIfDeployed(
       ContractFactoryConstructor,
       deployParams,
-      salt
+      salt,
     );
 
     if (!contract) {
@@ -411,8 +411,8 @@ export class SafeSingletonFactoryViewer {
         } not deployed at ${this.calculateAddress(
           ContractFactoryConstructor,
           deployParams,
-          salt
-        )}`
+          salt,
+        )}`,
       );
     }
 
