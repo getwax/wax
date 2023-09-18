@@ -3,34 +3,31 @@ import { expect } from "chai";
 import { AddressZero } from "@ethersproject/constants";
 import { getBytes, keccak256, solidityPacked } from "ethers";
 import { UserOperationStruct } from "@account-abstraction/contracts";
-import { calculateProxyAddress } from "./utils/calculateProxyAddress";
 import { signer as hubbleBlsSigner } from "@thehubbleproject/bls";
 import { getUserOpHash } from "@account-abstraction/utils";
-
-import { SafeProxyFactory } from "../../typechain-types/lib/safe-contracts/contracts/proxies/SafeProxyFactory";
-import { Safe } from "../../typechain-types/lib/safe-contracts/contracts/Safe";
-import { EntryPoint } from "../../typechain-types/lib/account-abstraction/contracts/core/EntryPoint";
+import { calculateProxyAddress } from "./utils/calculateProxyAddress";
 
 const BLS_PRIVATE_KEY =
   "0xdbe3d601b1b25c42c50015a87855fdce00ea9b3a7e33c92d31c69aeb70708e08";
 const MNEMONIC = "test test test test test test test test test test test junk";
 
-let safeProxyFactory: SafeProxyFactory;
-let safe: Safe;
-let entryPoint: EntryPoint;
-
 describe("SafeBlsPlugin", () => {
   const setupTests = async () => {
-    safeProxyFactory = await (
+    const safeProxyFactory = await (
       await ethers.getContractFactory("SafeProxyFactory")
     ).deploy();
-    safe = await (await ethers.getContractFactory("Safe")).deploy();
-    entryPoint = await (await ethers.getContractFactory("EntryPoint")).deploy();
+    const safe = await (await ethers.getContractFactory("Safe")).deploy();
+    const entryPoint = await (
+      await ethers.getContractFactory("EntryPoint")
+    ).deploy();
 
     const provider = ethers.provider;
     const userWallet = ethers.Wallet.fromPhrase(MNEMONIC).connect(provider);
 
     return {
+      safeProxyFactory,
+      safe,
+      entryPoint,
       provider,
       userWallet,
     };
@@ -44,12 +41,10 @@ describe("SafeBlsPlugin", () => {
    * 2. Executing a transaction is possible
    */
   it("should pass the ERC4337 validation", async () => {
-    const { provider, userWallet } =
+    const { entryPoint, safe, safeProxyFactory, provider, userWallet } =
       await setupTests();
 
-    const domain = getBytes(
-      keccak256(Buffer.from("eip4337.bls.domain"))
-    );
+    const domain = getBytes(keccak256(Buffer.from("eip4337.bls.domain")));
     const signerFactory = await hubbleBlsSigner.BlsSignerFactory.new();
     const blsSigner = signerFactory.getSigner(domain, BLS_PRIVATE_KEY);
 
@@ -61,27 +56,25 @@ describe("SafeBlsPlugin", () => {
     const safeBlsPlugin = await safeBlsPluginFactory.deploy(
       ENTRYPOINT_ADDRESS,
       blsSigner.pubkey,
-      { gasLimit: 30_000_000 }
+      { gasLimit: 30_000_000 },
     );
 
     const feeData = await provider.getFeeData();
     if (!feeData.maxFeePerGas || !feeData.maxPriorityFeePerGas) {
       throw new Error(
-        "maxFeePerGas or maxPriorityFeePerGas is null or undefined"
+        "maxFeePerGas or maxPriorityFeePerGas is null or undefined",
       );
     }
 
-    const maxFeePerGas = "0x" + feeData.maxFeePerGas.toString();
-    const maxPriorityFeePerGas = "0x" + feeData.maxPriorityFeePerGas.toString();
+    const maxFeePerGas = `0x${feeData.maxFeePerGas.toString()}`;
+    const maxPriorityFeePerGas = `0x${feeData.maxPriorityFeePerGas.toString()}`;
 
     const safeBlsPluginAddress = await safeBlsPlugin.getAddress();
     const singletonAddress = await safe.getAddress();
     const factoryAddress = await safeProxyFactory.getAddress();
 
-    const moduleInitializer = safeBlsPlugin.interface.encodeFunctionData(
-      // @ts-ignore Typescript linting isn't recognizing this function for some reason (Build still works fine)
-      "enableMyself",
-    );
+    const moduleInitializer =
+      safeBlsPlugin.interface.encodeFunctionData("enableMyself");
     const encodedInitializer = safe.interface.encodeFunctionData("setup", [
       [userWallet.address],
       1,
@@ -94,13 +87,14 @@ describe("SafeBlsPlugin", () => {
     ]);
 
     const deployedAddress = await calculateProxyAddress(
-      safeProxyFactory as any,
+      safeProxyFactory,
       singletonAddress,
       encodedInitializer,
-      73
+      73,
     );
 
-    // The initCode contains 20 bytes of the factory address and the rest is the calldata to be forwarded
+    // The initCode contains 20 bytes of the factory address and the rest is the
+    // calldata to be forwarded
     const initCode = ethers.concat([
       factoryAddress,
       safeProxyFactory.interface.encodeFunctionData("createProxyWithNonce", [
@@ -111,14 +105,14 @@ describe("SafeBlsPlugin", () => {
     ]);
 
     const signer = new ethers.Wallet(
-      "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"
+      "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d",
     );
     const recipientAddress = signer.address;
     const transferAmount = ethers.parseEther("1");
 
     const userOpCallData = safeBlsPlugin.interface.encodeFunctionData(
       "execTransaction",
-      [recipientAddress, transferAmount, "0x00"]
+      [recipientAddress, transferAmount, "0x00"],
     );
 
     // Native tokens for the pre-fund 💸
@@ -142,16 +136,16 @@ describe("SafeBlsPlugin", () => {
     } satisfies UserOperationStruct;
 
     const resolvedUserOp = await ethers.resolveProperties(
-      unsignedUserOperation
+      unsignedUserOperation,
     );
     const userOpHash = getUserOpHash(
       resolvedUserOp,
       ENTRYPOINT_ADDRESS,
-      Number((await provider.getNetwork()).chainId)
+      Number((await provider.getNetwork()).chainId),
     );
 
     // Create BLS signature of the userOpHash
-    const userOpSignature = await blsSigner.sign(userOpHash);
+    const userOpSignature = blsSigner.sign(userOpHash);
 
     const userOperation = {
       ...unsignedUserOperation,
@@ -171,12 +165,12 @@ describe("SafeBlsPlugin", () => {
     const recipientBalanceBefore = await provider.getBalance(recipientAddress);
 
     try {
-      const rcpt = await entryPoint.handleOps(
-        // @ts-ignore Typescript linting is showing an error for some reason (Build still works fine)
+      const _rcpt = await entryPoint.handleOps(
         [userOperation],
-        ENTRYPOINT_ADDRESS
+        ENTRYPOINT_ADDRESS,
       );
     } catch (e) {
+      // eslint-disable-next-line no-console
       console.log("EntryPoint handleOps error=", e);
     }
 
