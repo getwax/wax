@@ -10,6 +10,7 @@ import {
   Safe__factory,
 } from "../../../typechain-types";
 import sendUserOpAndWait from "../utils/sendUserOpAndWait";
+import receiptOf from "../utils/receiptOf";
 
 const ERC4337_TEST_ENV_VARIABLES_DEFINED =
   typeof process.env.ERC4337_TEST_BUNDLER_URL !== "undefined" &&
@@ -145,12 +146,12 @@ describe("SafeECDSAPlugin", () => {
     );
 
     // Native tokens for the pre-fund 💸
-    await (
-      await userWallet.sendTransaction({
+    await receiptOf(
+      userWallet.sendTransaction({
         to: deployedAddress,
         value: ethers.parseEther("100"),
-      })
-    ).wait();
+      }),
+    );
 
     const unsignedUserOperation: UserOperationStruct = {
       sender: deployedAddress,
