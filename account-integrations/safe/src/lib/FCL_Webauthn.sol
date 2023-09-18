@@ -28,14 +28,13 @@ library FCL_WebAuthn {
     error InvalidClientData();
     error InvalidSignature();
 
-    /** @notice Modified from original Fresh Crypto Lib code to use memory instead of calldata */
     function WebAuthn_format(
-        bytes memory authenticatorData,
+        bytes calldata authenticatorData,
         bytes1 authenticatorDataFlagMask,
-        bytes memory clientData,
+        bytes calldata clientData,
         bytes32 clientChallenge,
         uint256 clientChallengeDataOffset,
-        uint256[2] memory // rs
+        uint256[2] calldata // rs
     ) internal pure returns (bytes32 result) {
         // Let the caller check if User Presence (0x01) or User Verification (0x04) are set
         {
@@ -48,37 +47,20 @@ library FCL_WebAuthn {
             bytes(challengeEncoded).length
         );
 
-            // TODO: wax#68 Calldata decoding and stack limit
-            // Remove use of copyBytes function, and use commented inline assembly instead to extract the client challenge
-            // assembly {
-            //     calldatacopy(
-            //         add(challengeExtracted, 32),
-            //         add(clientData.offset, clientChallengeDataOffset),
-            //         mload(challengeExtracted)
-            //     )
-            // }
+            assembly {
+                calldatacopy(
+                    add(challengeExtracted, 32),
+                    add(clientData.offset, clientChallengeDataOffset),
+                    mload(challengeExtracted)
+                )
+            }
 
-            // bytes32 moreData; //=keccak256(abi.encodePacked(challengeExtracted));
-            // assembly {
-            //     moreData := keccak256(add(challengeExtracted, 32), mload(challengeExtracted))
-            // }
+            bytes32 moreData; //=keccak256(abi.encodePacked(challengeExtracted));
+            assembly {
+                moreData := keccak256(add(challengeExtracted, 32), mload(challengeExtracted))
+            }
 
-            // if (keccak256(abi.encodePacked(bytes(challengeEncoded))) != moreData) {
-            //     revert InvalidClientData();
-            // }
-
-            copyBytes(
-                clientData,
-                clientChallengeDataOffset,
-                challengeExtracted.length,
-                challengeExtracted,
-                0
-            );
-
-            if (
-                keccak256(abi.encodePacked(bytes(challengeEncoded))) !=
-                keccak256(abi.encodePacked(challengeExtracted))
-            ) {
+            if (keccak256(abi.encodePacked(bytes(challengeEncoded))) != moreData) {
                 revert InvalidClientData();
             }
         } //avoid stack full
@@ -90,31 +72,6 @@ library FCL_WebAuthn {
         return sha256(verifyData);
     }
 
-    // TODO: wax#68 Calldata decoding and stack limit - remove this function once #68 is complete
-    /* The following function has been written by Alex Beregszaszi (@axic), use it under the terms of the MIT license */
-    function copyBytes(
-        bytes memory _from,
-        uint _fromOffset,
-        uint _length,
-        bytes memory _to,
-        uint _toOffset
-    ) internal pure returns (bytes memory _copiedBytes) {
-        uint minLength = _length + _toOffset;
-        require(_to.length >= minLength); // Buffer too small. Should be a better way?
-        uint i = 32 + _fromOffset; // NOTE: the offset 32 is added to skip the `size` field of both bytes variables
-        uint j = 32 + _toOffset;
-        while (i < (32 + _fromOffset + _length)) {
-            assembly {
-                let tmp := mload(add(_from, i))
-                mstore(add(_to, j), tmp)
-            }
-            i += 32;
-            j += 32;
-        }
-        return _to;
-    }
-
-    /** @notice Modified from original Fresh Crypto Lib code to use memory instead of calldata */
     function checkSignature(
         bytes calldata authenticatorData,
         bytes1 authenticatorDataFlagMask,
