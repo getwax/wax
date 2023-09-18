@@ -66,8 +66,16 @@ library FCL_WebAuthn {
         } //avoid stack full
 
         // Verify the signature over sha256(authenticatorData || sha256(clientData))
+        bytes memory verifyData = new bytes(authenticatorData.length + 32);
+
+        assembly {
+            calldatacopy(add(verifyData, 32), authenticatorData.offset, authenticatorData.length)
+        }
+
         bytes32 more = sha256(clientData);
-        bytes memory verifyData = abi.encodePacked(authenticatorData, more);
+        assembly {
+            mstore(add(verifyData, add(authenticatorData.length, 32)), more)
+        }
 
         return sha256(verifyData);
     }
