@@ -95,5 +95,6 @@ module.exports = {
     'no-continue': 'off',
     'no-constant-condition': 'off',
     'no-underscore-dangle': 'off',
+    'prefer-destructuring': 'off',
   },
 };
