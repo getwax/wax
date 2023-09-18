@@ -69,6 +69,7 @@ contract SafeWebAuthnPlugin is BaseAccount {
 
     struct LocalVarStruct {
         bytes1 authenticatorDataFlagMask;
+        bytes32 clientChallenge;
         uint256 clientChallengeDataOffset;
     }
 
@@ -87,20 +88,22 @@ contract SafeWebAuthnPlugin is BaseAccount {
             uint i = 0;
             uint dataLen = 32;
             uint256 paramLen = abi.decode(userOp.signature[i:i+dataLen], (uint256));
-            // Fixed-length params (bytes1, (uint256?), uint256, uint256[2], uint256[2]). Expect 8 slots = 256 bytes
+            // Fixed-length params (bytes1, (uint256?), bytes32, uint256, uint256[2], uint256[2]). Expect 9 slots = 256 bytes
             i += dataLen; // advance index
 
             // decode fixed length params (values to memory)
-            dataLen = 3 * 32; //lenFixedParams - 32; // -32 already read length
+            dataLen = 4 * 32; //lenFixedParams - 32; // -32 already read length
             (
                 s.authenticatorDataFlagMask,
                 , // some number
+                s.clientChallenge,
                 s.clientChallengeDataOffset
             ) = abi.decode(
                 userOp.signature[i:i+dataLen],
                 (
                     bytes1,
                     uint256, //not sure what is encoded here
+                    bytes32,
                     uint256
                 )
             );
@@ -146,7 +149,7 @@ contract SafeWebAuthnPlugin is BaseAccount {
             authenticatorData,
             s.authenticatorDataFlagMask,
             clientData,
-            userOpHash,
+            s.clientChallenge,
             s.clientChallengeDataOffset,
             signature,
             pubKey
