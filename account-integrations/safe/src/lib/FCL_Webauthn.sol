@@ -20,7 +20,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.12;
 
-import {Base64} from "openzeppelin-contracts/contracts/utils/Base64.sol";
+import {Base64URL} from "./Base64URL.sol";
 import {FCL_Elliptic_ZZ} from "./FCL_elliptic.sol";
 
 library FCL_WebAuthn {
@@ -28,14 +28,13 @@ library FCL_WebAuthn {
     error InvalidClientData();
     error InvalidSignature();
 
-    /** @notice Modified from original Fresh Crypto Lib code to use memory instead of calldata */
     function WebAuthn_format(
-        bytes memory authenticatorData,
+        bytes calldata authenticatorData,
         bytes1 authenticatorDataFlagMask,
-        bytes memory clientData,
+        bytes calldata clientData,
         bytes32 clientChallenge,
         uint256 clientChallengeDataOffset,
-        uint256[2] memory // rs
+        uint256[2] calldata // rs
     ) internal pure returns (bytes32 result) {
         // Let the caller check if User Presence (0x01) or User Verification (0x04) are set
         {
@@ -43,38 +42,44 @@ library FCL_WebAuthn {
                 revert InvalidAuthenticatorData();
             }
             // Verify that clientData commits to the expected client challenge
-            string memory challengeEncoded = Base64.encode(abi.encodePacked(clientChallenge));
+            string memory challengeEncoded = Base64URL.encode32(abi.encodePacked(clientChallenge));
             bytes memory challengeExtracted = new bytes(
             bytes(challengeEncoded).length
         );
 
-            // TODO: wax#44 Extract webauthn challenge from clientData and compare to clientChallenge
-            // assembly {
-            //     calldatacopy(
-            //         add(challengeExtracted, 32),
-            //         add(clientData.offset, clientChallengeDataOffset),
-            //         mload(challengeExtracted)
-            //     )
-            // }
+            assembly {
+                calldatacopy(
+                    add(challengeExtracted, 32),
+                    add(clientData.offset, clientChallengeDataOffset),
+                    mload(challengeExtracted)
+                )
+            }
 
-            // bytes32 moreData; //=keccak256(abi.encodePacked(challengeExtracted));
-            // assembly {
-            //     moreData := keccak256(add(challengeExtracted, 32), mload(challengeExtracted))
-            // }
+            bytes32 moreData; //=keccak256(abi.encodePacked(challengeExtracted));
+            assembly {
+                moreData := keccak256(add(challengeExtracted, 32), mload(challengeExtracted))
+            }
 
-            // if (keccak256(abi.encodePacked(bytes(challengeEncoded))) != moreData) {
-            //     revert InvalidClientData();
-            // }
+            if (keccak256(abi.encodePacked(bytes(challengeEncoded))) != moreData) {
+                revert InvalidClientData();
+            }
         } //avoid stack full
 
         // Verify the signature over sha256(authenticatorData || sha256(clientData))
+        bytes memory verifyData = new bytes(authenticatorData.length + 32);
+
+        assembly {
+            calldatacopy(add(verifyData, 32), authenticatorData.offset, authenticatorData.length)
+        }
+
         bytes32 more = sha256(clientData);
-        bytes memory verifyData = abi.encodePacked(authenticatorData, more);
+        assembly {
+            mstore(add(verifyData, add(authenticatorData.length, 32)), more)
+        }
 
         return sha256(verifyData);
     }
 
-    /** @notice Modified from original Fresh Crypto Lib code to use memory instead of calldata */
     function checkSignature(
         bytes calldata authenticatorData,
         bytes1 authenticatorDataFlagMask,
@@ -90,7 +95,7 @@ library FCL_WebAuthn {
             authenticatorData, authenticatorDataFlagMask, clientData, clientChallenge, clientChallengeDataOffset, rs
         );
 
-        bool result = FCL_Elliptic_ZZ.ecdsa_verify_memory(message, rs, Q);
+        bool result = FCL_Elliptic_ZZ.ecdsa_verify(message, rs, Q);
 
         return result;
     }

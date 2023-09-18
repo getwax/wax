@@ -36,7 +36,7 @@ const config: HardhatUserConfig = {
     timeout: 120000,
   },
   preprocess: {
-    eachLine: (hre) => ({
+    eachLine: (_hre) => ({
       transform: (line: string) => {
         if (line.match(/^\s*import /i)) {
           for (const [from, to] of getRemappings()) {

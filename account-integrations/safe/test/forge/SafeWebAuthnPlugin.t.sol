@@ -52,7 +52,7 @@ contract SafeWebAuthnPluginTest is TestHelper {
             bytes memory authenticatorData,
             bytes1 authenticatorDataFlagMask,
             bytes memory clientData,
-            ,
+            bytes32 clientChallenge,
             uint256 clientChallengeDataOffset,
 
         ) = getWebAuthnSignatureValues();
@@ -63,6 +63,7 @@ contract SafeWebAuthnPluginTest is TestHelper {
             authenticatorData,
             authenticatorDataFlagMask,
             clientData,
+            clientChallenge,
             clientChallengeDataOffset,
             invalidSignature,
             publicKey

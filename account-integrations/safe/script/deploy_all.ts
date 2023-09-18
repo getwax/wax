@@ -13,7 +13,7 @@ import {
   Safe__factory,
 } from "../typechain-types";
 
-const deploy = async function () {
+async function deploy() {
   const contractFactories = [
     SimulateTxAccessor__factory,
     SafeProxyFactory__factory,
@@ -35,13 +35,13 @@ const deploy = async function () {
   for (const contractFactory of contractFactories) {
     const contract = await safeSingletonFactory.connectOrDeploy(
       contractFactory,
-      []
+      [],
     );
 
     const contractName = contractFactory.name.split("_")[0];
     console.log(`deployed ${contractName} to ${await contract.getAddress()}`);
   }
-};
+}
 
 deploy().catch((error: Error) => {
   console.error(error);
