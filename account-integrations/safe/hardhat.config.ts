@@ -16,7 +16,7 @@ function getRemappings() {
 
 const config: HardhatUserConfig = {
   solidity: {
-    version: "0.8.12",
+    version: "0.8.19",
     settings: {
       optimizer: {
         enabled: true,
@@ -65,7 +65,7 @@ task("sendEth", "Sends ETH to an address")
   .setAction(
     async ({ address, amount }: { address: string; amount: string }, hre) => {
       const wallet = hre.ethers.Wallet.fromPhrase(
-        'test '.repeat(11) + 'junk',
+        "test ".repeat(11) + "junk",
         hre.ethers.provider,
       );
 
