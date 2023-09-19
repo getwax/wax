@@ -22,7 +22,7 @@ interface ISafe {
     ) external returns (bool success);
 }
 
-contract RecoveryPlugin {
+contract SafeECDSARecoveryPlugin {
     address private immutable storedEOA;
     address public storedSafe;
 

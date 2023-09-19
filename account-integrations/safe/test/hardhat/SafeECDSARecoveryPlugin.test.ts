@@ -10,7 +10,7 @@ import { SafeECDSAPlugin } from "../../typechain-types/src/SafeECDSAPlugin.sol/S
 
 const MNEMONIC = "test test test test test test test test test test test junk";
 
-describe("RecoveryPlugin", () => {
+describe("SafeECDSARecoveryPlugin", () => {
   let provider: Provider;
   let safeSigner: HDNodeWallet;
   let entryPoint: EntryPoint;
@@ -36,7 +36,7 @@ describe("RecoveryPlugin", () => {
     const [, , recoverySigner] = await ethers.getSigners();
 
     const recoveryPlugin = await (
-      await ethers.getContractFactory("RecoveryPlugin")
+      await ethers.getContractFactory("SafeECDSARecoveryPlugin")
     ).deploy(safeCounterfactualAddress, recoverySigner.address);
     const recoveryPluginAddress = await recoveryPlugin.getAddress();
 
@@ -73,7 +73,7 @@ describe("RecoveryPlugin", () => {
     const [, , , recoverySigner] = await ethers.getSigners();
 
     const recoveryPlugin = await (
-      await ethers.getContractFactory("RecoveryPlugin")
+      await ethers.getContractFactory("SafeECDSARecoveryPlugin")
     ).deploy(safeCounterfactualAddress, recoverySigner.address);
     const recoveryPluginAddress = await recoveryPlugin.getAddress();
 
