@@ -8,7 +8,7 @@ contract WebAuthn {
         bytes calldata authenticatorData,
         bytes1 authenticatorDataFlagMask,
         bytes calldata clientData,
-        bytes32 messageHash,
+        bytes32 clientChallenge,
         uint256 clientChallengeDataOffset,
         uint256[2] calldata signature,
         uint256[2] calldata publicKey
@@ -18,7 +18,7 @@ contract WebAuthn {
                 authenticatorData,
                 authenticatorDataFlagMask,
                 clientData,
-                messageHash,
+                clientChallenge,
                 clientChallengeDataOffset,
                 signature,
                 publicKey

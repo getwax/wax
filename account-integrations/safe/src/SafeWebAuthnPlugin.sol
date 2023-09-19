@@ -4,8 +4,6 @@ pragma solidity >=0.8.0 <0.9.0;
 import {BaseAccount} from "account-abstraction/contracts/core/BaseAccount.sol";
 import {IEntryPoint, UserOperation} from "account-abstraction/contracts/interfaces/IEntryPoint.sol";
 
-import {FCL_WebAuthn} from "./lib/FCL_Webauthn.sol";
-
 interface ISafe {
     function enableModule(address module) external;
 
@@ -17,18 +15,32 @@ interface ISafe {
     ) external returns (bool success);
 }
 
+interface IWebAuthn {
+    function verifySignature(
+        bytes calldata authenticatorData,
+        bytes1 authenticatorDataFlagMask,
+        bytes calldata clientData,
+        bytes32 clientChallenge,
+        uint256 clientChallengeDataOffset,
+        uint256[2] calldata signature,
+        uint256[2] calldata publicKey
+    ) external returns (bool);
+}
+
 contract SafeWebAuthnPlugin is BaseAccount {
     address public immutable myAddress;
     address private immutable _entryPoint;
+    address private immutable _webAuthn;
     uint256[2] private _publicKey;
 
     address internal constant _SENTINEL_MODULES = address(0x1);
 
     error NONCE_NOT_SEQUENTIAL();
 
-    constructor(address entryPointAddress, uint256[2] memory pubKey) {
+    constructor(address entryPointAddress, address webAuthnAddress, uint256[2] memory pubKey) {
         myAddress = address(this);
         _entryPoint = entryPointAddress;
+        _webAuthn = webAuthnAddress;
         _publicKey = pubKey;
     }
 
@@ -145,7 +157,7 @@ contract SafeWebAuthnPlugin is BaseAccount {
             i += ((dataLen >> 5) + 1) << 5; // advance index (round up to next slot)
         }
 
-        bool verified = FCL_WebAuthn.checkSignature(
+        bool verified = IWebAuthn(_webAuthn).verifySignature(
             authenticatorData,
             s.authenticatorDataFlagMask,
             clientData,
