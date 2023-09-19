@@ -11,6 +11,10 @@ import {
   EntryPoint__factory,
   Greeter,
   Greeter__factory,
+  Safe,
+  SafeProxyFactory,
+  SafeProxyFactory__factory,
+  Safe__factory,
   SimpleAccountFactory,
   SimpleAccountFactory__factory,
 } from '../hardhat/typechain-types';
@@ -51,6 +55,8 @@ export type Contracts = {
   greeter: Greeter;
   entryPoint: EntryPoint;
   simpleAccountFactory: SimpleAccountFactory;
+  safe: Safe;
+  safeProxyFactory: SafeProxyFactory;
 };
 
 export default class WaxInPage {
@@ -152,13 +158,15 @@ export default class WaxInPage {
 
     const assumedEntryPoint = viewer.connectAssume(EntryPoint__factory, []);
 
-    const contracts = {
+    const contracts: Contracts = {
       greeter: viewer.connectAssume(Greeter__factory, ['']).connect(runner),
       entryPoint: assumedEntryPoint,
       simpleAccountFactory: viewer.connectAssume(
         SimpleAccountFactory__factory,
         [await assumedEntryPoint.getAddress()],
       ),
+      safe: viewer.connectAssume(Safe__factory, []),
+      safeProxyFactory: viewer.connectAssume(SafeProxyFactory__factory, []),
     };
 
     if (this.#contractsDeployed) {
@@ -189,6 +197,9 @@ export default class WaxInPage {
         factory.connectOrDeploy(SimpleAccountFactory__factory, [
           await entryPoint.getAddress(),
         ]),
+      safe: () => factory.connectOrDeploy(Safe__factory, []),
+      safeProxyFactory: () =>
+        factory.connectOrDeploy(SafeProxyFactory__factory, []),
     };
 
     for (const deployment of Object.values(deployments)) {
