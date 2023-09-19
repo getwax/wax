@@ -119,7 +119,12 @@ export default class SafeECDSAAccountWrapper implements IAccount {
   }
 
   async getNonce(): Promise<bigint> {
-    return await this.getContract().getNonce();
+    const contracts = await this.waxInPage.getContracts();
+
+    // TODO: Why does this give a different result to
+    // this.getContract().getNonce()?
+    // (And why does that alternative give the wrong answer?)
+    return await contracts.entryPoint.getNonce(this.address, 0);
   }
 
   async sign(

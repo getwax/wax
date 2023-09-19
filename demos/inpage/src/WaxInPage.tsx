@@ -29,6 +29,9 @@ import NetworkBundler from './bundlers/NetworkBundler';
 import IBundler from './bundlers/IBundler';
 import IAccount from './accounts/IAccount';
 import { makeAccountWrapper } from './accounts/AccountData';
+import SafeECDSAAccountWrapper from './accounts/SafeECDSAAccountWrapper';
+import ChoicePopup from './ChoicePopup';
+import never from './helpers/never';
 import SimpleAccountWrapper from './accounts/SimpleAccountWrapper';
 
 type Config = {
@@ -304,10 +307,50 @@ export default class WaxInPage {
       return await makeAccountWrapper(existingAccounts[0], this);
     }
 
-    const simpleAccount = await SimpleAccountWrapper.createRandom(this);
+    const popup = await this.getPopup();
 
-    await this.storage.accounts.set([simpleAccount.toData()]);
+    let choice: 'SimpleAccount' | 'SafeECDSAAccount';
 
-    return simpleAccount;
+    try {
+      choice = await new Promise<'SimpleAccount' | 'SafeECDSAAccount'>(
+        (resolve, reject) => {
+          ReactDOM.createRoot(
+            popup.getWindow().document.getElementById('root')!,
+          ).render(
+            <React.StrictMode>
+              <ChoicePopup
+                heading="Choose an Account Type"
+                text="Different accounts can have different features."
+                choices={[
+                  'SimpleAccount' as const,
+                  'SafeECDSAAccount' as const,
+                ]}
+                resolve={resolve}
+              />
+            </React.StrictMode>,
+          );
+
+          popup.events.on('unload', () => reject(new Error('Popup closed')));
+        },
+      );
+    } finally {
+      popup.close();
+    }
+
+    if (choice === 'SimpleAccount') {
+      const account = await SimpleAccountWrapper.createRandom(this);
+      await this.storage.accounts.set([account.toData()]);
+
+      return account;
+    }
+
+    if (choice === 'SafeECDSAAccount') {
+      const account = await SafeECDSAAccountWrapper.createRandom(this);
+      await this.storage.accounts.set([account.toData()]);
+
+      return account;
+    }
+
+    never(choice);
   }
 }

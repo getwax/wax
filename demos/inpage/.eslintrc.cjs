@@ -119,5 +119,6 @@ module.exports = {
     'no-continue': 'off',
     'no-constant-condition': 'off',
     'no-underscore-dangle': 'off',
+    'consistent-return': 'off',
   },
 };
