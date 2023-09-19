@@ -141,28 +141,6 @@ export default class WaxInPage {
     return response;
   }
 
-  // Usually you could do `simpleAccountFactory.getAddress()` to get its
-  // address, but SimpleAccountFactory overrides getAddress to be a function for
-  // getting the address of an account, which messes with the ethers .getAddress
-  // builtin.
-  //
-  // Proposed fix:
-  //   https://github.com/eth-infinitism/account-abstraction/pull/323
-  //
-  async getSimpleAccountFactoryAddress(): Promise<string> {
-    const chainId = BigInt(
-      await this.ethereum.request({ method: 'eth_chainId' }),
-    );
-
-    const viewer = new SafeSingletonFactoryViewer(this.ethersProvider, chainId);
-
-    const entryPointAddress = viewer.calculateAddress(EntryPoint__factory, []);
-
-    return viewer.calculateAddress(SimpleAccountFactory__factory, [
-      entryPointAddress,
-    ]);
-  }
-
   async getContracts(
     runner: ethers.ContractRunner = this.ethersProvider,
   ): Promise<Contracts> {
