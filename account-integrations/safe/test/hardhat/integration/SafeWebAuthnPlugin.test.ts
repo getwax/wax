@@ -10,17 +10,14 @@ import {
 } from "../../../typechain-types";
 import sendUserOpAndWait from "../utils/sendUserOpAndWait";
 import receiptOf from "../utils/receiptOf";
+import SafeSingletonFactory from "../utils/SafeSingletonFactory";
 
 const ERC4337_TEST_ENV_VARIABLES_DEFINED =
   typeof process.env.ERC4337_TEST_BUNDLER_URL !== "undefined" &&
   typeof process.env.ERC4337_TEST_NODE_URL !== "undefined" &&
-  typeof process.env.ERC4337_TEST_SAFE_FACTORY_ADDRESS !== "undefined" &&
-  typeof process.env.ERC4337_TEST_SINGLETON_ADDRESS !== "undefined" &&
   typeof process.env.MNEMONIC !== "undefined";
 
 const itif = ERC4337_TEST_ENV_VARIABLES_DEFINED ? it : it.skip;
-const SAFE_FACTORY_ADDRESS = process.env.ERC4337_TEST_SAFE_FACTORY_ADDRESS;
-const SINGLETON_ADDRESS = process.env.ERC4337_TEST_SINGLETON_ADDRESS;
 const BUNDLER_URL = process.env.ERC4337_TEST_BUNDLER_URL;
 const NODE_URL = process.env.ERC4337_TEST_NODE_URL;
 const MNEMONIC = process.env.MNEMONIC;
@@ -35,24 +32,16 @@ describe("SafeWebAuthnPlugin", () => {
       "eth_supportedEntryPoints",
       [],
     )) as string[];
+
     if (entryPoints.length === 0) {
       throw new Error("No entry points found");
     }
 
-    if (!SAFE_FACTORY_ADDRESS) {
-      throw new Error("No Safe factory address found");
-    }
-
-    if (!SINGLETON_ADDRESS) {
-      throw new Error("No Safe singleton address found");
-    }
+    const ssf = await SafeSingletonFactory.init(userWallet);
 
     return {
-      factory: SafeProxyFactory__factory.connect(
-        SAFE_FACTORY_ADDRESS,
-        userWallet,
-      ),
-      singleton: Safe__factory.connect(SINGLETON_ADDRESS, provider),
+      factory: await ssf.connectOrDeploy(SafeProxyFactory__factory, []),
+      singleton: await ssf.connectOrDeploy(Safe__factory, []),
       bundlerProvider,
       provider,
       userWallet,
@@ -63,10 +52,10 @@ describe("SafeWebAuthnPlugin", () => {
   const getPublicKeyAndSignature = () => {
     const publicKey: [BigNumberish, BigNumberish] = [
       BigInt(
-        "114874632398302156264159990279427641021947882640101801130664833947273521181002"
+        "114874632398302156264159990279427641021947882640101801130664833947273521181002",
       ),
       BigInt(
-        "32136952818958550240756825111900051564117520891182470183735244184006536587423"
+        "32136952818958550240756825111900051564117520891182470183735244184006536587423",
       ),
     ];
 
@@ -80,10 +69,10 @@ describe("SafeWebAuthnPlugin", () => {
     const clientChallengeDataOffset = 36;
     const signature: [BigNumberish, BigNumberish] = [
       BigInt(
-        "45847212378479006099766816358861726414873720355505495069909394794949093093607"
+        "45847212378479006099766816358861726414873720355505495069909394794949093093607",
       ),
       BigInt(
-        "55835259151215769394881684156457977412783812617123006733908193526332337539398"
+        "55835259151215769394881684156457977412783812617123006733908193526332337539398",
       ),
     ];
 
