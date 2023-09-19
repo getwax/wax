@@ -17,8 +17,6 @@ interface ISafe {
         bytes memory data,
         uint8 operation
     ) external returns (bool success);
-
-    function isModuleEnabled(address module) external view returns (bool);
 }
 
 contract SafeECDSAPlugin is BaseAccount {
@@ -31,7 +29,6 @@ contract SafeECDSAPlugin is BaseAccount {
     address internal constant _SENTINEL_MODULES = address(0x1);
 
     error NONCE_NOT_SEQUENTIAL();
-    error MODULE_NOT_ENABLED();
     event OWNER_UPDATED(address indexed oldOwner, address indexed newOwner);
 
     constructor(address entryPointAddress, address ownerAddress) {
@@ -76,13 +73,8 @@ contract SafeECDSAPlugin is BaseAccount {
     }
 
     function updateOwner(address newOwner) public {
-        // TODO: Is this check all that's needed?  Would be niced to check if the sender
-        // is the safe address but we don't know the safe address here since we deploy the plugin
-        // at the same time as the safe.
-        bool isModuleEnabled = ISafe(msg.sender).isModuleEnabled(address(this));
-        if(!isModuleEnabled) {
-            revert MODULE_NOT_ENABLED();
-        }
+        // TODO: Check if msg.sender is the Safe. We can't do that now because the Safe
+        // and the plugin are deployed at the same time.  So the plugin doesn't know the Safe address.
         emit OWNER_UPDATED(_owner, newOwner);
         _owner = newOwner;
     }
