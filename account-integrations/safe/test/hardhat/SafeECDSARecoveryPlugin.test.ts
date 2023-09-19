@@ -105,7 +105,6 @@ describe("SafeECDSARecoveryPlugin", () => {
 
     const recoveryPluginSinger = recoveryPlugin.connect(recoverySigner);
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     await recoveryPluginSinger.resetEcdsaAddress(
       await deployedSafe.getAddress(),
       ecdsaPluginAddress,
