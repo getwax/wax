@@ -12,8 +12,8 @@ import {
   Greeter,
   Greeter__factory,
   Safe,
-  SafeProxyFactory,
-  SafeProxyFactory__factory,
+  SafeECDSAFactory,
+  SafeECDSAFactory__factory,
   Safe__factory,
   SimpleAccountFactory,
   SimpleAccountFactory__factory,
@@ -56,7 +56,7 @@ export type Contracts = {
   entryPoint: EntryPoint;
   simpleAccountFactory: SimpleAccountFactory;
   safe: Safe;
-  safeProxyFactory: SafeProxyFactory;
+  safeECDSAFactory: SafeECDSAFactory;
 };
 
 export default class WaxInPage {
@@ -166,7 +166,7 @@ export default class WaxInPage {
         [await assumedEntryPoint.getAddress()],
       ),
       safe: viewer.connectAssume(Safe__factory, []),
-      safeProxyFactory: viewer.connectAssume(SafeProxyFactory__factory, []),
+      safeECDSAFactory: viewer.connectAssume(SafeECDSAFactory__factory, []),
     };
 
     if (this.#contractsDeployed) {
@@ -198,8 +198,8 @@ export default class WaxInPage {
           await entryPoint.getAddress(),
         ]),
       safe: () => factory.connectOrDeploy(Safe__factory, []),
-      safeProxyFactory: () =>
-        factory.connectOrDeploy(SafeProxyFactory__factory, []),
+      safeECDSAFactory: () =>
+        factory.connectOrDeploy(SafeECDSAFactory__factory, []),
     };
 
     for (const deployment of Object.values(deployments)) {
