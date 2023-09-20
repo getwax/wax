@@ -67,7 +67,7 @@ contract SafeBlsPlugin is BaseAccount {
         return IEntryPoint(_entryPoint);
     }
 
-    function owner() public pure returns (uint256[4] memory _blsPublicKey) {
+    function owner() public view returns (uint256[4] memory) {
         return _blsPublicKey;
     }
 
@@ -100,7 +100,7 @@ contract SafeBlsPlugin is BaseAccount {
      * This function prevents using a “key” different from the first “zero” key.
      * @param nonce to validate
      */
-    function _validateNonce(uint256 nonce) internal view override {
+    function _validateNonce(uint256 nonce) internal pure override {
         if (nonce >= type(uint64).max) {
             revert NONCE_NOT_SEQUENTIAL();
         }

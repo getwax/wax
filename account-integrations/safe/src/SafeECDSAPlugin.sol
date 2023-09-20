@@ -22,13 +22,14 @@ interface ISafe {
 contract SafeECDSAPlugin is BaseAccount {
     using ECDSA for bytes32;
 
-    address public immutable myAddress;
-    address private immutable _owner;
+    address public immutable myAddress; // Module address
+    address private _owner; // Key address
     address private immutable _entryPoint;
 
     address internal constant _SENTINEL_MODULES = address(0x1);
 
     error NONCE_NOT_SEQUENTIAL();
+    event OWNER_UPDATED(address indexed oldOwner, address indexed newOwner);
 
     constructor(address entryPointAddress, address ownerAddress) {
         myAddress = address(this);
@@ -71,10 +72,17 @@ contract SafeECDSAPlugin is BaseAccount {
         return _owner;
     }
 
+    function updateOwner(address newOwner) public {
+        // TODO: Check if msg.sender is the Safe. We can't do that now because the Safe
+        // and the plugin are deployed at the same time.  So the plugin doesn't know the Safe address.
+        emit OWNER_UPDATED(_owner, newOwner);
+        _owner = newOwner;
+    }
+
     function _validateSignature(
         UserOperation calldata userOp,
         bytes32 userOpHash
-    ) internal override returns (uint256 validationData) {
+    ) internal view override returns (uint256 validationData) {
         bytes32 hash = userOpHash.toEthSignedMessageHash();
         if (_owner != hash.recover(userOp.signature))
             return SIG_VALIDATION_FAILED;
@@ -86,7 +94,7 @@ contract SafeECDSAPlugin is BaseAccount {
      * This function prevents using a “key” different from the first “zero” key.
      * @param nonce to validate
      */
-    function _validateNonce(uint256 nonce) internal view override {
+    function _validateNonce(uint256 nonce) internal pure override {
         if (nonce >= type(uint64).max) {
             revert NONCE_NOT_SEQUENTIAL();
         }
