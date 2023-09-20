@@ -45,7 +45,7 @@ const purposeMap = {
     short: 'Deploy account',
     desc: [
       'The current 4337 account type requires a separate deployment. Please',
-      'enter a private key or seed phraise with funds to do this.',
+      'enter a private key or seed phrase with funds to do this.',
     ].join(' '),
   },
   'simulate-bundler': {
