@@ -1,5 +1,7 @@
 # Safe plugins
 
+Please note, these plugins are in a pre-alpha state and are not ready for production use. In their current state, the plugins are meant for testing and experimentation.
+
 # Getting Started
 
 1. `cd account-integrations/safe`
