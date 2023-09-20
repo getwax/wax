@@ -6,22 +6,21 @@ import { UserOperationStruct } from "@account-abstraction/contracts";
 import { getUserOpHash } from "@account-abstraction/utils";
 import { calculateProxyAddress } from "../utils/calculateProxyAddress";
 import {
+  SafeECDSAFactory__factory,
+  SafeECDSAPlugin__factory,
   SafeProxyFactory__factory,
   Safe__factory,
 } from "../../../typechain-types";
 import sendUserOpAndWait from "../utils/sendUserOpAndWait";
 import receiptOf from "../utils/receiptOf";
+import SafeSingletonFactory from "../utils/SafeSingletonFactory";
 
 const ERC4337_TEST_ENV_VARIABLES_DEFINED =
   typeof process.env.ERC4337_TEST_BUNDLER_URL !== "undefined" &&
   typeof process.env.ERC4337_TEST_NODE_URL !== "undefined" &&
-  typeof process.env.ERC4337_TEST_SAFE_FACTORY_ADDRESS !== "undefined" &&
-  typeof process.env.ERC4337_TEST_SINGLETON_ADDRESS !== "undefined" &&
   typeof process.env.MNEMONIC !== "undefined";
 
 const itif = ERC4337_TEST_ENV_VARIABLES_DEFINED ? it : it.skip;
-const SAFE_FACTORY_ADDRESS = process.env.ERC4337_TEST_SAFE_FACTORY_ADDRESS;
-const SINGLETON_ADDRESS = process.env.ERC4337_TEST_SINGLETON_ADDRESS;
 const BUNDLER_URL = process.env.ERC4337_TEST_BUNDLER_URL;
 const NODE_URL = process.env.ERC4337_TEST_NODE_URL;
 const MNEMONIC = process.env.MNEMONIC;
@@ -36,24 +35,16 @@ describe("SafeECDSAPlugin", () => {
       "eth_supportedEntryPoints",
       [],
     )) as string[];
+
     if (entryPoints.length === 0) {
       throw new Error("No entry points found");
     }
 
-    if (!SAFE_FACTORY_ADDRESS) {
-      throw new Error("No Safe factory address found");
-    }
-
-    if (!SINGLETON_ADDRESS) {
-      throw new Error("No Safe singleton address found");
-    }
+    const ssf = await SafeSingletonFactory.init(userWallet);
 
     return {
-      factory: SafeProxyFactory__factory.connect(
-        SAFE_FACTORY_ADDRESS,
-        userWallet,
-      ),
-      singleton: Safe__factory.connect(SINGLETON_ADDRESS, provider),
+      factory: await ssf.connectOrDeploy(SafeProxyFactory__factory, []),
+      singleton: await ssf.connectOrDeploy(Safe__factory, []),
       bundlerProvider,
       provider,
       userWallet,
@@ -69,25 +60,16 @@ describe("SafeECDSAPlugin", () => {
    * 2. Executing a transaction is possible
    */
   itif("should pass the ERC4337 validation", async () => {
-    const {
-      singleton,
-      factory,
-      provider,
-      bundlerProvider,
-      userWallet,
-      entryPoints,
-    } = await setupTests();
+    const { singleton, provider, bundlerProvider, userWallet, entryPoints } =
+      await setupTests();
     const ENTRYPOINT_ADDRESS = entryPoints[0];
 
-    const safeECDSAPluginFactory = (
-      await hre.ethers.getContractFactory("SafeECDSAPlugin")
-    ).connect(userWallet);
-    const safeECDSAPlugin = await safeECDSAPluginFactory.deploy(
-      ENTRYPOINT_ADDRESS,
-      userWallet.address,
-      { gasLimit: 1_000_000 },
+    const ssf = await SafeSingletonFactory.init(userWallet);
+
+    const safeECDSAFactory = await ssf.connectOrDeploy(
+      SafeECDSAFactory__factory,
+      [],
     );
-    await safeECDSAPlugin.deploymentTransaction()?.wait();
 
     const feeData = await provider.getFeeData();
     if (!feeData.maxFeePerGas || !feeData.maxPriorityFeePerGas) {
@@ -99,64 +81,50 @@ describe("SafeECDSAPlugin", () => {
     const maxFeePerGas = `0x${feeData.maxFeePerGas.toString()}`;
     const maxPriorityFeePerGas = `0x${feeData.maxPriorityFeePerGas.toString()}`;
 
-    const safeECDSAPluginAddress = await safeECDSAPlugin.getAddress();
-    const singletonAddress = await singleton.getAddress();
-    const factoryAddress = await factory.getAddress();
+    const owner = ethers.Wallet.createRandom();
 
-    const moduleInitializer =
-      safeECDSAPlugin.interface.encodeFunctionData("enableMyself");
-    const encodedInitializer = singleton.interface.encodeFunctionData("setup", [
-      [userWallet.address],
-      1,
-      safeECDSAPluginAddress,
-      moduleInitializer,
-      safeECDSAPluginAddress,
-      AddressZero,
+    const createArgs = [
+      singleton,
+      ENTRYPOINT_ADDRESS,
+      owner.address,
       0,
-      AddressZero,
-    ]);
+    ] satisfies Parameters<typeof safeECDSAFactory.create.staticCall>;
 
-    const deployedAddress = await calculateProxyAddress(
-      factory,
-      singletonAddress,
-      encodedInitializer,
-      73,
+    const accountAddress = await safeECDSAFactory.create.staticCall(
+      ...createArgs,
     );
 
-    // The initCode contains 20 bytes of the factory address and the rest is the
-    // calldata to be forwarded
-    const initCode = concat([
-      factoryAddress,
-      factory.interface.encodeFunctionData("createProxyWithNonce", [
-        singletonAddress,
-        encodedInitializer,
-        73,
-      ]),
-    ]);
+    await receiptOf(safeECDSAFactory.create(...createArgs));
 
-    const signer = new ethers.Wallet(
+    const recipient = new ethers.Wallet(
       "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d",
     );
-    const recipientAddress = signer.address;
     const transferAmount = ethers.parseEther("1");
 
-    const userOpCallData = safeECDSAPlugin.interface.encodeFunctionData(
-      "execTransaction",
-      [recipientAddress, transferAmount, "0x00"],
-    );
+    const userOpCallData =
+      SafeECDSAPlugin__factory.createInterface().encodeFunctionData(
+        "execTransaction",
+        [recipient.address, transferAmount, "0x00"],
+      );
 
     // Native tokens for the pre-fund 💸
     await receiptOf(
       userWallet.sendTransaction({
-        to: deployedAddress,
+        to: accountAddress,
         value: ethers.parseEther("100"),
       }),
     );
 
     const unsignedUserOperation: UserOperationStruct = {
-      sender: deployedAddress,
+      sender: accountAddress,
       nonce: "0x0",
-      initCode,
+
+      // Note: initCode is not used because we need to create both the safe
+      // proxy and the plugin, and 4337 currently only allows one contract
+      // creation in this step. Since we need an extra step anyway, it's simpler
+      // to do the whole create outside of 4337.
+      initCode: "0x",
+
       callData: userOpCallData,
       callGasLimit: "0x7A120",
       verificationGasLimit: "0x7A120",
@@ -171,9 +139,9 @@ describe("SafeECDSAPlugin", () => {
     const userOpHash = getUserOpHash(
       resolvedUserOp,
       ENTRYPOINT_ADDRESS,
-      Number(provider._network.chainId),
+      Number((await provider.getNetwork()).chainId),
     );
-    const userOpSignature = await userWallet.signMessage(getBytes(userOpHash));
+    const userOpSignature = await owner.signMessage(getBytes(userOpHash));
 
     const userOperation = {
       ...unsignedUserOperation,
@@ -190,11 +158,11 @@ describe("SafeECDSAPlugin", () => {
     //     `;
     // console.log(DEBUG_MESSAGE);
 
-    const recipientBalanceBefore = await provider.getBalance(recipientAddress);
+    const recipientBalanceBefore = await provider.getBalance(recipient.address);
 
     await sendUserOpAndWait(userOperation, ENTRYPOINT_ADDRESS, bundlerProvider);
 
-    const recipientBalanceAfter = await provider.getBalance(recipientAddress);
+    const recipientBalanceAfter = await provider.getBalance(recipient.address);
 
     const expectedRecipientBalance = recipientBalanceBefore + transferAmount;
     expect(recipientBalanceAfter).to.equal(expectedRecipientBalance);

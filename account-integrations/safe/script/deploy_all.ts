@@ -11,6 +11,7 @@ import {
   SignMessageLib__factory,
   SafeL2__factory,
   Safe__factory,
+  EntryPoint__factory,
 } from "../typechain-types";
 
 async function deploy() {
@@ -20,6 +21,7 @@ async function deploy() {
     TokenCallbackHandler__factory,
     CompatibilityFallbackHandler__factory,
     CreateCall__factory,
+    EntryPoint__factory,
     MultiSend__factory,
     MultiSendCallOnly__factory,
     SignMessageLib__factory,

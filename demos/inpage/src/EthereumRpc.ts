@@ -73,6 +73,19 @@ namespace EthereumRpc {
     typeof UserOperationGasEstimate
   >;
 
+  export const Action = z.object({
+    from: z.optional(z.string()),
+
+    // TODO: Shouldn't this be optional? (contract deployment)
+    to: z.string(),
+
+    gas: z.optional(z.union([z.string(), z.bigint()])),
+    data: z.optional(z.string()),
+    value: z.optional(EthereumRpc.BigNumberish),
+  });
+
+  export type Action = z.infer<typeof Action>;
+
   export const schema = {
     eth_requestAccounts: {
       params: emptyParams,
@@ -87,13 +100,7 @@ namespace EthereumRpc {
       output: z.string(),
     },
     eth_sendTransaction: {
-      params: z
-        .array(
-          z.object({
-            from: z.optional(z.string()),
-          }),
-        )
-        .min(1),
+      params: z.array(Action).min(1),
       output: z.string(),
     },
     eth_getTransactionByHash: {

@@ -1,11 +1,9 @@
 import z from 'zod';
 
-import { ethers } from 'ethers';
 import JsonRpcError from './JsonRpcError';
 import WaxInPage from '.';
 import EthereumRpc from './EthereumRpc';
-import { UserOperationStruct } from '../hardhat/typechain-types/@account-abstraction/contracts/interfaces/IEntryPoint';
-import { SimpleAccount__factory } from '../hardhat/typechain-types';
+import { UserOperationStruct } from '../hardhat/typechain-types/account-abstraction/contracts/interfaces/IEntryPoint';
 import assert from './helpers/assert';
 import IBundler from './bundlers/IBundler';
 import waxPrivate from './waxPrivate';
@@ -244,32 +242,14 @@ export default class EthereumApi {
 
       const actions = await Promise.all(
         txs.map(async (tx) => {
-          const parsedTx = z
-            .object({
-              // TODO: Shouldn't this be optional? (contract deployment)
-              to: z.string(),
-
-              gas: z.optional(z.string()),
-              data: z.optional(z.string()),
-              value: z.optional(EthereumRpc.BigNumberish),
-            })
-            .safeParse(tx);
-
-          if (!parsedTx.success) {
-            throw new JsonRpcError({
-              code: -32601,
-              message: `Failed to parse tx: ${parsedTx.error.toString()}`,
-            });
-          }
-
-          let { value } = parsedTx.data;
+          let { value } = tx;
 
           if (typeof value === 'number' || typeof value === 'bigint') {
             value = `0x${value.toString(16)}`;
           }
 
           // eslint-disable-next-line prefer-destructuring
-          let gas: string | bigint | undefined = parsedTx.data.gas;
+          let gas: string | bigint | undefined = tx.gas;
 
           if (gas === undefined) {
             gas = BigInt(
@@ -277,7 +257,7 @@ export default class EthereumApi {
                 method: 'eth_estimateGas',
                 params: [
                   {
-                    ...parsedTx.data,
+                    ...tx,
                     value,
                   },
                 ],
@@ -286,9 +266,7 @@ export default class EthereumApi {
 
             if (BigInt(value ?? 0) !== 0n) {
               const recipientBalance =
-                await this.#waxInPage.ethersProvider.getBalance(
-                  parsedTx.data.to,
-                );
+                await this.#waxInPage.ethersProvider.getBalance(tx.to);
 
               const txCount =
                 await this.#waxInPage.ethersProvider.getTransactionCount(
@@ -302,49 +280,15 @@ export default class EthereumApi {
           }
 
           return {
-            to: parsedTx.data.to,
+            to: tx.to,
             gas,
-            data: parsedTx.data.data ?? '0x',
-            value: parsedTx.data.value ?? 0n,
+            data: tx.data ?? '0x',
+            value: tx.value ?? 0n,
           };
         }),
       );
 
-      const simpleAccount = SimpleAccount__factory.connect(
-        account.address,
-        this.#waxInPage.ethersProvider,
-      );
-
-      let callData;
-
-      if (actions.length === 1) {
-        const action = actions[0];
-
-        callData = simpleAccount.interface.encodeFunctionData('execute', [
-          action.to,
-          action.value,
-          action.data ?? '0x',
-        ]);
-      } else {
-        const totalValue = actions
-          .map((a) => (a.value === undefined ? 0n : BigInt(a.value)))
-          .reduce((a, b) => a + b);
-
-        if (totalValue > 0n) {
-          throw new Error(
-            [
-              "TODO: SimpleAccount doesn't yet support batch operations that",
-              'send ETH. Fixed in PR#281 but not published yet:',
-              'https://github.com/eth-infinitism/account-abstraction/pull/281.',
-            ].join(' '),
-          );
-        }
-
-        callData = simpleAccount.interface.encodeFunctionData('executeBatch', [
-          actions.map((a) => a.to),
-          actions.map((a) => a.data ?? '0x'),
-        ]);
-      }
+      const callData = await account.encodeActions(actions);
 
       let nonce: bigint;
 
@@ -356,22 +300,15 @@ export default class EthereumApi {
 
       if (accountBytecode === '0x') {
         nonce = 0n;
-
-        initCode = await this.#waxInPage.getSimpleAccountFactoryAddress();
-
-        initCode += contracts.simpleAccountFactory.interface
-          .encodeFunctionData('createAccount', [account.ownerAddress, 0])
-          .slice(2);
+        initCode = await account.makeInitCode();
       } else {
-        nonce = await simpleAccount.getNonce();
+        nonce = await account.getNonce();
         initCode = '0x';
       }
 
       const feeData = await this.#waxInPage.ethersProvider.getFeeData();
       assert(feeData.maxFeePerGas !== null);
       assert(feeData.maxPriorityFeePerGas !== null);
-
-      const ownerWallet = new ethers.Wallet(account.privateKey);
 
       const userOp: StrictUserOperation = {
         sender,
@@ -389,9 +326,7 @@ export default class EthereumApi {
 
       let userOpHash = await contracts.entryPoint.getUserOpHash(userOp);
 
-      userOp.signature = await ownerWallet.signMessage(
-        ethers.getBytes(userOpHash),
-      );
+      userOp.signature = await account.sign(userOp, userOpHash);
 
       const { verificationGasLimit, preVerificationGas } = await this.request({
         method: 'eth_estimateUserOperationGas',
@@ -403,9 +338,7 @@ export default class EthereumApi {
 
       userOpHash = await contracts.entryPoint.getUserOpHash(userOp);
 
-      userOp.signature = await ownerWallet.signMessage(
-        ethers.getBytes(userOpHash),
-      );
+      userOp.signature = await account.sign(userOp, userOpHash);
 
       await this.request({
         method: 'eth_sendUserOperation',

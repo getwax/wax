@@ -11,6 +11,10 @@ import {
   EntryPoint__factory,
   Greeter,
   Greeter__factory,
+  Safe,
+  SafeECDSAFactory,
+  SafeECDSAFactory__factory,
+  Safe__factory,
   SimpleAccountFactory,
   SimpleAccountFactory__factory,
 } from '../hardhat/typechain-types';
@@ -23,6 +27,12 @@ import waxPrivate from './waxPrivate';
 import SimulatedBundler from './bundlers/SimulatedBundler';
 import NetworkBundler from './bundlers/NetworkBundler';
 import IBundler from './bundlers/IBundler';
+import IAccount from './accounts/IAccount';
+import { makeAccountWrapper } from './accounts/AccountData';
+import SafeECDSAAccountWrapper from './accounts/SafeECDSAAccountWrapper';
+import ChoicePopup from './ChoicePopup';
+import never from './helpers/never';
+import SimpleAccountWrapper from './accounts/SimpleAccountWrapper';
 
 type Config = {
   logRequests?: boolean;
@@ -48,6 +58,8 @@ export type Contracts = {
   greeter: Greeter;
   entryPoint: EntryPoint;
   simpleAccountFactory: SimpleAccountFactory;
+  safe: Safe;
+  safeECDSAFactory: SafeECDSAFactory;
 };
 
 export default class WaxInPage {
@@ -138,28 +150,6 @@ export default class WaxInPage {
     return response;
   }
 
-  // Usually you could do `simpleAccountFactory.getAddress()` to get its
-  // address, but SimpleAccountFactory overrides getAddress to be a function for
-  // getting the address of an account, which messes with the ethers .getAddress
-  // builtin.
-  //
-  // Proposed fix:
-  //   https://github.com/eth-infinitism/account-abstraction/pull/323
-  //
-  async getSimpleAccountFactoryAddress(): Promise<string> {
-    const chainId = BigInt(
-      await this.ethereum.request({ method: 'eth_chainId' }),
-    );
-
-    const viewer = new SafeSingletonFactoryViewer(this.ethersProvider, chainId);
-
-    const entryPointAddress = viewer.calculateAddress(EntryPoint__factory, []);
-
-    return viewer.calculateAddress(SimpleAccountFactory__factory, [
-      entryPointAddress,
-    ]);
-  }
-
   async getContracts(
     runner: ethers.ContractRunner = this.ethersProvider,
   ): Promise<Contracts> {
@@ -171,13 +161,15 @@ export default class WaxInPage {
 
     const assumedEntryPoint = viewer.connectAssume(EntryPoint__factory, []);
 
-    const contracts = {
+    const contracts: Contracts = {
       greeter: viewer.connectAssume(Greeter__factory, ['']).connect(runner),
       entryPoint: assumedEntryPoint,
       simpleAccountFactory: viewer.connectAssume(
         SimpleAccountFactory__factory,
         [await assumedEntryPoint.getAddress()],
       ),
+      safe: viewer.connectAssume(Safe__factory, []),
+      safeECDSAFactory: viewer.connectAssume(SafeECDSAFactory__factory, []),
     };
 
     if (this.#contractsDeployed) {
@@ -208,6 +200,9 @@ export default class WaxInPage {
         factory.connectOrDeploy(SimpleAccountFactory__factory, [
           await entryPoint.getAddress(),
         ]),
+      safe: () => factory.connectOrDeploy(Safe__factory, []),
+      safeECDSAFactory: () =>
+        factory.connectOrDeploy(SafeECDSAFactory__factory, []),
     };
 
     for (const deployment of Object.values(deployments)) {
@@ -301,32 +296,61 @@ export default class WaxInPage {
     await this.storage.connectedAccounts.clear();
   }
 
-  async _getAccount(waxPrivateParam: symbol) {
+  async _getAccount(waxPrivateParam: symbol): Promise<IAccount> {
     if (waxPrivateParam !== waxPrivate) {
       throw new Error('This method is private to the waxInPage library');
     }
 
-    let account = await this.storage.account.get();
+    const existingAccounts = await this.storage.accounts.get();
 
-    if (account) {
+    if (existingAccounts.length > 0) {
+      return await makeAccountWrapper(existingAccounts[0], this);
+    }
+
+    const popup = await this.getPopup();
+
+    let choice: 'SimpleAccount' | 'SafeECDSAAccount';
+
+    try {
+      choice = await new Promise<'SimpleAccount' | 'SafeECDSAAccount'>(
+        (resolve, reject) => {
+          ReactDOM.createRoot(
+            popup.getWindow().document.getElementById('root')!,
+          ).render(
+            <React.StrictMode>
+              <ChoicePopup
+                heading="Choose an Account Type"
+                text="Different accounts can have different features."
+                choices={[
+                  'SimpleAccount' as const,
+                  'SafeECDSAAccount' as const,
+                ]}
+                resolve={resolve}
+              />
+            </React.StrictMode>,
+          );
+
+          popup.events.on('unload', () => reject(new Error('Popup closed')));
+        },
+      );
+    } finally {
+      popup.close();
+    }
+
+    if (choice === 'SimpleAccount') {
+      const account = await SimpleAccountWrapper.createRandom(this);
+      await this.storage.accounts.set([account.toData()]);
+
       return account;
     }
 
-    const contracts = await this.getContracts();
+    if (choice === 'SafeECDSAAccount') {
+      const account = await SafeECDSAAccountWrapper.createRandom(this);
+      await this.storage.accounts.set([account.toData()]);
 
-    const wallet = ethers.Wallet.createRandom();
+      return account;
+    }
 
-    account = {
-      privateKey: wallet.privateKey,
-      ownerAddress: wallet.address,
-      address: await contracts.simpleAccountFactory.createAccount.staticCall(
-        wallet.address,
-        0,
-      ),
-    };
-
-    await this.storage.account.set(account);
-
-    return account;
+    never(choice);
   }
 }

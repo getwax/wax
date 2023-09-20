@@ -32,14 +32,18 @@ cp .env.example .env
 
 3. Setup and run an external bundler (make sure the values in `.env` match up with the bundler and node you're running).
 
+For example, [eth-infinitism/bundler](https://github.com/eth-infinitism/bundler).
+
 ```bash
 # If using the eth-infinitism bundler, checkout to this commmit. The latest version of the bundler has started breaking the integration tests. This is a previous commit where the integration tests still pass
 git checkout 1b154c9
 ```
 
+You will probably need to fund the address used by the bundler, eg:
+
 ```bash
-# If using the eth-infinitism bundler
-yarn run bundler
+# In this repo
+yarn hardhat --network localhost sendEth --address INSERT_BUNDLER_ADDRESS
 ```
 
 4. Run the plugin tests:
