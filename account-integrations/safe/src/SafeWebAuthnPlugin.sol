@@ -67,7 +67,9 @@ contract SafeWebAuthnPlugin is BaseAccount {
         return _publicKey;
     }
 
-    struct LocalVarStruct {
+    // Struct declaration to hold multiple local vars.
+    // Prevents stack from getting too deep for evm.
+    struct LocalVarWrapper {
         bytes1 authenticatorDataFlagMask;
         bytes32 clientChallenge;
         uint256 clientChallengeDataOffset;
@@ -81,9 +83,10 @@ contract SafeWebAuthnPlugin is BaseAccount {
         bytes calldata clientData;
         uint256[2] calldata signature;
         uint256[2] calldata pubKey;
-        LocalVarStruct memory s;
+        LocalVarWrapper memory wrapper;
 
-        {            
+        // scope to contain local variables that can be popped from the stack after use
+        {
             // parse length of all fixed-length params (including length)
             uint i = 0;
             uint dataLen = 32;
@@ -92,12 +95,13 @@ contract SafeWebAuthnPlugin is BaseAccount {
             i += dataLen; // advance index
 
             // decode fixed length params (values to memory)
-            dataLen = 4 * 32; //lenFixedParams - 32; // -32 already read length
+            dataLen = paramLen - 32; // length already read
+            dataLen -= 2 * 2 * 32; // exclude fixed length arrays
             (
-                s.authenticatorDataFlagMask,
+                wrapper.authenticatorDataFlagMask,
                 , // some number
-                s.clientChallenge,
-                s.clientChallengeDataOffset
+                wrapper.clientChallenge,
+                wrapper.clientChallengeDataOffset
             ) = abi.decode(
                 userOp.signature[i:i+dataLen],
                 (
@@ -130,8 +134,7 @@ contract SafeWebAuthnPlugin is BaseAccount {
             paramLen = abi.decode(userOp.signature[i:i+dataLen], (uint256));
             i += dataLen; // advance index
             // assign authenticatorData to sig splice
-            dataLen = paramLen;//((paramLen >> 5) + 1) << 5; // (round up to next slot)
-
+            dataLen = paramLen;
             authenticatorData = userOp.signature[i:i+dataLen];
             i += ((dataLen >> 5) + 1) << 5; // advance index (round up to next slot)
 
@@ -140,17 +143,17 @@ contract SafeWebAuthnPlugin is BaseAccount {
             paramLen = abi.decode(userOp.signature[i:i+dataLen], (uint256));
             i += dataLen; // advance index
             // assign clientData to sig splice
-            dataLen = paramLen;// ((paramLen >> 5) + 1) << 5; // (round up to next slot)
+            dataLen = paramLen;
             clientData = userOp.signature[i:i+dataLen];
-            i += ((dataLen >> 5) + 1) << 5; // advance index (round up to next slot)
-        }
+            // i += ((dataLen >> 5) + 1) << 5; // advance index (round up to next slot)
+        } // end scope to free vars from stack
 
         bool verified = FCL_WebAuthn.checkSignature(
             authenticatorData,
-            s.authenticatorDataFlagMask,
+            wrapper.authenticatorDataFlagMask,
             clientData,
-            s.clientChallenge,
-            s.clientChallengeDataOffset,
+            wrapper.clientChallenge,
+            wrapper.clientChallengeDataOffset,
             signature,
             pubKey
         );
