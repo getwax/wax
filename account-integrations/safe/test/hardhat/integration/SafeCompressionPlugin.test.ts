@@ -1,11 +1,11 @@
-import hre from "hardhat";
 import { expect } from "chai";
-import { AddressZero } from "@ethersproject/constants";
-import { getBytes, concat, resolveProperties, ethers } from "ethers";
+import { getBytes, resolveProperties, ethers } from "ethers";
 import { UserOperationStruct } from "@account-abstraction/contracts";
 import { getUserOpHash } from "@account-abstraction/utils";
-import { calculateProxyAddress } from "../utils/calculateProxyAddress";
 import {
+  AddressRegistry__factory,
+  FallbackDecompressor__factory,
+  SafeCompressionPlugin__factory,
   SafeECDSAFactory__factory,
   SafeECDSAPlugin__factory,
   SafeProxyFactory__factory,
@@ -14,7 +14,10 @@ import {
 import sendUserOpAndWait from "../utils/sendUserOpAndWait";
 import receiptOf from "../utils/receiptOf";
 import SafeSingletonFactory from "../utils/SafeSingletonFactory";
-import makeDevFaster from "../utils/makeDevFaster";
+import SafeTx from "../utils/SafeTx";
+import makeDevFaster from "../../../helpers/makeDevFaster";
+import assert from "../utils/assert";
+import sleep from "../utils/sleep";
 
 const ERC4337_TEST_ENV_VARIABLES_DEFINED =
   typeof process.env.ERC4337_TEST_BUNDLER_URL !== "undefined" &&
@@ -26,11 +29,14 @@ const BUNDLER_URL = process.env.ERC4337_TEST_BUNDLER_URL;
 const NODE_URL = process.env.ERC4337_TEST_NODE_URL;
 const MNEMONIC = process.env.MNEMONIC;
 
-describe("SafeECDSAPlugin", () => {
+const gwei = 10n ** 9n;
+
+describe("SafeCompressionPlugin", () => {
   const setupTests = async () => {
     const bundlerProvider = new ethers.JsonRpcProvider(BUNDLER_URL);
     const provider = new ethers.JsonRpcProvider(NODE_URL);
     await makeDevFaster(provider);
+
     const userWallet = ethers.Wallet.fromPhrase(MNEMONIC!).connect(provider);
 
     const entryPoints = (await bundlerProvider.send(
@@ -61,7 +67,7 @@ describe("SafeECDSAPlugin", () => {
    * 1. Deployment of the Safe with the ERC4337 plugin and handler is possible
    * 2. Executing a transaction is possible
    */
-  it("should pass the ERC4337 validation", async () => {
+  it.only("should pass the ERC4337 validation", async () => {
     const { singleton, provider, bundlerProvider, userWallet, entryPoints } =
       await setupTests();
     const ENTRYPOINT_ADDRESS = entryPoints[0];
@@ -83,7 +89,14 @@ describe("SafeECDSAPlugin", () => {
     const maxFeePerGas = `0x${feeData.maxFeePerGas.toString()}`;
     const maxPriorityFeePerGas = `0x${feeData.maxPriorityFeePerGas.toString()}`;
 
-    const owner = ethers.Wallet.createRandom();
+    const owner = ethers.Wallet.createRandom(provider);
+
+    await receiptOf(
+      userWallet.sendTransaction({
+        to: owner.address,
+        value: ethers.parseEther("100"),
+      }),
+    );
 
     const createArgs = [
       singleton,
@@ -97,6 +110,128 @@ describe("SafeECDSAPlugin", () => {
     );
 
     await receiptOf(safeECDSAFactory.create(...createArgs));
+
+    let counter = 0;
+    console.log(++counter);
+
+    const addressRegistry = await ssf.connectOrDeploy(
+      AddressRegistry__factory,
+      [],
+    );
+    console.log(++counter);
+
+    const fallbackDecompressor = await ssf.connectOrDeploy(
+      FallbackDecompressor__factory,
+      [await addressRegistry.getAddress()],
+    );
+    console.log(++counter);
+
+    const compressionPlugin = await new SafeCompressionPlugin__factory(
+      userWallet,
+    ).deploy(ENTRYPOINT_ADDRESS, await fallbackDecompressor.getAddress());
+    console.log(++counter);
+
+    const deploymentTx = compressionPlugin.deploymentTransaction();
+    assert(deploymentTx !== null);
+    await deploymentTx.wait();
+    console.log(++counter, "a");
+
+    const safe = Safe__factory.connect(accountAddress, owner);
+
+    await receiptOf(
+      userWallet.sendTransaction({
+        to: accountAddress,
+        value: 10n ** 20n,
+        nonce: deploymentTx.nonce + 1,
+      }),
+    );
+
+    console.log(++counter);
+
+    const simpleTransferTx = new SafeTx(
+      (await provider.getNetwork()).chainId,
+      accountAddress,
+      ethers.ZeroAddress,
+      1n,
+      "0x",
+      0,
+      100_000n,
+      30_000n,
+      100n * gwei,
+      ethers.ZeroAddress,
+      ethers.ZeroAddress,
+      await safe.nonce(),
+    );
+
+    simpleTransferTx.signatures.push(await simpleTransferTx.sign(owner));
+
+    console.log(
+      "0x0 balance before",
+      await provider.getBalance(ethers.ZeroAddress),
+    );
+
+    console.log(
+      "send receipt",
+      await receiptOf(simpleTransferTx.exec(userWallet)),
+    );
+
+    console.log(
+      "0x0 balance after",
+      await provider.getBalance(ethers.ZeroAddress),
+    );
+
+    const enableCompressionTx = new SafeTx(
+      (await provider.getNetwork()).chainId,
+      accountAddress,
+      accountAddress,
+      0n,
+      safe.interface.encodeFunctionData("enableModule", [
+        await compressionPlugin.getAddress(),
+      ]),
+      0,
+      100_000n,
+      30_000n,
+      100n * gwei,
+      ethers.ZeroAddress,
+      ethers.ZeroAddress,
+      await safe.nonce(),
+    );
+    console.log(++counter);
+
+    const sig = await enableCompressionTx.sign(owner);
+    console.log({ sig });
+    enableCompressionTx.signatures.push(sig);
+    console.log(++counter);
+
+    console.log(
+      "is compression plugin enabled",
+      await safe.isModuleEnabled(await compressionPlugin.getAddress()),
+    );
+
+    const receipt = await receiptOf(enableCompressionTx.exec(userWallet));
+    console.log({ receipt });
+
+    console.log(
+      "is compression plugin enabled",
+      await safe.isModuleEnabled(await compressionPlugin.getAddress()),
+    );
+
+    const compressionAccount = SafeCompressionPlugin__factory.connect(
+      accountAddress,
+      userWallet,
+    );
+
+    console.log(++counter, "before foo");
+
+    console.log("foo", await compressionAccount.foo());
+
+    console.log(++counter, "before execTransaction(42)");
+
+    await receiptOf(compressionAccount.execTransaction(42));
+    console.log(++counter);
+    console.log("value", await compressionAccount.value());
+
+    console.log(++counter, "b");
 
     const recipient = new ethers.Wallet(
       "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d",
