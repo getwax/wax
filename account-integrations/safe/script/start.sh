@@ -28,11 +28,10 @@ docker run --rm -i --name $CONTAINER -p 8545:8545 ethereum/client-go:v1.10.26 \
   --rpc.allow-unprotected-txs \
   --rpc.txfeecap 2 \
   --dev \
+  --dev.period=0 \
   --verbosity 2 \
   --nodiscover \
   --maxpeers 0 \
-  --mine \
-  --miner.threads 1 \
   --networkid 1337 \
   &
 

@@ -14,6 +14,7 @@ import {
 import sendUserOpAndWait from "../utils/sendUserOpAndWait";
 import receiptOf from "../utils/receiptOf";
 import SafeSingletonFactory from "../utils/SafeSingletonFactory";
+import makeDevFaster from "../utils/makeDevFaster";
 
 const ERC4337_TEST_ENV_VARIABLES_DEFINED =
   typeof process.env.ERC4337_TEST_BUNDLER_URL !== "undefined" &&
@@ -29,6 +30,7 @@ describe("SafeECDSAPlugin", () => {
   const setupTests = async () => {
     const bundlerProvider = new ethers.JsonRpcProvider(BUNDLER_URL);
     const provider = new ethers.JsonRpcProvider(NODE_URL);
+    await makeDevFaster(provider);
     const userWallet = ethers.Wallet.fromPhrase(MNEMONIC!).connect(provider);
 
     const entryPoints = (await bundlerProvider.send(

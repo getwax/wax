@@ -13,6 +13,7 @@ import {
   Safe__factory,
   EntryPoint__factory,
 } from "../typechain-types";
+import makeDevFaster from "../test/hardhat/utils/makeDevFaster";
 
 async function deploy() {
   const contractFactories = [
@@ -30,6 +31,7 @@ async function deploy() {
   ];
 
   const provider = new ethers.JsonRpcProvider(process.env.NODE_URL);
+  await makeDevFaster(provider);
   const hdNode = ethers.HDNodeWallet.fromPhrase(process.env.MNEMONIC!);
   const wallet = new ethers.Wallet(hdNode.privateKey, provider);
 
