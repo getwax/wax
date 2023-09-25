@@ -19,21 +19,25 @@ interface ISafe {
     ) external returns (bool success);
 }
 
+struct ECDSAOwnerStorage {
+    address owner;
+}
+
 contract SafeECDSAPlugin is BaseAccount {
     using ECDSA for bytes32;
 
+    mapping(address => ECDSAOwnerStorage) public ecdsaOwnerStorage;
+
     address public immutable myAddress; // Module address
-    address private _owner; // Key address
     address private immutable _entryPoint;
 
     address internal constant _SENTINEL_MODULES = address(0x1);
 
     error NONCE_NOT_SEQUENTIAL();
-    event OWNER_UPDATED(address indexed oldOwner, address indexed newOwner);
+    event OWNER_UPDATED(address indexed safe, address indexed oldOwner, address indexed newOwner);
 
-    constructor(address entryPointAddress, address ownerAddress) {
+    constructor(address entryPointAddress) {
         myAddress = address(this);
-        _owner = ownerAddress;
         _entryPoint = entryPointAddress;
     }
 
@@ -60,31 +64,32 @@ contract SafeECDSAPlugin is BaseAccount {
         );
     }
 
-    function enableMyself() public {
+    function enableMyself(address ownerKey) public {
         ISafe(address(this)).enableModule(myAddress);
+
+        // Enable the safe address with the defined key
+        bytes memory _data = abi.encodePacked(ownerKey);
+        SafeECDSAPlugin(myAddress).enable(_data);
     }
 
     function entryPoint() public view override returns (IEntryPoint) {
         return IEntryPoint(_entryPoint);
     }
 
-    function owner() public view returns (address) {
-        return _owner;
-    }
-
-    function updateOwner(address newOwner) public {
-        // TODO: Check if msg.sender is the Safe. We can't do that now because the Safe
-        // and the plugin are deployed at the same time.  So the plugin doesn't know the Safe address.
-        emit OWNER_UPDATED(_owner, newOwner);
-        _owner = newOwner;
+    function enable(bytes calldata _data) external payable {
+        address newOwner = address(bytes20(_data[0:20]));
+        address oldOwner = ecdsaOwnerStorage[msg.sender].owner;
+        ecdsaOwnerStorage[msg.sender].owner = newOwner;
+        emit OWNER_UPDATED(msg.sender, oldOwner, newOwner);
     }
 
     function _validateSignature(
         UserOperation calldata userOp,
         bytes32 userOpHash
     ) internal view override returns (uint256 validationData) {
+        address keyOwner = ecdsaOwnerStorage[msg.sender].owner;
         bytes32 hash = userOpHash.toEthSignedMessageHash();
-        if (_owner != hash.recover(userOp.signature))
+        if (keyOwner != hash.recover(userOp.signature))
             return SIG_VALIDATION_FAILED;
         return 0;
     }

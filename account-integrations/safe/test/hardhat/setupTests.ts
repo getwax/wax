@@ -56,7 +56,6 @@ async function deploySafeAndECDSAPlugin(
 
   const safeEcdsaPluginContract = await safeECDSAPluginFactory.deploy(
     ENTRYPOINT_ADDRESS,
-    wallet.address,
     { gasLimit: 10_000_000 },
   );
 
@@ -65,7 +64,10 @@ async function deploySafeAndECDSAPlugin(
   const factoryAddress = await safeProxyFactory.getAddress();
 
   const moduleInitializer =
-    safeEcdsaPluginContract.interface.encodeFunctionData("enableMyself");
+    safeEcdsaPluginContract.interface.encodeFunctionData("enableMyself", [
+      wallet.address,
+    ]);
+
   const encodedInitializer = safe.interface.encodeFunctionData("setup", [
     [wallet.address],
     1,
@@ -76,7 +78,6 @@ async function deploySafeAndECDSAPlugin(
     0,
     AddressZero,
   ]);
-
   const counterfactualAddress = await calculateProxyAddress(
     safeProxyFactory,
     singletonAddress,
