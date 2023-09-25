@@ -16,7 +16,7 @@ contract SafeECDSAPluginTest is TestHelper {
     SafeECDSAPluginHarness public safeECDSAPlugin;
 
     function setUp() public {
-        safeECDSAPlugin = new SafeECDSAPluginHarness(entryPointAddress, ALICE);
+        safeECDSAPlugin = new SafeECDSAPluginHarness(entryPointAddress);
     }
 
     function test_validateNonce_ValidNonceSequence() public {
@@ -25,13 +25,13 @@ contract SafeECDSAPluginTest is TestHelper {
         uint192 zeroKey = 0;
 
         // Act & Assert
-        safeECDSAPlugin.exposed_validateNonce(nonce);
+        safeECDSAPlugin.exposedValidateNonce(nonce);
 
         vm.startPrank(address(safeECDSAPlugin));
         entryPoint.incrementNonce(zeroKey);
         vm.stopPrank();
 
-        safeECDSAPlugin.exposed_validateNonce(nonce++);
+        safeECDSAPlugin.exposedValidateNonce(nonce++);
     }
 
     function test_validateNonce_ValidNonceLessThanMaxUint64() public view {
@@ -39,7 +39,7 @@ contract SafeECDSAPluginTest is TestHelper {
         uint256 nonce = uint256(type(uint64).max) - 1;
 
         // Act & Assert
-        safeECDSAPlugin.exposed_validateNonce(nonce);
+        safeECDSAPlugin.exposedValidateNonce(nonce);
     }
 
     function test_validateNonce_InvalidNonceEqualToMaxUint64() public {
@@ -48,7 +48,7 @@ contract SafeECDSAPluginTest is TestHelper {
 
         // Act & Assert
         vm.expectRevert(SafeECDSAPlugin.NONCE_NOT_SEQUENTIAL.selector);
-        safeECDSAPlugin.exposed_validateNonce(nonce);
+        safeECDSAPlugin.exposedValidateNonce(nonce);
     }
 
     function test_validateNonce_InvalidNonceGreaterThanMaxUint64() public {
@@ -57,6 +57,6 @@ contract SafeECDSAPluginTest is TestHelper {
 
         // Act & Assert
         vm.expectRevert(SafeECDSAPlugin.NONCE_NOT_SEQUENTIAL.selector);
-        safeECDSAPlugin.exposed_validateNonce(nonce);
+        safeECDSAPlugin.exposedValidateNonce(nonce);
     }
 }
