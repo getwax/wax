@@ -12,8 +12,8 @@ contract WebAuthn {
         uint256 clientChallengeDataOffset,
         uint256[2] calldata signature,
         uint256[2] calldata publicKey
-    ) external returns (bool) {
-        return
+    ) internal returns (bool verified) {
+        verified =
             FCL_WebAuthn.checkSignature(
                 authenticatorData,
                 authenticatorDataFlagMask,

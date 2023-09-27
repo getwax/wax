@@ -3,6 +3,7 @@ pragma solidity >=0.8.0 <0.9.0;
 
 import {BaseAccount} from "account-abstraction/contracts/core/BaseAccount.sol";
 import {IEntryPoint, UserOperation} from "account-abstraction/contracts/interfaces/IEntryPoint.sol";
+import {WebAuthn} from "wax/primitives/src/WebAuthn.sol";
 
 interface ISafe {
     function enableModule(address module) external;
@@ -27,20 +28,18 @@ interface IWebAuthn {
     ) external returns (bool);
 }
 
-contract SafeWebAuthnPlugin is BaseAccount {
+contract SafeWebAuthnPlugin is BaseAccount, WebAuthn {
     address public immutable myAddress;
     address private immutable _entryPoint;
-    address private immutable _webAuthn;
     uint256[2] private _publicKey;
 
     address internal constant _SENTINEL_MODULES = address(0x1);
 
     error NONCE_NOT_SEQUENTIAL();
 
-    constructor(address entryPointAddress, address webAuthnAddress, uint256[2] memory pubKey) {
+    constructor(address entryPointAddress, uint256[2] memory pubKey) {
         myAddress = address(this);
         _entryPoint = entryPointAddress;
-        _webAuthn = webAuthnAddress;
         _publicKey = pubKey;
     }
 
@@ -157,7 +156,7 @@ contract SafeWebAuthnPlugin is BaseAccount {
             i += ((dataLen >> 5) + 1) << 5; // advance index (round up to next slot)
         }
 
-        bool verified = IWebAuthn(_webAuthn).verifySignature(
+        bool verified = verifySignature(
             authenticatorData,
             s.authenticatorDataFlagMask,
             clientData,
