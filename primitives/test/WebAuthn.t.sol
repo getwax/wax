@@ -3,17 +3,17 @@ pragma solidity ^0.8.12;
 
 import "forge-std/Test.sol";
 import {TestHelper} from "./utils/TestHelper.sol";
-import {WebAuthn} from "../src/WebAuthn.sol";
+import {WebAuthnHarness} from "./utils/WebAuthnHarness.sol";
 
 /* solhint-disable func-name-mixedcase */
 
 contract WebauthnTest is TestHelper {
     constructor() TestHelper() {}
 
-    WebAuthn public webauthn;
+    WebAuthnHarness public webauthn;
 
     function setUp() public {
-        webauthn = new WebAuthn();
+        webauthn = new WebAuthnHarness();
     }
 
     function test_verifySignature_ValidSignature() public {
@@ -29,7 +29,7 @@ contract WebauthnTest is TestHelper {
         uint256[2] memory publicKey = getWebAuthnPublicKey();
 
         // Act
-        bool verified = webauthn.verifySignature(
+        bool verified = webauthn.exposed_verifySignature(
             authenticatorData,
             authenticatorDataFlagMask,
             clientData,
