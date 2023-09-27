@@ -196,18 +196,11 @@ describe("SafeWebAuthnPlugin", () => {
       }),
     );
 
-    // const callGasLimit = await provider.estimateGas({
-    //   from: ENTRYPOINT_ADDRESS,
-    //   to: deployedAddress,
-    //   data: userOpCallData,
-    // });
-
     const userOperationWithoutGasFields = {
       sender: deployedAddress,
       nonce: "0x0",
       initCode,
       callData: userOpCallData,
-      // callGasLimit: ethers.toBeHex(callGasLimit * 2n),
       callGasLimit: "0x00",
       paymasterAndData: "0x",
       signature: userOpSignature,

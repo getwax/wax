@@ -16,18 +16,6 @@ interface ISafe {
     ) external returns (bool success);
 }
 
-interface IWebAuthn {
-    function verifySignature(
-        bytes calldata authenticatorData,
-        bytes1 authenticatorDataFlagMask,
-        bytes calldata clientData,
-        bytes32 clientChallenge,
-        uint256 clientChallengeDataOffset,
-        uint256[2] calldata signature,
-        uint256[2] calldata publicKey
-    ) external returns (bool);
-}
-
 contract SafeWebAuthnPlugin is BaseAccount, WebAuthn {
     address public immutable myAddress;
     address private immutable _entryPoint;
