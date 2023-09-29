@@ -3,8 +3,7 @@ pragma solidity >=0.8.0 <0.9.0;
 
 import {BaseAccount} from "account-abstraction/contracts/core/BaseAccount.sol";
 import {IEntryPoint, UserOperation} from "account-abstraction/contracts/interfaces/IEntryPoint.sol";
-
-import {FCL_WebAuthn} from "./lib/FCL_Webauthn.sol";
+import {WebAuthn} from "wax/primitives/src/WebAuthn.sol";
 
 interface ISafe {
     function enableModule(address module) external;
@@ -17,7 +16,7 @@ interface ISafe {
     ) external returns (bool success);
 }
 
-contract SafeWebAuthnPlugin is BaseAccount {
+contract SafeWebAuthnPlugin is BaseAccount, WebAuthn {
     address public immutable myAddress;
     address private immutable _entryPoint;
     uint256[2] private _publicKey;
@@ -145,7 +144,7 @@ contract SafeWebAuthnPlugin is BaseAccount {
             i += ((dataLen >> 5) + 1) << 5; // advance index (round up to next slot)
         }
 
-        bool verified = FCL_WebAuthn.checkSignature(
+        bool verified = verifySignature(
             authenticatorData,
             s.authenticatorDataFlagMask,
             clientData,
