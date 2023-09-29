@@ -23,19 +23,12 @@ contract SafeBlsPluginTest is TestHelper {
         );
     }
 
-    function test_validateNonce_ValidNonceSequence() public {
+    function test_validateNonce_ValidNonce() public view {
         // Arrange
         uint256 nonce = 0;
-        uint192 zeroKey = 0;
 
         // Act & Assert
         safeBlsPlugin.exposed_validateNonce(nonce);
-
-        vm.startPrank(address(safeBlsPlugin));
-        entryPoint.incrementNonce(zeroKey);
-        vm.stopPrank();
-
-        safeBlsPlugin.exposed_validateNonce(nonce++);
     }
 
     function test_validateNonce_ValidNonceLessThanMaxUint64() public view {

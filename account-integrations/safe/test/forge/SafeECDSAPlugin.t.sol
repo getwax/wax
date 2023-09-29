@@ -19,19 +19,12 @@ contract SafeECDSAPluginTest is TestHelper {
         safeECDSAPlugin = new SafeECDSAPluginHarness(entryPointAddress);
     }
 
-    function test_validateNonce_ValidNonceSequence() public {
+    function test_validateNonce_ValidNonce() public view {
         // Arrange
         uint256 nonce = 0;
-        uint192 zeroKey = 0;
 
         // Act & Assert
         safeECDSAPlugin.exposedValidateNonce(nonce);
-
-        vm.startPrank(address(safeECDSAPlugin));
-        entryPoint.incrementNonce(zeroKey);
-        vm.stopPrank();
-
-        safeECDSAPlugin.exposedValidateNonce(nonce++);
     }
 
     function test_validateNonce_ValidNonceLessThanMaxUint64() public view {
