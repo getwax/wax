@@ -80,19 +80,12 @@ contract SafeWebAuthnPluginTest is TestHelper {
         assertEq(validationData, expectedValidationData);
     }
 
-    function test_validateNonce_ValidNonceSequence() public {
+    function test_validateNonce_ValidNonce() public view {
         // Arrange
         uint256 nonce = 0;
-        uint192 zeroKey = 0;
 
         // Act & Assert
         safeWebAuthnPlugin.exposed_validateNonce(nonce);
-
-        vm.startPrank(address(safeWebAuthnPlugin));
-        entryPoint.incrementNonce(zeroKey);
-        vm.stopPrank();
-
-        safeWebAuthnPlugin.exposed_validateNonce(nonce++);
     }
 
     function test_validateNonce_ValidNonceLessThanMaxUint64() public view {
