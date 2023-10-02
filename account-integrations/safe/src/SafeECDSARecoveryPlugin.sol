@@ -50,7 +50,7 @@ contract SafeECDSARecoveryPlugin {
             revert ATTEMPTING_RESET_ON_WRONG_SAFE(safe);
         }
 
-        bytes memory data = abi.encodeWithSignature("updateOwner(address)", newValidatingEcdsaAddress);
+        bytes memory data = abi.encodeWithSignature("enable(bytes)", abi.encodePacked(newValidatingEcdsaAddress));
         ISafe(safe).execTransactionFromModule(ecdsaPluginAddress, 0, data, Enum.Operation.Call);
     }
 }

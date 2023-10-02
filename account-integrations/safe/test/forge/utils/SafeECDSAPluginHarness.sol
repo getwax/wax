@@ -6,12 +6,9 @@ import {SafeECDSAPlugin} from "../../../src/SafeECDSAPlugin.sol";
 
 /** Helper contract to expose internal functions for testing */
 contract SafeECDSAPluginHarness is SafeECDSAPlugin {
-    constructor(
-        address entryPointAddress,
-        address ownerAddress
-    ) SafeECDSAPlugin(entryPointAddress, ownerAddress) {}
+    constructor(address entryPointAddress) SafeECDSAPlugin(entryPointAddress) {}
 
-    function exposed_validateNonce(uint256 nonce) external view {
+    function exposedValidateNonce(uint256 nonce) external pure {
         _validateNonce(nonce);
     }
 }

@@ -27,15 +27,14 @@ contract SafeECDSAFactory {
         owners[0] = owner;
 
         SafeECDSAPlugin plugin = new SafeECDSAPlugin{salt: salt}(
-            address(entryPoint),
-            owner
+            address(entryPoint)
         );
 
         safe.setup(
             owners,
             1,
             address(plugin),
-            abi.encodeCall(SafeECDSAPlugin.enableMyself, ()),
+            abi.encodeCall(SafeECDSAPlugin.enableMyself, (owner)),
             address(plugin),
             address(0),
             0,
