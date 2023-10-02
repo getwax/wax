@@ -91,7 +91,7 @@ contract SafeWebAuthnPlugin is BaseAccount {
             uint i = 0;
             uint dataLen = 32;
             uint256 paramLen = abi.decode(userOp.signature[i:i+dataLen], (uint256));
-            // Fixed-length params (bytes1, (uint256?), bytes32, uint256, uint256[2], uint256[2]). Expect 9 slots = 256 bytes
+            // Fixed-length params (bytes1, (uint256?), bytes32, uint256, uint256[2], uint256[2]). Expect 9 slots (288 bytes)
             i += dataLen; // advance index
 
             // decode fixed length params (values to memory)
