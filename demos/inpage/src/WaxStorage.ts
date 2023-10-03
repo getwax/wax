@@ -33,7 +33,6 @@ export type WaxStorage = {
 export default function makeLocalWaxStorage() {
   const fields = mapValues(schema, ({ type, default_ }, key) => ({
     async get() {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       const raw = localStorage.getItem(`wax-${key}`);
 
       if (raw === null) {
@@ -44,7 +43,6 @@ export default function makeLocalWaxStorage() {
     },
 
     async set(value: unknown) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       localStorage.setItem(`wax-${key}`, JSON.stringify(type.parse(value)));
     },
 

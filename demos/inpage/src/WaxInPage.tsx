@@ -206,7 +206,6 @@ export default class WaxInPage {
     };
 
     for (const deployment of Object.values(deployments)) {
-      // eslint-disable-next-line no-await-in-loop
       await deployment();
     }
 
