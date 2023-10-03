@@ -8,6 +8,7 @@ import assert from './helpers/assert';
 import IBundler from './bundlers/IBundler';
 import waxPrivate from './waxPrivate';
 import ethereumRequest from './ethereumRequest';
+import calculateUserOpHash from './helpers/calculateUserOpHash';
 
 // We need a UserOperation in order to estimate the gas fields of a
 // UserOperation, so we use these values as placeholders.
@@ -154,6 +155,28 @@ export default class EthereumApi {
     return await contracts.entryPoint.getAddress();
   }
 
+  async #calculateUserOpHash(userOp: EthereumRpc.UserOperation) {
+    const contracts = await this.#waxInPage.getContracts();
+
+    const rpcUserOpHash = await contracts.entryPoint.getUserOpHash(userOp);
+
+    const userOpHash = calculateUserOpHash(
+      userOp,
+      await contracts.entryPoint.getAddress(),
+      Number(await this.#chainIdPromise),
+    );
+
+    assert(
+      userOpHash === rpcUserOpHash,
+      [
+        'Locally calculated userOpHash does not match userOpHash from rpc',
+        '(entryPoint.getUserOpHash)',
+      ].join(' '),
+    );
+
+    return userOpHash;
+  }
+
   #customHandlers: Partial<EthereumRpc.Handlers> = {
     eth_chainId: () => this.#chainIdPromise,
 
@@ -269,9 +292,7 @@ export default class EthereumApi {
                 await this.#waxInPage.ethersProvider.getBalance(tx.to);
 
               const txCount =
-                await this.#waxInPage.ethersProvider.getTransactionCount(
-                  parsedTx.data.to,
-                );
+                await this.#waxInPage.ethersProvider.getTransactionCount(tx.to);
 
               if (recipientBalance === 0n && txCount === 0) {
                 gas += extraGasForTransferToNewAddress;
@@ -324,7 +345,7 @@ export default class EthereumApi {
         signature: temporarySignature,
       } satisfies UserOperationStruct;
 
-      let userOpHash = await contracts.entryPoint.getUserOpHash(userOp);
+      let userOpHash = await this.#calculateUserOpHash(userOp);
 
       userOp.signature = await account.sign(userOp, userOpHash);
 
@@ -336,7 +357,7 @@ export default class EthereumApi {
       userOp.verificationGasLimit = verificationGasLimit;
       userOp.preVerificationGas = preVerificationGas;
 
-      userOpHash = await contracts.entryPoint.getUserOpHash(userOp);
+      userOpHash = await this.#calculateUserOpHash(userOp);
 
       userOp.signature = await account.sign(userOp, userOpHash);
 
