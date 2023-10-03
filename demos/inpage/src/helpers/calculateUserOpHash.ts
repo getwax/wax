@@ -16,10 +16,10 @@ export default function calculateUserOpHash(
 }
 
 function simpleHash(userOp: EthereumRpc.UserOperation) {
-  return ethers.keccak256(pack(userOp));
+  return ethers.keccak256(encode(userOp));
 }
 
-function pack(userOp: EthereumRpc.UserOperation) {
+function encode(userOp: EthereumRpc.UserOperation) {
   return ethers.AbiCoder.defaultAbiCoder().encode(
     [
       'address',
