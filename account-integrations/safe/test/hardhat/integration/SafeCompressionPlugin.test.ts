@@ -15,9 +15,8 @@ import sendUserOpAndWait from "../utils/sendUserOpAndWait";
 import receiptOf from "../utils/receiptOf";
 import SafeSingletonFactory from "../utils/SafeSingletonFactory";
 import SafeTx from "../utils/SafeTx";
-import makeDevFaster from "../../../helpers/makeDevFaster";
+import makeDevFaster from "../utils/makeDevFaster";
 import assert from "../utils/assert";
-import sleep from "../utils/sleep";
 
 const ERC4337_TEST_ENV_VARIABLES_DEFINED =
   typeof process.env.ERC4337_TEST_BUNDLER_URL !== "undefined" &&
