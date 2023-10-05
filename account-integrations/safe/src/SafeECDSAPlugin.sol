@@ -64,10 +64,6 @@ contract SafeECDSAPlugin is BaseAccount {
         );
     }
 
-    function bar() public pure returns (uint256) {
-        return 456;
-    }
-
     function enableMyself(address ownerKey) public {
         ISafe(address(this)).enableModule(myAddress);
 

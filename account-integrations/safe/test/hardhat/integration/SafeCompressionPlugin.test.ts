@@ -5,6 +5,7 @@ import { getUserOpHash } from "@account-abstraction/utils";
 import {
   AddressRegistry__factory,
   FallbackDecompressor__factory,
+  SafeCompressionFactory__factory,
   SafeCompressionPlugin__factory,
   SafeECDSAFactory__factory,
   SafeECDSAPlugin__factory,
@@ -69,12 +70,13 @@ describe("SafeCompressionPlugin", () => {
   it.only("should pass the ERC4337 validation", async () => {
     const { singleton, provider, bundlerProvider, userWallet, entryPoints } =
       await setupTests();
+
     const ENTRYPOINT_ADDRESS = entryPoints[0];
 
     const ssf = await SafeSingletonFactory.init(userWallet);
 
-    const safeECDSAFactory = await ssf.connectOrDeploy(
-      SafeECDSAFactory__factory,
+    const safeCompressionFactory = await ssf.connectOrDeploy(
+      SafeCompressionFactory__factory,
       [],
     );
 
@@ -97,157 +99,63 @@ describe("SafeCompressionPlugin", () => {
       }),
     );
 
-    const createArgs = [
-      singleton,
-      ENTRYPOINT_ADDRESS,
-      owner.address,
-      0,
-    ] satisfies Parameters<typeof safeECDSAFactory.create.staticCall>;
-
-    const accountAddress = await safeECDSAFactory.create.staticCall(
-      ...createArgs,
-    );
-
-    await receiptOf(safeECDSAFactory.create(...createArgs));
-
-    let counter = 0;
-    console.log(++counter);
-
     const addressRegistry = await ssf.connectOrDeploy(
       AddressRegistry__factory,
       [],
     );
-    console.log(++counter);
 
     const fallbackDecompressor = await ssf.connectOrDeploy(
       FallbackDecompressor__factory,
       [await addressRegistry.getAddress()],
     );
-    console.log(++counter);
 
-    const compressionPlugin = await new SafeCompressionPlugin__factory(
-      userWallet,
-    ).deploy(ENTRYPOINT_ADDRESS, await fallbackDecompressor.getAddress());
-    console.log(++counter);
-
-    const deploymentTx = compressionPlugin.deploymentTransaction();
-    assert(deploymentTx !== null);
-    await deploymentTx.wait();
-    console.log(++counter, "a");
-
-    const safe = Safe__factory.connect(accountAddress, owner);
-
-    await receiptOf(
-      userWallet.sendTransaction({
-        to: accountAddress,
-        value: 10n ** 20n,
-        nonce: deploymentTx.nonce + 1,
-      }),
-    );
-
-    console.log(++counter);
-
-    const simpleTransferTx = new SafeTx(
-      (await provider.getNetwork()).chainId,
-      accountAddress,
-      ethers.ZeroAddress,
-      1n,
-      "0x",
+    const createArgs = [
+      singleton,
+      ENTRYPOINT_ADDRESS,
+      await fallbackDecompressor.getAddress(),
+      owner.address,
       0,
-      100_000n,
-      30_000n,
-      100n * gwei,
-      ethers.ZeroAddress,
-      ethers.ZeroAddress,
-      await safe.nonce(),
+    ] satisfies Parameters<typeof safeCompressionFactory.create.staticCall>;
+
+    const accountAddress = await safeCompressionFactory.create.staticCall(
+      ...createArgs,
     );
 
-    simpleTransferTx.signatures.push(await simpleTransferTx.sign(owner));
-
-    console.log(
-      "0x0 balance before",
-      await provider.getBalance(ethers.ZeroAddress),
-    );
-
-    console.log(
-      "send receipt",
-      await receiptOf(simpleTransferTx.exec(userWallet)),
-    );
-
-    console.log(
-      "0x0 balance after",
-      await provider.getBalance(ethers.ZeroAddress),
-    );
-
-    const enableCompressionTx = new SafeTx(
-      (await provider.getNetwork()).chainId,
-      accountAddress,
-      accountAddress,
-      0n,
-      safe.interface.encodeFunctionData("enableModule", [
-        await compressionPlugin.getAddress(),
-      ]),
-      0,
-      100_000n,
-      30_000n,
-      100n * gwei,
-      ethers.ZeroAddress,
-      ethers.ZeroAddress,
-      await safe.nonce(),
-    );
-    console.log(++counter);
-
-    const sig = await enableCompressionTx.sign(owner);
-    console.log({ sig });
-    enableCompressionTx.signatures.push(sig);
-    console.log(++counter);
-
-    console.log(
-      "is compression plugin enabled",
-      await safe.isModuleEnabled(await compressionPlugin.getAddress()),
-    );
-
-    const receipt = await receiptOf(enableCompressionTx.exec(userWallet));
-    console.log({ receipt });
-
-    console.log(
-      "is compression plugin enabled",
-      await safe.isModuleEnabled(await compressionPlugin.getAddress()),
-    );
+    await receiptOf(safeCompressionFactory.create(...createArgs));
 
     const compressionAccount = SafeCompressionPlugin__factory.connect(
       accountAddress,
       userWallet,
     );
 
-    console.log(++counter, "before foo");
-
-    console.log("foo", await compressionAccount.foo());
-
-    console.log(++counter, "before execTransaction(42)");
-
-    await receiptOf(compressionAccount.execTransaction(42));
-    console.log(++counter);
-    console.log("value", await compressionAccount.value());
-
-    console.log(++counter, "b");
-
     const recipient = new ethers.Wallet(
       "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d",
     );
+
     const transferAmount = ethers.parseEther("1");
 
-    const userOpCallData =
-      SafeECDSAPlugin__factory.createInterface().encodeFunctionData(
-        "execTransaction",
-        [recipient.address, transferAmount, "0x00"],
-      );
+    const compressedActions = await fallbackDecompressor.compress(
+      [
+        {
+          to: recipient.address,
+          value: transferAmount,
+          data: "0x",
+        },
+      ],
+      [],
+    );
+
+    const userOpCallData = compressionAccount.interface.encodeFunctionData(
+      "decompressAndPerform",
+      [compressedActions],
+    );
 
     // Native tokens for the pre-fund 💸
     await receiptOf(
       userWallet.sendTransaction({
         to: accountAddress,
         value: ethers.parseEther("100"),
+        nonce: await userWallet.getNonce(),
       }),
     );
 
@@ -283,16 +191,6 @@ describe("SafeCompressionPlugin", () => {
       ...unsignedUserOperation,
       signature: userOpSignature,
     };
-
-    // Uncomment to get a detailed debug message
-    // const DEBUG_MESSAGE = `
-    //         Using entry point: ${ENTRYPOINT_ADDRESS}
-    //         Deployed Safe address: ${deployedAddress}
-    //         Module/Handler address: ${safeECDSAPluginAddress}
-    //         User operation:
-    //         ${JSON.stringify(userOperation, null, 2)}
-    //     `;
-    // console.log(DEBUG_MESSAGE);
 
     const recipientBalanceBefore = await provider.getBalance(recipient.address);
 
