@@ -12,7 +12,7 @@ import ConfigType from './ConfigType';
 const config: ConfigType = {
   logRequests: true,
   rpcUrl:
-    (import.meta.env.RPC_URL as string) ??
+    (import.meta.env.VITE_RPC_URL as string) ??
     'https://sepolia-rollup.arbitrum.io/rpc',
 
   // Uncomment this with the url of a bundler to enable using an external
