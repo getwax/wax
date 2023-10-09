@@ -11,7 +11,7 @@ import ConfigType from './ConfigType';
 
 const config: ConfigType = {
   logRequests: true,
-  rpcUrl: 'https://sepolia-rollup.arbitrum.io/rpc',
+  rpcUrl: 'http://127.0.0.1:8545',
 
   // Uncomment this with the url of a bundler to enable using an external
   // bundler (sometimes this is the same as rpcUrl). Otherwise, a bundler will
