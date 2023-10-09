@@ -4,7 +4,7 @@ import Button from '../src/Button';
 import usePath from './usePath';
 import DemoContext from './DemoContext';
 import runAsync from './helpers/runAsync';
-import config from './config';
+import config from './config/config';
 
 const addFundsDefault = (() => {
   if (config.rpcUrl === 'http://127.0.0.1:8545') {

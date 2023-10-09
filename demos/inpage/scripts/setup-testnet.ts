@@ -11,7 +11,7 @@ const demoConfigNeeded = !(await fileExists('demo/config/config.ts'));
 
 if (demoConfigNeeded) {
   await fs.copyFile(
-    projectPath('demo/config/config.template.ts'),
+    projectPath('demo/config/config.testnet.ts'),
     projectPath('demo/config/config.ts'),
   );
 }
@@ -24,5 +24,3 @@ console.log('Setup success 🔥');
 if (demoConfigNeeded) {
   console.log('demo/config/config.ts can be edited to suit your needs');
 }
-
-console.log('Use `yarn dev` to start the dev server');
