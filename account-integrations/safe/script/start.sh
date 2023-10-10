@@ -1,5 +1,13 @@
 #!/bin/bash
 
+# Runs a geth node and deploys contracts in one script, ensuring proper cleanup
+# when errors occur.
+#
+# Advantages of using geth:
+# - Exposes special trace methods needed to run the bundler, enabling testing of
+#   the bundler's restrictions on user ops
+# - Fast
+
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 set -meuo pipefail

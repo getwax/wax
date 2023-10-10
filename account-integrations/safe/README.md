@@ -21,6 +21,8 @@ To run the hardhat tests, you'll need to run a node and a bundler as some of the
 1. Start a geth node, fund accounts and deploy Safe contracts:
 
 ```bash
+# Note: This uses geth. There is also start-hardhat.sh for using hardhat. See
+# docs inside each script for more information.
 ./script/start.sh
 ```
 
