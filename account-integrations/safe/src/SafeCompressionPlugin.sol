@@ -4,6 +4,8 @@ pragma abicoder v2;
 
 import {ECDSA} from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
 
+import {HandlerContext} from "safe-contracts/contracts/handler/HandlerContext.sol";
+
 import {BaseAccount} from "account-abstraction/contracts/core/BaseAccount.sol";
 import {UserOperation} from "account-abstraction/contracts/interfaces/IEntryPoint.sol";
 
@@ -25,7 +27,7 @@ struct ECDSAOwnerStorage {
     address owner;
 }
 
-contract SafeCompressionPlugin {
+contract SafeCompressionPlugin is HandlerContext {
     using ECDSA for bytes32;
 
     uint256 constant internal SIG_VALIDATION_FAILED = 1;
@@ -96,8 +98,8 @@ contract SafeCompressionPlugin {
 
     modifier fromThisOrEntryPoint() {
         require(
-            msg.sender == entryPoint ||
-            msg.sender == address(this)
+            _msgSender() == entryPoint ||
+            _msgSender() == address(this)
         );
         _;
     }
