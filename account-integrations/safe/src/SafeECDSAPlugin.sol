@@ -2,6 +2,8 @@
 pragma solidity >=0.7.0 <0.9.0;
 pragma abicoder v2;
 
+import {HandlerContext} from "safe-contracts/contracts/handler/HandlerContext.sol";
+
 import {BaseAccount} from "account-abstraction/contracts/core/BaseAccount.sol";
 import {IEntryPoint, UserOperation} from "account-abstraction/contracts/interfaces/IEntryPoint.sol";
 import {UserOperation} from "account-abstraction/contracts/interfaces/IEntryPoint.sol";
@@ -23,7 +25,7 @@ struct ECDSAOwnerStorage {
     address owner;
 }
 
-contract SafeECDSAPlugin is BaseAccount {
+contract SafeECDSAPlugin is BaseAccount, HandlerContext {
     using ECDSA for bytes32;
 
     mapping(address => ECDSAOwnerStorage) public ecdsaOwnerStorage;
@@ -55,7 +57,7 @@ contract SafeECDSAPlugin is BaseAccount {
         address to,
         uint256 value,
         bytes calldata data
-    ) external payable {
+    ) external payable fromThisOrEntryPoint {
         address payable safeAddress = payable(msg.sender);
         ISafe safe = ISafe(safeAddress);
         require(
@@ -122,5 +124,13 @@ contract SafeECDSAPlugin is BaseAccount {
                 0
             );
         }
+    }
+
+    modifier fromThisOrEntryPoint() {
+        require(
+            _msgSender() == address(this) ||
+            _msgSender() == _entryPoint
+        );
+        _;
     }
 }
