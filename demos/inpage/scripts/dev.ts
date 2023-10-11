@@ -1,7 +1,7 @@
 #!/usr/bin/env ts-node-esm
 
 import concurrently from 'concurrently';
-import config from '../demo/config.ts';
+import config from '../demo/config/config.ts';
 
 const tasks = ['vite'];
 
