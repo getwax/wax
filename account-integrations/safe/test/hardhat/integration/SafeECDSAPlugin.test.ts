@@ -1,10 +1,7 @@
-import hre from "hardhat";
 import { expect } from "chai";
-import { AddressZero } from "@ethersproject/constants";
-import { getBytes, concat, resolveProperties, ethers } from "ethers";
+import { getBytes, resolveProperties, ethers } from "ethers";
 import { UserOperationStruct } from "@account-abstraction/contracts";
 import { getUserOpHash } from "@account-abstraction/utils";
-import { calculateProxyAddress } from "../utils/calculateProxyAddress";
 import {
   SafeECDSAFactory__factory,
   SafeECDSAPlugin__factory,
