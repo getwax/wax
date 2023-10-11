@@ -7,11 +7,17 @@ import PermissionPopup from './PermissionPopup';
 import sheetsRegistry from './sheetsRegistry';
 import makeLocalWaxStorage, { WaxStorage } from './WaxStorage';
 import {
+  AddressRegistry,
+  AddressRegistry__factory,
   EntryPoint,
   EntryPoint__factory,
+  FallbackDecompressor,
+  FallbackDecompressor__factory,
   Greeter,
   Greeter__factory,
   Safe,
+  SafeCompressionFactory,
+  SafeCompressionFactory__factory,
   SafeECDSAFactory,
   SafeECDSAFactory__factory,
   Safe__factory,
@@ -60,6 +66,9 @@ export type Contracts = {
   simpleAccountFactory: SimpleAccountFactory;
   safe: Safe;
   safeECDSAFactory: SafeECDSAFactory;
+  safeCompressionFactory: SafeCompressionFactory;
+  fallbackDecompressor: FallbackDecompressor;
+  addressRegistry: AddressRegistry;
 };
 
 export default class WaxInPage {
@@ -161,6 +170,11 @@ export default class WaxInPage {
 
     const assumedEntryPoint = viewer.connectAssume(EntryPoint__factory, []);
 
+    const assumedAddressRegistry = viewer.connectAssume(
+      AddressRegistry__factory,
+      [],
+    );
+
     const contracts: Contracts = {
       greeter: viewer.connectAssume(Greeter__factory, ['']).connect(runner),
       entryPoint: assumedEntryPoint,
@@ -170,6 +184,15 @@ export default class WaxInPage {
       ),
       safe: viewer.connectAssume(Safe__factory, []),
       safeECDSAFactory: viewer.connectAssume(SafeECDSAFactory__factory, []),
+      safeCompressionFactory: viewer.connectAssume(
+        SafeCompressionFactory__factory,
+        [],
+      ),
+      fallbackDecompressor: viewer.connectAssume(
+        FallbackDecompressor__factory,
+        [await assumedAddressRegistry.getAddress()],
+      ),
+      addressRegistry: assumedAddressRegistry,
     };
 
     if (this.#contractsDeployed) {
@@ -191,6 +214,11 @@ export default class WaxInPage {
 
     const entryPoint = await factory.connectOrDeploy(EntryPoint__factory, []);
 
+    const addressRegistry = await factory.connectOrDeploy(
+      AddressRegistry__factory,
+      [],
+    );
+
     const deployments: {
       [C in keyof Contracts]: () => Promise<Contracts[C]>;
     } = {
@@ -203,6 +231,13 @@ export default class WaxInPage {
       safe: () => factory.connectOrDeploy(Safe__factory, []),
       safeECDSAFactory: () =>
         factory.connectOrDeploy(SafeECDSAFactory__factory, []),
+      safeCompressionFactory: () =>
+        factory.connectOrDeploy(SafeCompressionFactory__factory, []),
+      fallbackDecompressor: async () =>
+        factory.connectOrDeploy(FallbackDecompressor__factory, [
+          await addressRegistry.getAddress(),
+        ]),
+      addressRegistry: () => Promise.resolve(addressRegistry),
     };
 
     for (const deployment of Object.values(deployments)) {
