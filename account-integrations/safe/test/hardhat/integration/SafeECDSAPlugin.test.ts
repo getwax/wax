@@ -188,4 +188,34 @@ describe("SafeECDSAPlugin", () => {
 
     expect(await provider.getBalance(recipient.address)).to.equal(oneEther);
   });
+
+  itif("should not allow execTransaction from unrelated address", async () => {
+    const { accountAddress, userWallet, provider } = await setupDeployedAccount(
+      ethers.ZeroAddress,
+      0,
+      "0x",
+    );
+
+    const unrelatedWallet = ethers.Wallet.createRandom(provider);
+
+    await receiptOf(
+      userWallet.sendTransaction({
+        to: unrelatedWallet.address,
+        value: 100n * oneEther,
+      }),
+    );
+
+    const account = SafeECDSAPlugin__factory.connect(
+      accountAddress,
+      unrelatedWallet,
+    );
+
+    const recipient = ethers.Wallet.createRandom(provider);
+
+    await expect(
+      receiptOf(account.execTransaction(recipient.address, oneEther, "0x")),
+    ).to.eventually.rejected;
+
+    await expect(provider.getBalance(recipient)).to.eventually.equal(0n);
+  });
 });
