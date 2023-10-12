@@ -120,5 +120,7 @@ module.exports = {
     'no-constant-condition': 'off',
     'no-underscore-dangle': 'off',
     'consistent-return': 'off',
+    'no-plusplus': 'off',
+    'no-bitwise': 'off',
   },
 };

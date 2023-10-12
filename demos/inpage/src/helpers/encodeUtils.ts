@@ -2,6 +2,10 @@ export function hexJoin(hexStrings: string[]) {
   return `0x${hexStrings.map(remove0x).join('')}`;
 }
 
+export function hexLen(hexString: string) {
+  return (hexString.length - 2) / 2;
+}
+
 export function remove0x(hexString: string) {
   if (!hexString.startsWith('0x')) {
     throw new Error('Expected 0x prefix');
