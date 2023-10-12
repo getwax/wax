@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 pragma solidity >=0.8.0 <0.9.0;
 
+import {HandlerContext} from "safe-contracts/contracts/handler/HandlerContext.sol";
+
 import {BaseAccount} from "account-abstraction/contracts/core/BaseAccount.sol";
 import {IEntryPoint, UserOperation} from "account-abstraction/contracts/interfaces/IEntryPoint.sol";
 import {WebAuthn} from "wax/primitives/src/WebAuthn.sol";
@@ -16,7 +18,7 @@ interface ISafe {
     ) external returns (bool success);
 }
 
-contract SafeWebAuthnPlugin is BaseAccount, WebAuthn {
+contract SafeWebAuthnPlugin is BaseAccount, WebAuthn, HandlerContext {
     address public immutable myAddress;
     address private immutable _entryPoint;
     uint256[2] private _publicKey;
@@ -45,7 +47,7 @@ contract SafeWebAuthnPlugin is BaseAccount, WebAuthn {
         address to,
         uint256 value,
         bytes calldata data
-    ) external payable {
+    ) external payable fromThisOrEntryPoint {
         address payable safeAddress = payable(msg.sender);
         ISafe safe = ISafe(safeAddress);
         require(
@@ -188,5 +190,13 @@ contract SafeWebAuthnPlugin is BaseAccount, WebAuthn {
                 0
             );
         }
+    }
+
+    modifier fromThisOrEntryPoint() {
+        require(
+            _msgSender() == address(this) ||
+            _msgSender() == _entryPoint
+        );
+        _;
     }
 }

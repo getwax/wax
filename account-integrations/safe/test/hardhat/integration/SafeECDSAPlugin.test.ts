@@ -1,10 +1,7 @@
-import hre from "hardhat";
 import { expect } from "chai";
-import { AddressZero } from "@ethersproject/constants";
-import { getBytes, concat, resolveProperties, ethers } from "ethers";
+import { getBytes, resolveProperties, ethers } from "ethers";
 import { UserOperationStruct } from "@account-abstraction/contracts";
 import { getUserOpHash } from "@account-abstraction/utils";
-import { calculateProxyAddress } from "../utils/calculateProxyAddress";
 import {
   SafeECDSAFactory__factory,
   SafeECDSAPlugin__factory,
@@ -25,6 +22,8 @@ const itif = ERC4337_TEST_ENV_VARIABLES_DEFINED ? it : it.skip;
 const BUNDLER_URL = process.env.ERC4337_TEST_BUNDLER_URL;
 const NODE_URL = process.env.ERC4337_TEST_NODE_URL;
 const MNEMONIC = process.env.MNEMONIC;
+
+const oneEther = ethers.parseEther("1");
 
 describe("SafeECDSAPlugin", () => {
   const setupTests = async () => {
@@ -54,14 +53,11 @@ describe("SafeECDSAPlugin", () => {
     };
   };
 
-  /**
-   * This test verifies a ERC4337 transaction succeeds when sent via a plugin
-   * The user operation deploys a Safe with the ERC4337 plugin and a handler
-   * and executes a transaction, thus verifying two things:
-   * 1. Deployment of the Safe with the ERC4337 plugin and handler is possible
-   * 2. Executing a transaction is possible
-   */
-  itif("should pass the ERC4337 validation", async () => {
+  async function setupDeployedAccount(
+    to: ethers.AddressLike,
+    value: ethers.BigNumberish,
+    data: ethers.BytesLike,
+  ) {
     const { singleton, provider, bundlerProvider, userWallet, entryPoints } =
       await setupTests();
     const ENTRYPOINT_ADDRESS = entryPoints[0];
@@ -106,7 +102,7 @@ describe("SafeECDSAPlugin", () => {
     const userOpCallData =
       SafeECDSAPlugin__factory.createInterface().encodeFunctionData(
         "execTransaction",
-        [recipient.address, transferAmount, "0x00"],
+        [to, value, data],
       );
 
     // Native tokens for the pre-fund 💸
@@ -160,13 +156,63 @@ describe("SafeECDSAPlugin", () => {
     //     `;
     // console.log(DEBUG_MESSAGE);
 
-    const recipientBalanceBefore = await provider.getBalance(recipient.address);
-
     await sendUserOpAndWait(userOperation, ENTRYPOINT_ADDRESS, bundlerProvider);
 
-    const recipientBalanceAfter = await provider.getBalance(recipient.address);
+    return {
+      provider,
+      bundlerProvider,
+      entryPoint: ENTRYPOINT_ADDRESS,
+      userWallet,
+      accountAddress,
+    };
+  }
 
-    const expectedRecipientBalance = recipientBalanceBefore + transferAmount;
-    expect(recipientBalanceAfter).to.equal(expectedRecipientBalance);
+  /**
+   * This test verifies a ERC4337 transaction succeeds when sent via a plugin
+   * The user operation deploys a Safe with the ERC4337 plugin and a handler
+   * and executes a transaction, thus verifying two things:
+   * 1. Deployment of the Safe with the ERC4337 plugin and handler is possible
+   * 2. Executing a transaction is possible
+   */
+  itif("should pass the ERC4337 validation", async () => {
+    const recipient = ethers.Wallet.createRandom();
+
+    const { provider } = await setupDeployedAccount(
+      recipient.address,
+      oneEther,
+      "0x",
+    );
+
+    expect(await provider.getBalance(recipient.address)).to.equal(oneEther);
+  });
+
+  itif("should not allow execTransaction from unrelated address", async () => {
+    const { accountAddress, userWallet, provider } = await setupDeployedAccount(
+      ethers.ZeroAddress,
+      0,
+      "0x",
+    );
+
+    const unrelatedWallet = ethers.Wallet.createRandom(provider);
+
+    await receiptOf(
+      userWallet.sendTransaction({
+        to: unrelatedWallet.address,
+        value: 100n * oneEther,
+      }),
+    );
+
+    const account = SafeECDSAPlugin__factory.connect(
+      accountAddress,
+      unrelatedWallet,
+    );
+
+    const recipient = ethers.Wallet.createRandom(provider);
+
+    await expect(
+      receiptOf(account.execTransaction(recipient.address, oneEther, "0x")),
+    ).to.eventually.rejected;
+
+    await expect(provider.getBalance(recipient)).to.eventually.equal(0n);
   });
 });
