@@ -116,23 +116,15 @@ export default class SafeCompressionAccountWrapper implements IAccount {
     const bits: boolean[] = [];
 
     for (const action of actions) {
-      const isAddressRegistered = false;
-      const addressIndex = 0n;
+      const addressIndex: bigint | undefined = undefined;
 
-      // TODO: Find addressIndex
-      // for (let j = 0; j < /* registeredAddresses.length */ 0; j++) {
-      //   // if (registeredAddresses[j].addr == action.to) {
-      //   //     isAddressRegistered = true;
-      //   //     addressIndex = registeredAddresses[j].id;
-      //   //     break;
-      //   // }
-      // }
+      // TODO: Find addressIndex using event logs (see issue #122)
 
-      bits.push(isAddressRegistered);
+      bits.push(addressIndex !== undefined);
 
       let toBytes;
 
-      if (isAddressRegistered) {
+      if (addressIndex !== undefined) {
         toBytes = encodeRegIndex(addressIndex);
       } else {
         toBytes = action.to;
