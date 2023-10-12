@@ -39,6 +39,7 @@ import SafeECDSAAccountWrapper from './accounts/SafeECDSAAccountWrapper';
 import ChoicePopup from './ChoicePopup';
 import never from './helpers/never';
 import SimpleAccountWrapper from './accounts/SimpleAccountWrapper';
+import SafeCompressionAccountWrapper from './accounts/SafeCompressionAccountWrapper';
 
 type Config = {
   logRequests?: boolean;
@@ -343,30 +344,31 @@ export default class WaxInPage {
 
     const popup = await this.getPopup();
 
-    let choice: 'SimpleAccount' | 'SafeECDSAAccount';
+    let choice: 'SimpleAccount' | 'SafeECDSAAccount' | 'SafeCompressionAccount';
 
     try {
-      choice = await new Promise<'SimpleAccount' | 'SafeECDSAAccount'>(
-        (resolve, reject) => {
-          ReactDOM.createRoot(
-            popup.getWindow().document.getElementById('root')!,
-          ).render(
-            <React.StrictMode>
-              <ChoicePopup
-                heading="Choose an Account Type"
-                text="Different accounts can have different features."
-                choices={[
-                  'SimpleAccount' as const,
-                  'SafeECDSAAccount' as const,
-                ]}
-                resolve={resolve}
-              />
-            </React.StrictMode>,
-          );
+      choice = await new Promise<
+        'SimpleAccount' | 'SafeECDSAAccount' | 'SafeCompressionAccount'
+      >((resolve, reject) => {
+        ReactDOM.createRoot(
+          popup.getWindow().document.getElementById('root')!,
+        ).render(
+          <React.StrictMode>
+            <ChoicePopup
+              heading="Choose an Account Type"
+              text="Different accounts can have different features."
+              choices={[
+                'SimpleAccount' as const,
+                'SafeECDSAAccount' as const,
+                'SafeCompressionAccount' as const,
+              ]}
+              resolve={resolve}
+            />
+          </React.StrictMode>,
+        );
 
-          popup.events.on('unload', () => reject(new Error('Popup closed')));
-        },
-      );
+        popup.events.on('unload', () => reject(new Error('Popup closed')));
+      });
     } finally {
       popup.close();
     }
@@ -380,6 +382,13 @@ export default class WaxInPage {
 
     if (choice === 'SafeECDSAAccount') {
       const account = await SafeECDSAAccountWrapper.createRandom(this);
+      await this.storage.accounts.set([account.toData()]);
+
+      return account;
+    }
+
+    if (choice === 'SafeCompressionAccount') {
+      const account = await SafeCompressionAccountWrapper.createRandom(this);
       await this.storage.accounts.set([account.toData()]);
 
       return account;

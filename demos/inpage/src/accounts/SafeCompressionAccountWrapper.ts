@@ -112,7 +112,7 @@ export default class SafeCompressionAccountWrapper implements IAccount {
 
   // eslint-disable-next-line @typescript-eslint/require-await, class-methods-use-this
   async encodeActions(actions: EthereumRpc.Action[]): Promise<string> {
-    let stream = '';
+    let stream = '0x';
     const bits: boolean[] = [];
 
     for (const action of actions) {
@@ -130,7 +130,7 @@ export default class SafeCompressionAccountWrapper implements IAccount {
 
       bits.push(isAddressRegistered);
 
-      let toBytes = '';
+      let toBytes;
 
       if (isAddressRegistered) {
         toBytes = encodeRegIndex(addressIndex);
