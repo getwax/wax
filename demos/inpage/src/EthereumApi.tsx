@@ -443,6 +443,8 @@ export default class EthereumApi {
         blockNumber: receipt.receipt.blockNumber,
         from: receipt.sender,
         gas: receipt.actualGasUsed,
+        gasUsed: receipt.actualGasUsed,
+        cumulativeGasUsed: receipt.receipt.cumulativeGasUsed ?? '0x0',
         hash: receipt.userOpHash,
         input: userOp.callData,
         nonce: receipt.nonce,
@@ -462,7 +464,25 @@ export default class EthereumApi {
         gasPrice: receipt.actualGasCost,
         maxFeePerGas: `0x${userOp.maxFeePerGas.toString(16)}`,
         maxPriorityFeePerGas: `0x${userOp.maxPriorityFeePerGas.toString(16)}`,
+        logs: [], // TODO
       } satisfies EthereumRpc.TransactionReceipt;
+    },
+
+    eth_getTransactionReceipt: async (txHash) => {
+      const opInfo = this.#userOps.get(txHash);
+
+      if (opInfo === undefined) {
+        return await ethereumRequest({
+          url: this.#rpcUrl,
+          method: 'eth_getTransactionReceipt',
+          params: [txHash],
+        });
+      }
+
+      return await this.request({
+        method: 'eth_getTransactionByHash',
+        params: [txHash],
+      });
     },
 
     eth_sendUserOperation: async (userOp) =>
