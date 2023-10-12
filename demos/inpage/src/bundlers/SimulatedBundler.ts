@@ -38,7 +38,7 @@ export default class SimulatedBundler implements IBundler {
     userOp: EthereumRpc.UserOperation,
   ): Promise<EthereumRpc.UserOperationGasEstimate> {
     const contracts = await this.#waxInPage.getContracts();
-    const account = await this.#waxInPage._getAccount(waxPrivate);
+    const account = await this.#waxInPage._getOrCreateAccount(waxPrivate);
 
     // We need a beneficiary address to measure the encoded calldata, but
     // there's no need for it to be correct.

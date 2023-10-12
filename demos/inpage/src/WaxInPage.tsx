@@ -333,7 +333,21 @@ export default class WaxInPage {
     await this.storage.connectedAccounts.clear();
   }
 
-  async _getAccount(waxPrivateParam: symbol): Promise<IAccount> {
+  async _getAccount(waxPrivateParam: symbol): Promise<IAccount | undefined> {
+    if (waxPrivateParam !== waxPrivate) {
+      throw new Error('This method is private to the waxInPage library');
+    }
+
+    const existingAccounts = await this.storage.accounts.get();
+
+    if (existingAccounts.length === 0) {
+      return undefined;
+    }
+
+    return await makeAccountWrapper(existingAccounts[0], this);
+  }
+
+  async _getOrCreateAccount(waxPrivateParam: symbol): Promise<IAccount> {
     if (waxPrivateParam !== waxPrivate) {
       throw new Error('This method is private to the waxInPage library');
     }

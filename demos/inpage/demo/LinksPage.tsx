@@ -50,6 +50,9 @@ const LinksPage = () => {
       <Button secondary onPress={() => setPath('/greeter')}>
         Greeter dApp
       </Button>
+      <Button secondary onPress={() => setPath('/sendEth')}>
+        Send ETH
+      </Button>
       <Button
         secondary
         onPress={async () => {
