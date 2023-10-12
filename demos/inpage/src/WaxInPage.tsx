@@ -40,9 +40,11 @@ import ChoicePopup from './ChoicePopup';
 import never from './helpers/never';
 import SimpleAccountWrapper from './accounts/SimpleAccountWrapper';
 import SafeCompressionAccountWrapper from './accounts/SafeCompressionAccountWrapper';
+import { hexLen } from './helpers/encodeUtils';
 
 type Config = {
   logRequests?: boolean;
+  logBytes?: boolean;
   requirePermission: boolean;
   deployContractsIfNeeded: boolean;
   ethersPollingInterval?: number;
@@ -395,5 +397,19 @@ export default class WaxInPage {
     }
 
     never(choice);
+  }
+
+  logBytes(description: string, bytes: string) {
+    if (this.getConfig('logBytes')) {
+      // eslint-disable-next-line no-console
+      console.log(
+        'logBytes:',
+        description,
+        'is',
+        hexLen(bytes),
+        'bytes:',
+        bytes,
+      );
+    }
   }
 }

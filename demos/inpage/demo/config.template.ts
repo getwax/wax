@@ -11,6 +11,7 @@ import ConfigType from './ConfigType';
 
 const config: ConfigType = {
   logRequests: true,
+  logBytes: true,
   rpcUrl: 'http://127.0.0.1:8545',
 
   // Uncomment this with the url of a bundler to enable using an external

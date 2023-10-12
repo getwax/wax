@@ -9,6 +9,7 @@ import IBundler from './bundlers/IBundler';
 import waxPrivate from './waxPrivate';
 import ethereumRequest from './ethereumRequest';
 import calculateUserOpHash from './helpers/calculateUserOpHash';
+import { hexLen } from './helpers/encodeUtils';
 
 // We need a UserOperation in order to estimate the gas fields of a
 // UserOperation, so we use these values as placeholders.
@@ -310,6 +311,8 @@ export default class EthereumApi {
       );
 
       const callData = await account.encodeActions(actions);
+
+      this.#waxInPage.logBytes('userOp.calldata', callData);
 
       let nonce: bigint;
 

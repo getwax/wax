@@ -153,6 +153,8 @@ export default class SafeCompressionAccountWrapper implements IAccount {
       stream,
     ]);
 
+    this.waxInPage.logBytes('stream argument of decompressAndPerform', stream);
+
     return SafeCompressionPlugin__factory.createInterface().encodeFunctionData(
       'decompressAndPerform',
       [stream],
