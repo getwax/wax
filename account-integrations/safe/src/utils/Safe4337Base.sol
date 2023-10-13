@@ -34,6 +34,14 @@ abstract contract Safe4337Base is BaseAccount, HandlerContext {
         );
     }
 
+    function _requireFromCurrentSafeOrEntryPoint() internal virtual view {
+        require(
+            _msgSender() == address(entryPoint()) ||
+            _msgSender() == address(_currentSafe()),
+            "account: not from EntryPoint"
+        );
+    }
+
     /**
      * This function is overridden as this plugin does not hold funds, so the
      * transaction has to be executed from the sender Safe
