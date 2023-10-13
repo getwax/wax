@@ -3,10 +3,7 @@ pragma solidity >=0.7.0 <0.9.0;
 pragma abicoder v2;
 
 import {ECDSA} from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
-
 import {HandlerContext} from "safe-contracts/contracts/handler/HandlerContext.sol";
-
-import {BaseAccount} from "account-abstraction/contracts/core/BaseAccount.sol";
 import {IEntryPoint, UserOperation} from "account-abstraction/contracts/interfaces/IEntryPoint.sol";
 
 import {Safe4337Base, ISafe} from "./utils/Safe4337Base.sol";
