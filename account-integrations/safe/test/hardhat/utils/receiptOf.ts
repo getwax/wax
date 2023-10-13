@@ -1,4 +1,5 @@
 import { ethers } from "ethers";
+import assert from "./assert";
 
 export default async function receiptOf(
   txResponseOrPromise:
@@ -6,5 +7,9 @@ export default async function receiptOf(
     | Promise<ethers.TransactionResponse>,
 ) {
   const txResponse = await txResponseOrPromise;
-  return await txResponse.wait();
+  const receipt = await txResponse.wait();
+  assert(receipt !== null);
+  assert(receipt.status === 1);
+
+  return receipt;
 }
