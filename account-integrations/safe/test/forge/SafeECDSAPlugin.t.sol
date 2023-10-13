@@ -6,6 +6,7 @@ import "forge-std/console2.sol";
 import {TestHelper} from "./utils/TestHelper.sol";
 import {SafeECDSAPluginHarness} from "./utils/SafeECDSAPluginHarness.sol";
 import {SafeECDSAPlugin} from "../../src/SafeECDSAPlugin.sol";
+import {Safe4337Base} from "../../src/utils/Safe4337Base.sol";
 import {UserOperation, UserOperationLib} from "account-abstraction/contracts/interfaces/IEntryPoint.sol";
 
 /* solhint-disable func-name-mixedcase */
@@ -40,7 +41,7 @@ contract SafeECDSAPluginTest is TestHelper {
         uint256 nonce = type(uint64).max;
 
         // Act & Assert
-        vm.expectRevert(SafeECDSAPlugin.NONCE_NOT_SEQUENTIAL.selector);
+        vm.expectRevert(Safe4337Base.NONCE_NOT_SEQUENTIAL.selector);
         safeECDSAPlugin.exposedValidateNonce(nonce);
     }
 
@@ -49,7 +50,7 @@ contract SafeECDSAPluginTest is TestHelper {
         uint256 nonce = uint256(type(uint64).max) + 1;
 
         // Act & Assert
-        vm.expectRevert(SafeECDSAPlugin.NONCE_NOT_SEQUENTIAL.selector);
+        vm.expectRevert(Safe4337Base.NONCE_NOT_SEQUENTIAL.selector);
         safeECDSAPlugin.exposedValidateNonce(nonce);
     }
 }
