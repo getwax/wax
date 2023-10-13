@@ -27,9 +27,6 @@ interface ISafe {
 abstract contract Safe4337Base is BaseAccount, HandlerContext {
     error NONCE_NOT_SEQUENTIAL();
 
-    /**
-     * ensure the request comes from the known entrypoint.
-     */
     function _requireFromEntryPoint() internal virtual view override {
         require(
             _msgSender() == address(entryPoint()),
@@ -47,7 +44,7 @@ abstract contract Safe4337Base is BaseAccount, HandlerContext {
         uint256 missingAccountFunds
     ) internal virtual override {
         if (missingAccountFunds != 0) {
-            _thisSafe().execTransactionFromModule(
+            _currentSafe().execTransactionFromModule(
                 address(entryPoint()),
                 missingAccountFunds,
                 "",
@@ -68,11 +65,16 @@ abstract contract Safe4337Base is BaseAccount, HandlerContext {
         }
     }
 
-    function _thisSafe() internal virtual view returns (ISafe) {
-        // There is some confusion about whether `msg.sender` should be used
-        // instead of `this` for referring to the current Safe. There is a PR
-        // here to get feedback from Safe about this:
-        //   https://github.com/safe-global/safe-contracts/pull/682
-        return ISafe(address(this));
+    /**
+     * Get the current safe.
+     *
+     * This can be a bit counter-intuitive. The safe only does a delegatecall
+     * into the plugin during setup. In regular usage, it uses a regular call,
+     * which is why we can use `msg.sender` to refer to the safe. Additionally,
+     * `this` will be the plugin for those calls, so it won't work when trying
+     * to do safe operations like `execTransactionFromModule`.
+     */
+    function _currentSafe() internal virtual view returns (ISafe) {
+        return ISafe(msg.sender);
     }
 }
