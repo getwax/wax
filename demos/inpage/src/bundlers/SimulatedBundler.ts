@@ -1,3 +1,4 @@
+import { ethers } from 'ethers';
 import WaxInPage from '..';
 import EthereumRpc from '../EthereumRpc';
 import measureCalldataGas from '../measureCalldataGas';
@@ -27,9 +28,12 @@ export default class SimulatedBundler implements IBundler {
 
     // *not* the confirmation, just the response (don't add .wait(), that's
     // wrong).
-    await contracts.entryPoint
+    const txResponse = await contracts.entryPoint
       .connect(adminAccount)
       .handleOps([userOp], adminAccount.getAddress());
+
+    const tx = ethers.Transaction.from(txResponse);
+    this.#waxInPage.logBytes('EntryPoint tx', tx.serialized);
 
     return await contracts.entryPoint.getUserOpHash(userOp);
   }
