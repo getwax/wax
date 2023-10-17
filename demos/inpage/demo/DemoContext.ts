@@ -4,6 +4,8 @@ import WaxInPage, { Contracts, EthereumApi } from '../src';
 import TypedEmitter from './helpers/TypedEmitter';
 import runAsync from './helpers/runAsync';
 import config from './config/config';
+import waxPrivate from '../src/waxPrivate';
+import IAccount from '../src/accounts/IAccount';
 
 type BalanceUpdate = { address: string; balance: bigint };
 
@@ -167,6 +169,18 @@ export default class DemoContext {
     }, [address]);
 
     return balance;
+  };
+
+  useAccount = () => {
+    const [account, setAccount] = useState<IAccount>();
+
+    useEffect(() => {
+      runAsync(async () => {
+        setAccount(await this.waxInPage._getAccount(waxPrivate));
+      });
+    }, []);
+
+    return account;
   };
 
   refreshBalance = async () => {
