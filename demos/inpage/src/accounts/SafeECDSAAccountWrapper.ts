@@ -175,6 +175,7 @@ export default class SafeECDSAAccountWrapper implements IAccount {
       );
       const factory = await SafeSingletonFactory.init(admin);
 
+      // TODO: (merge-ok) deploy recovery plugin on initial contracts deploy
       recoveryPlugin = await factory.connectOrDeploy(
         SafeECDSARecoveryPlugin__factory,
         [safeProxyAddress, recoveryAddress],
@@ -185,6 +186,7 @@ export default class SafeECDSAAccountWrapper implements IAccount {
 
     let moduleEnabled = await safeProxy.isModuleEnabled(recoveryPluginAddress);
     if (!moduleEnabled) {
+      // TODO: (merge-ok) try calling 'enableModule' via bundler
       await executeContractCallWithSigners(
         safeProxy,
         safeProxy,
@@ -231,7 +233,7 @@ export default class SafeECDSAAccountWrapper implements IAccount {
 
     const plugin = this.getContract();
 
-    // TODO: ensure wallet is already funded
+    // TODO: (merge-ok) ensure wallet is already funded
     await (
       await owner.sendTransaction({
         to: recoveryWallet.address,

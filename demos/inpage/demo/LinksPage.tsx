@@ -5,7 +5,6 @@ import usePath from './usePath';
 import DemoContext from './DemoContext';
 import runAsync from './helpers/runAsync';
 import config from './config/config';
-import waxPrivate from '../src/waxPrivate';
 
 const addFundsDefault = (() => {
   if (config.rpcUrl === 'http://127.0.0.1:8545') {
@@ -17,16 +16,16 @@ const addFundsDefault = (() => {
 
 const LinksPage = () => {
   const demo = DemoContext.use();
-  const address = demo.useAddress();
   const [, setPath] = usePath();
+  const account = demo.useAccount();
 
   return (
     <div className="links-page">
       <Button
         secondary
-        disabled={address === undefined}
+        disabled={account === undefined}
         onPress={async () => {
-          if (address === undefined) {
+          if (account === undefined) {
             return;
           }
 
@@ -34,19 +33,18 @@ const LinksPage = () => {
             'fund-new-account',
           );
 
-          const account = await demo.waxInPage._getAccount(waxPrivate);
           const { ownerAddress } = account.toData();
 
           await (
             await admin.sendTransaction({
-              to: address,
+              to: account.address,
               value: ethers.parseEther(
                 config.addFundsEthAmount ?? addFundsDefault,
               ),
             })
           ).wait();
 
-          // TODO: If default config, do this
+          // TODO: (merge-ok) ensure wallet is already funded
           await (
             await admin.sendTransaction({
               to: ownerAddress,

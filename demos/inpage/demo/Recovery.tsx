@@ -12,7 +12,6 @@ import Address from './Address';
 const Recovery = () => {
   const demo = DemoContext.use();
   const contracts = demo.useContracts();
-  const signer = demo.useSigner();
   const refresh = useRefresh();
   const account = demo.useAccount();
 
@@ -31,6 +30,10 @@ const Recovery = () => {
       </Loading>
     );
   }
+
+  const recoverySet =
+    account instanceof SafeECDSAAccountWrapper &&
+    account.toData().recoveryAddress;
 
   return (
     <div className="recovery">
@@ -66,13 +69,12 @@ const Recovery = () => {
           />
         </div>
         <Button
-          disabled={!signer}
+          disabled={!account}
           onPress={async () => {
-            // const account = await demo.waxInPage._getAccount(waxPrivate);
             if (account instanceof SafeECDSAAccountWrapper) {
               await account.enableRecoveryModule(recoveryAddress);
             } else {
-              // TODO: handle this case
+              // TODO: (merge-ok) handle this case
             }
             refresh();
           }}
@@ -81,44 +83,46 @@ const Recovery = () => {
         </Button>
       </section>
 
-      {/* {if (accountRecoverySet) && ()}  */}
-      {/* //     const moduleEnabled = await safeProxy.isModuleEnabled(
-      recoveryPluginAddress,
-    ); */}
-      <section className="recovery-section">
-        <Heading>Recover account</Heading>
-        <div>
-          New owner account seed phrase:{' '}
-          <input
-            type="text"
-            onInput={(e) => setNewOwnerAccountSeedPhrase(e.currentTarget.value)}
-          />
-        </div>
-        <div>
-          Recovery account seed phrase:{' '}
-          <input
-            type="text"
-            onInput={(e) => setRecoveryAccountSeedPhrase(e.currentTarget.value)}
-          />
-        </div>
-        <Button
-          disabled={!signer}
-          onPress={async () => {
-            // const account = await demo.waxInPage._getAccount(waxPrivate);
-            if (account instanceof SafeECDSAAccountWrapper) {
-              await account.recoveryAccount(
-                newOwnerAccountSeedPhrase,
-                recoveryAccountSeedPhrase,
-              );
-            } else {
-              // TODO: handle this case
-            }
-            refresh();
-          }}
-        >
-          Recover
-        </Button>
-      </section>
+      {recoverySet && (
+        <section className="recovery-section">
+          <Heading>Recover account</Heading>
+          <div>
+            New owner account seed phrase:{' '}
+            <input
+              type="text"
+              onInput={(e) =>
+                setNewOwnerAccountSeedPhrase(e.currentTarget.value)
+              }
+            />
+          </div>
+          <div>
+            Recovery account seed phrase:{' '}
+            <input
+              type="text"
+              onInput={(e) =>
+                setRecoveryAccountSeedPhrase(e.currentTarget.value)
+              }
+            />
+          </div>
+          <Button
+            disabled={!account}
+            onPress={async () => {
+              if (account instanceof SafeECDSAAccountWrapper) {
+                // TODO: (merge-ok) Handle recovery without passing seed phrases
+                await account.recoveryAccount(
+                  newOwnerAccountSeedPhrase,
+                  recoveryAccountSeedPhrase,
+                );
+              } else {
+                // TODO: (merge-ok) handle this case
+              }
+              refresh();
+            }}
+          >
+            Recover
+          </Button>
+        </section>
+      )}
     </div>
   );
 };
