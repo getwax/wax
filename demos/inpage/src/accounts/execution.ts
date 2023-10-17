@@ -26,8 +26,7 @@ export const executeContractCallWithSigners = async (
     contract,
     method,
     params,
-    // Number(await safe.nonce()),
-    0,
+    Number(await safe.nonce()),
     delegateCall,
     overrides,
   );

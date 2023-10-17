@@ -197,6 +197,7 @@ export default class SafeECDSAAccountWrapper implements IAccount {
       assert(moduleEnabled, 'module not enabled');
 
       this.recoveryAddress = recoveryAddress;
+      await this.waxInPage.storage.accounts.set([this.toData()]);
     }
   }
 
@@ -253,5 +254,6 @@ export default class SafeECDSAAccountWrapper implements IAccount {
 
     this.ownerAddress = newOwnerAddress;
     this.privateKey = newOwnerWallet.privateKey;
+    await this.waxInPage.storage.accounts.set([this.toData()]);
   }
 }
