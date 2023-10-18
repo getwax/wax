@@ -71,12 +71,14 @@ const AdminPopup = ({
   purpose,
   resolve,
   reject,
+  deployerSeedPhrase,
 }: {
   purpose: AdminPurpose;
   resolve: (response: string) => void;
   reject: (error: Error) => void;
+  deployerSeedPhrase: string;
 }) => {
-  const [keyData, setKeyData] = useState(`${'test '.repeat(11)}junk`);
+  const [keyData, setKeyData] = useState(deployerSeedPhrase);
 
   let message = 'Invalid';
 
