@@ -16,7 +16,8 @@ const config: ConfigType = {
     'https://sepolia-rollup.arbitrum.io/rpc',
 
   // If a default seed phrase is not provided, a user must provide their own.
-  deployerSeedPhrase: (import.meta.env.VITE_DEPLOYER_SEED_PHRASE as string) ?? '',
+  deployerSeedPhrase:
+    (import.meta.env.VITE_DEPLOYER_SEED_PHRASE as string) ?? '',
 
   // Uncomment this with the url of a bundler to enable using an external
   // bundler (sometimes this is the same as rpcUrl). Otherwise, a bundler will
