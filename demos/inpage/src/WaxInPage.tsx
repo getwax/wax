@@ -71,6 +71,7 @@ export default class WaxInPage {
   ethereum: EthereumApi;
   storage: WaxStorage;
   ethersProvider: ethers.BrowserProvider;
+  deployerSeedPhrase = '';
 
   constructor({
     rpcUrl,
@@ -148,6 +149,10 @@ export default class WaxInPage {
     popup.close();
 
     return response;
+  }
+
+  setDeployerSeedPhrase(seed: string) {
+    this.deployerSeedPhrase = seed;
   }
 
   async getContracts(
@@ -241,7 +246,12 @@ export default class WaxInPage {
           popup.getWindow().document.getElementById('root')!,
         ).render(
           <React.StrictMode>
-            <AdminPopup purpose={purpose} resolve={resolve} reject={reject} />
+            <AdminPopup
+              purpose={purpose}
+              resolve={resolve}
+              reject={reject}
+              deployerSeedPhrase={this.deployerSeedPhrase}
+            />
           </React.StrictMode>,
         );
 
