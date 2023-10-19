@@ -6,6 +6,7 @@ import "forge-std/console2.sol";
 import {TestHelper} from "./utils/TestHelper.sol";
 import {SafeWebAuthnPluginHarness} from "./utils/SafeWebAuthnPluginHarness.sol";
 import {SafeWebAuthnPlugin} from "../../src/SafeWebAuthnPlugin.sol";
+import {Safe4337Base} from "../../src/utils/Safe4337Base.sol";
 import {UserOperation, UserOperationLib} from "account-abstraction/contracts/interfaces/IEntryPoint.sol";
 
 /* solhint-disable func-name-mixedcase */
@@ -101,7 +102,7 @@ contract SafeWebAuthnPluginTest is TestHelper {
         uint256 nonce = type(uint64).max;
 
         // Act & Assert
-        vm.expectRevert(SafeWebAuthnPlugin.NONCE_NOT_SEQUENTIAL.selector);
+        vm.expectRevert(Safe4337Base.NONCE_NOT_SEQUENTIAL.selector);
         safeWebAuthnPlugin.exposed_validateNonce(nonce);
     }
 
@@ -110,7 +111,7 @@ contract SafeWebAuthnPluginTest is TestHelper {
         uint256 nonce = uint256(type(uint64).max) + 1;
 
         // Act & Assert
-        vm.expectRevert(SafeWebAuthnPlugin.NONCE_NOT_SEQUENTIAL.selector);
+        vm.expectRevert(Safe4337Base.NONCE_NOT_SEQUENTIAL.selector);
         safeWebAuthnPlugin.exposed_validateNonce(nonce);
     }
 }

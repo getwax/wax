@@ -3,67 +3,43 @@ pragma solidity >=0.7.0 <0.9.0;
 pragma abicoder v2;
 
 import {ECDSA} from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
-
 import {HandlerContext} from "safe-contracts/contracts/handler/HandlerContext.sol";
+import {IEntryPoint, UserOperation} from "account-abstraction/contracts/interfaces/IEntryPoint.sol";
 
-import {BaseAccount} from "account-abstraction/contracts/core/BaseAccount.sol";
-import {UserOperation} from "account-abstraction/contracts/interfaces/IEntryPoint.sol";
-
+import {Safe4337Base, ISafe} from "./utils/Safe4337Base.sol";
 import {WaxLib as W} from "./compression/WaxLib.sol";
 import {IDecompressor} from "./compression/decompressors/IDecompressor.sol";
-
-interface ISafe {
-    function enableModule(address module) external;
-
-    function execTransactionFromModule(
-        address to,
-        uint256 value,
-        bytes memory data,
-        uint8 operation
-    ) external returns (bool success);
-}
 
 struct ECDSAOwnerStorage {
     address owner;
 }
 
-contract SafeCompressionPlugin is HandlerContext {
+contract SafeCompressionPlugin is Safe4337Base {
     using ECDSA for bytes32;
-
-    uint256 constant internal SIG_VALIDATION_FAILED = 1;
 
     mapping(address => ECDSAOwnerStorage) public ecdsaOwnerStorage;
     address public immutable myAddress;
-    address private immutable entryPoint;
+    address private immutable _entryPoint;
     IDecompressor public decompressor;
 
     address internal constant _SENTINEL_MODULES = address(0x1);
 
-    error NONCE_NOT_SEQUENTIAL();
     event OWNER_UPDATED(address indexed safe, address indexed oldOwner, address indexed newOwner);
 
     constructor(address entryPointParam, IDecompressor decompressorParam) {
         myAddress = address(this);
-        entryPoint = entryPointParam;
+        _entryPoint = entryPointParam;
         decompressor = decompressorParam;
-    }
-
-    function validateUserOp(
-        UserOperation calldata userOp,
-        bytes32 userOpHash,
-        uint256 missingAccountFunds
-    ) external returns (uint256 validationData) {
-        _validateNonce(userOp.nonce);
-        validationData = _validateSignature(userOp, userOpHash);
-        _payPrefund(missingAccountFunds);
     }
 
     function decompressAndPerform(
         bytes calldata stream
-    ) public fromThisOrEntryPoint {
+    ) public {
+        _requireFromEntryPoint();
+
         (W.Action[] memory actions,) = decompressor.decompress(stream);
 
-        ISafe safe = ISafe(msg.sender);
+        ISafe safe = _currentSafe();
 
         for (uint256 i = 0; i < actions.length; i++) {
             W.Action memory a = actions[i];
@@ -77,7 +53,8 @@ contract SafeCompressionPlugin is HandlerContext {
 
     function setDecompressor(
         IDecompressor decompressorParam
-    ) public fromThisOrEntryPoint {
+    ) public {
+        _requireFromCurrentSafeOrEntryPoint();
         decompressor = decompressorParam;
     }
 
@@ -87,6 +64,10 @@ contract SafeCompressionPlugin is HandlerContext {
         // Enable the safe address with the defined key
         bytes memory _data = abi.encodePacked(ownerKey);
         SafeCompressionPlugin(myAddress).enable(_data);
+    }
+
+    function entryPoint() public view override returns (IEntryPoint) {
+        return IEntryPoint(_entryPoint);
     }
 
     function enable(bytes calldata _data) external payable {
@@ -99,49 +80,14 @@ contract SafeCompressionPlugin is HandlerContext {
     function _validateSignature(
         UserOperation calldata userOp,
         bytes32 userOpHash
-    ) internal view returns (uint256 validationData) {
+    ) internal view override returns (uint256 validationData) {
         address keyOwner = ecdsaOwnerStorage[msg.sender].owner;
         bytes32 hash = userOpHash.toEthSignedMessageHash();
-        if (keyOwner != hash.recover(userOp.signature))
+
+        if (keyOwner != hash.recover(userOp.signature)) {
             return SIG_VALIDATION_FAILED;
+        }
+
         return 0;
-    }
-
-    /**
-     * Ensures userOp nonce is sequential. Nonce uniqueness is already managed by the EntryPoint.
-     * This function prevents using a “key” different from the first “zero” key.
-     * @param nonce to validate
-     */
-    function _validateNonce(uint256 nonce) internal pure {
-        if (nonce >= type(uint64).max) {
-            revert NONCE_NOT_SEQUENTIAL();
-        }
-    }
-
-    /**
-     * This function is overridden as this plugin does not hold funds, so the transaction
-     * has to be executed from the sender Safe
-     * @param missingAccountFunds The minimum value this method should send to the entrypoint
-     */
-    function _payPrefund(uint256 missingAccountFunds) internal {
-        address payable safeAddress = payable(msg.sender);
-        ISafe senderSafe = ISafe(safeAddress);
-
-        if (missingAccountFunds != 0) {
-            senderSafe.execTransactionFromModule(
-                entryPoint,
-                missingAccountFunds,
-                "",
-                0
-            );
-        }
-    }
-
-    modifier fromThisOrEntryPoint() {
-        require(
-            _msgSender() == entryPoint ||
-            _msgSender() == address(this)
-        );
-        _;
     }
 }

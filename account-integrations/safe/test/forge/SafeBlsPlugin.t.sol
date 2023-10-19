@@ -6,6 +6,7 @@ import "forge-std/console2.sol";
 import {TestHelper} from "./utils/TestHelper.sol";
 import {SafeBlsPluginHarness} from "./utils/SafeBlsPluginHarness.sol";
 import {SafeBlsPlugin} from "../../src/SafeBlsPlugin.sol";
+import {Safe4337Base} from "../../src/utils/Safe4337Base.sol";
 import {UserOperation, UserOperationLib} from "account-abstraction/contracts/interfaces/IEntryPoint.sol";
 
 /* solhint-disable func-name-mixedcase */
@@ -44,7 +45,7 @@ contract SafeBlsPluginTest is TestHelper {
         uint256 nonce = type(uint64).max;
 
         // Act & Assert
-        vm.expectRevert(SafeBlsPlugin.NONCE_NOT_SEQUENTIAL.selector);
+        vm.expectRevert(Safe4337Base.NONCE_NOT_SEQUENTIAL.selector);
         safeBlsPlugin.exposed_validateNonce(nonce);
     }
 
@@ -53,7 +54,7 @@ contract SafeBlsPluginTest is TestHelper {
         uint256 nonce = uint256(type(uint64).max) + 1;
 
         // Act & Assert
-        vm.expectRevert(SafeBlsPlugin.NONCE_NOT_SEQUENTIAL.selector);
+        vm.expectRevert(Safe4337Base.NONCE_NOT_SEQUENTIAL.selector);
         safeBlsPlugin.exposed_validateNonce(nonce);
     }
 }
