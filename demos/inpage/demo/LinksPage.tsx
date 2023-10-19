@@ -5,6 +5,7 @@ import usePath from './usePath';
 import DemoContext from './DemoContext';
 import runAsync from './helpers/runAsync';
 import config from './config/config';
+import SafeECDSAAccountWrapper from '../src/accounts/SafeECDSAAccountWrapper';
 
 const addFundsDefault = (() => {
   if (config.rpcUrl === 'http://127.0.0.1:8545') {
@@ -16,16 +17,16 @@ const addFundsDefault = (() => {
 
 const LinksPage = () => {
   const demo = DemoContext.use();
-  const address = demo.useAddress();
   const [, setPath] = usePath();
+  const account = demo.useAccount();
 
   return (
     <div className="links-page">
       <Button
         secondary
-        disabled={address === undefined}
+        disabled={account === undefined}
         onPress={async () => {
-          if (address === undefined) {
+          if (account === undefined) {
             return;
           }
 
@@ -33,9 +34,21 @@ const LinksPage = () => {
             'fund-new-account',
           );
 
+          const { ownerAddress } = account.toData();
+
           await (
             await admin.sendTransaction({
-              to: address,
+              to: account.address,
+              value: ethers.parseEther(
+                config.addFundsEthAmount ?? addFundsDefault,
+              ),
+            })
+          ).wait();
+
+          // TODO: (merge-ok) ensure wallet is already funded
+          await (
+            await admin.sendTransaction({
+              to: ownerAddress,
               value: ethers.parseEther(
                 config.addFundsEthAmount ?? addFundsDefault,
               ),
@@ -53,6 +66,16 @@ const LinksPage = () => {
       <Button secondary onPress={() => setPath('/greeter')}>
         Greeter dApp
       </Button>
+      {account instanceof SafeECDSAAccountWrapper && (
+        <Button
+          secondary
+          onPress={() => {
+            setPath('/recovery');
+          }}
+        >
+          Recovery Example
+        </Button>
+      )}
       <Button
         secondary
         onPress={async () => {
