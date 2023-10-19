@@ -2,6 +2,8 @@
 pragma solidity >=0.7.0 <0.9.0;
 pragma abicoder v2;
 
+import {HandlerContext} from "safe-contracts/contracts/handler/HandlerContext.sol";
+
 import {BaseAccount} from "account-abstraction/contracts/core/BaseAccount.sol";
 import {IEntryPoint, UserOperation} from "account-abstraction/contracts/interfaces/IEntryPoint.sol";
 import {BLS} from "account-abstraction/contracts/samples/bls/lib/hubble-contracts/contracts/libs/BLS.sol";
@@ -19,7 +21,7 @@ interface ISafe {
 
 error IncorrectSignatureLength(uint256 length);
 
-contract SafeBlsPlugin is BaseAccount {
+contract SafeBlsPlugin is BaseAccount, HandlerContext {
     // TODO: Use EIP 712 for domain separation
     bytes32 public constant BLS_DOMAIN = keccak256("eip4337.bls.domain");
     address public immutable myAddress;
@@ -50,7 +52,7 @@ contract SafeBlsPlugin is BaseAccount {
         address to,
         uint256 value,
         bytes calldata data
-    ) external payable {
+    ) external payable fromThisOrEntryPoint {
         address payable safeAddress = payable(msg.sender);
         ISafe safe = ISafe(safeAddress);
         require(
@@ -123,5 +125,13 @@ contract SafeBlsPlugin is BaseAccount {
                 0
             );
         }
+    }
+
+    modifier fromThisOrEntryPoint() {
+        require(
+            _msgSender() == address(this) ||
+            _msgSender() == _entryPoint
+        );
+        _;
     }
 }

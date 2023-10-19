@@ -11,8 +11,13 @@ import ConfigType from './ConfigType';
 
 const config: ConfigType = {
   logRequests: true,
-  logBytes: true,
-  rpcUrl: 'http://127.0.0.1:8545',
+  rpcUrl:
+    (import.meta.env.VITE_RPC_URL as string) ??
+    'https://sepolia-rollup.arbitrum.io/rpc',
+
+  // If a default seed phrase is not provided, a user must provide their own.
+  deployerSeedPhrase:
+    (import.meta.env.VITE_DEPLOYER_SEED_PHRASE as string) ?? '',
 
   // Uncomment this with the url of a bundler to enable using an external
   // bundler (sometimes this is the same as rpcUrl). Otherwise, a bundler will

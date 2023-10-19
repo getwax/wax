@@ -5,7 +5,7 @@ import App from './App.tsx';
 import WaxInPage from '../src';
 import './index.css';
 import DemoContext from './DemoContext.ts';
-import config from './config.ts';
+import config from './config/config.ts';
 
 WaxInPage.addStylesheet();
 

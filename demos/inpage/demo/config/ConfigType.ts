@@ -5,6 +5,7 @@ type ConfigType = {
   bundlerRpcUrl?: string;
   pollingInterval?: number;
   addFundsEthAmount?: string;
+  deployerSeedPhrase: string;
 };
 
 export default ConfigType;

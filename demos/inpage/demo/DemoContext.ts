@@ -3,6 +3,7 @@ import { ethers } from 'ethers';
 import WaxInPage, { Contracts, EthereumApi } from '../src';
 import TypedEmitter from './helpers/TypedEmitter';
 import runAsync from './helpers/runAsync';
+import config from './config/config';
 
 type BalanceUpdate = { address: string; balance: bigint };
 
@@ -20,6 +21,7 @@ export default class DemoContext {
 
   constructor(public waxInPage: WaxInPage) {
     this.ethereum = waxInPage.ethereum;
+    waxInPage.setDeployerSeedPhrase(config.deployerSeedPhrase);
 
     runAsync(async () => {
       const accounts = await this.ethereum.request({

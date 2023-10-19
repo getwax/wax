@@ -6,6 +6,7 @@
   "types": "build/lib/index.d.ts",
   "scripts": {
     "setup": "yarn && scripts/setup.ts",
+    "setup:testnet": "yarn && scripts/setup-testnet.ts",
     "dev": "scripts/dev.ts",
     "check-ts": "tsc --noEmit",
     "build": "yarn check-ts && rm -rf build && yarn build:lib && yarn build:demo && yarn build:globalScript && yarn build:packed-lib",
