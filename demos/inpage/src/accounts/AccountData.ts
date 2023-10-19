@@ -5,11 +5,18 @@ import SimpleAccountWrapper, {
 import WaxInPage from '..';
 import never from '../helpers/never';
 import IAccount from './IAccount';
-import SafeECDSAPluginAccount, {
+import SafeECDSAAccountWrapper, {
   SafeECDSAAccountData,
 } from './SafeECDSAAccountWrapper';
+import SafeCompressionAccountWrapper, {
+  SafeCompressionAccountData,
+} from './SafeCompressionAccountWrapper';
 
-const AccountData = z.union([SimpleAccountData, SafeECDSAAccountData]);
+const AccountData = z.union([
+  SimpleAccountData,
+  SafeECDSAAccountData,
+  SafeCompressionAccountData,
+]);
 
 type AccountData = z.infer<typeof AccountData>;
 
@@ -25,7 +32,11 @@ export async function makeAccountWrapper(
   }
 
   if (data.type === 'SafeECDSAAccount') {
-    return SafeECDSAPluginAccount.fromData(data, waxInPage);
+    return SafeECDSAAccountWrapper.fromData(data, waxInPage);
+  }
+
+  if (data.type === 'SafeCompressionAccount') {
+    return SafeCompressionAccountWrapper.fromData(data, waxInPage);
   }
 
   return never(data);

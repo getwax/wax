@@ -7,3 +7,7 @@ import {SimpleAccountFactory} from "account-abstraction/contracts/samples/Simple
 import {Safe} from "../lib/account-integrations/safe/lib/safe-contracts/contracts/Safe.sol";
 import {SafeECDSAFactory} from "../lib/account-integrations/safe/src/SafeECDSAFactory.sol";
 import {SafeECDSAPlugin} from "../lib/account-integrations/safe/src/SafeECDSAPlugin.sol";
+import {SafeCompressionFactory} from "../lib/account-integrations/safe/src/SafeCompressionFactory.sol";
+import {SafeCompressionPlugin} from "../lib/account-integrations/safe/src/SafeCompressionPlugin.sol";
+import {FallbackDecompressor} from "../lib/account-integrations/compression/src/decompressors/FallbackDecompressor.sol";
+import {AddressRegistry} from "../lib/account-integrations/compression/src/AddressRegistry.sol";

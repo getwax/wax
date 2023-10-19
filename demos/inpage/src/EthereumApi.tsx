@@ -19,8 +19,6 @@ const temporarySignature = [
   '95170906b11c6f30dcc74e463e1e6990c68a3998a7271b728b123456',
 ].join('');
 
-const extraGasForTransferToNewAddress = 20_000n;
-
 type StrictUserOperation = {
   sender: string;
   nonce: string;
@@ -199,7 +197,7 @@ export default class EthereumApi {
         });
       }
 
-      const account = await this.#waxInPage._getAccount(waxPrivate);
+      const account = await this.#waxInPage._getOrCreateAccount(waxPrivate);
 
       connectedAccounts = [account.address];
 
@@ -212,7 +210,7 @@ export default class EthereumApi {
       await this.#waxInPage.storage.connectedAccounts.get(),
 
     eth_sendTransaction: async (...txs) => {
-      const account = await this.#waxInPage._getAccount(waxPrivate);
+      const account = await this.#waxInPage._getOrCreateAccount(waxPrivate);
       const contracts = await this.#waxInPage.getContracts();
 
       const sender = txs[0].from ?? account.address;
@@ -286,18 +284,6 @@ export default class EthereumApi {
                 ],
               }),
             );
-
-            if (BigInt(value ?? 0) !== 0n) {
-              const recipientBalance =
-                await this.#waxInPage.ethersProvider.getBalance(tx.to);
-
-              const txCount =
-                await this.#waxInPage.ethersProvider.getTransactionCount(tx.to);
-
-              if (recipientBalance === 0n && txCount === 0) {
-                gas += extraGasForTransferToNewAddress;
-              }
-            }
           }
 
           return {
@@ -310,6 +296,8 @@ export default class EthereumApi {
       );
 
       const callData = await account.encodeActions(actions);
+
+      this.#waxInPage.logBytes('userOp.calldata', callData);
 
       let nonce: bigint;
 
@@ -380,6 +368,48 @@ export default class EthereumApi {
       return userOpHash;
     },
 
+    eth_estimateGas: async (tx) => {
+      const account = await this.#waxInPage._getAccount(waxPrivate);
+      const from = tx.from ?? account?.address;
+
+      if (
+        account === undefined ||
+        from?.toLowerCase() !== account.address.toLowerCase()
+      ) {
+        const res = await ethereumRequest({
+          url: this.#rpcUrl,
+          method: 'eth_estimateGas',
+          params: [tx],
+        });
+
+        return z.string().parse(res);
+      }
+
+      if (tx.to === undefined) {
+        throw new Error('Not implemented: estimateGas for contract creation');
+      }
+
+      const contracts = await this.#waxInPage.getContracts();
+
+      return await ethereumRequest({
+        url: this.#rpcUrl,
+        method: 'eth_estimateGas',
+        params: [
+          {
+            from: await contracts.entryPoint.getAddress(),
+            to: from,
+            data: await account.encodeActions([
+              {
+                to: tx.to,
+                data: tx.data ?? '0x',
+                value: tx.value ?? 0n,
+              },
+            ]),
+          },
+        ],
+      });
+    },
+
     eth_getTransactionByHash: async (txHash) => {
       const opInfo = this.#userOps.get(txHash);
 
@@ -413,6 +443,8 @@ export default class EthereumApi {
         blockNumber: receipt.receipt.blockNumber,
         from: receipt.sender,
         gas: receipt.actualGasUsed,
+        gasUsed: receipt.actualGasUsed,
+        cumulativeGasUsed: receipt.receipt.cumulativeGasUsed ?? '0x0',
         hash: receipt.userOpHash,
         input: userOp.callData,
         nonce: receipt.nonce,
@@ -432,7 +464,25 @@ export default class EthereumApi {
         gasPrice: receipt.actualGasCost,
         maxFeePerGas: `0x${userOp.maxFeePerGas.toString(16)}`,
         maxPriorityFeePerGas: `0x${userOp.maxPriorityFeePerGas.toString(16)}`,
+        logs: [], // TODO
       } satisfies EthereumRpc.TransactionReceipt;
+    },
+
+    eth_getTransactionReceipt: async (txHash) => {
+      const opInfo = this.#userOps.get(txHash);
+
+      if (opInfo === undefined) {
+        return await ethereumRequest({
+          url: this.#rpcUrl,
+          method: 'eth_getTransactionReceipt',
+          params: [txHash],
+        });
+      }
+
+      return await this.request({
+        method: 'eth_getTransactionByHash',
+        params: [txHash],
+      });
     },
 
     eth_sendUserOperation: async (userOp) =>

@@ -70,5 +70,5 @@ function parseResponse<M extends string>(
     });
   }
 
-  return parsedResponse.data as EthereumRpc.Response<M>;
+  return response as EthereumRpc.Response<M>;
 }
