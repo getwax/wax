@@ -7,11 +7,17 @@ import PermissionPopup from './PermissionPopup';
 import sheetsRegistry from './sheetsRegistry';
 import makeLocalWaxStorage, { WaxStorage } from './WaxStorage';
 import {
+  AddressRegistry,
+  AddressRegistry__factory,
   EntryPoint,
   EntryPoint__factory,
+  FallbackDecompressor,
+  FallbackDecompressor__factory,
   Greeter,
   Greeter__factory,
   Safe,
+  SafeCompressionFactory,
+  SafeCompressionFactory__factory,
   SafeECDSAFactory,
   SafeECDSAFactory__factory,
   Safe__factory,
@@ -33,9 +39,12 @@ import SafeECDSAAccountWrapper from './accounts/SafeECDSAAccountWrapper';
 import ChoicePopup from './ChoicePopup';
 import never from './helpers/never';
 import SimpleAccountWrapper from './accounts/SimpleAccountWrapper';
+import SafeCompressionAccountWrapper from './accounts/SafeCompressionAccountWrapper';
+import { hexLen } from './helpers/encodeUtils';
 
 type Config = {
   logRequests?: boolean;
+  logBytes?: boolean;
   requirePermission: boolean;
   deployContractsIfNeeded: boolean;
   ethersPollingInterval?: number;
@@ -60,6 +69,9 @@ export type Contracts = {
   simpleAccountFactory: SimpleAccountFactory;
   safe: Safe;
   safeECDSAFactory: SafeECDSAFactory;
+  safeCompressionFactory: SafeCompressionFactory;
+  fallbackDecompressor: FallbackDecompressor;
+  addressRegistry: AddressRegistry;
 };
 
 export default class WaxInPage {
@@ -71,6 +83,7 @@ export default class WaxInPage {
   ethereum: EthereumApi;
   storage: WaxStorage;
   ethersProvider: ethers.BrowserProvider;
+  deployerSeedPhrase = '';
 
   constructor({
     rpcUrl,
@@ -150,6 +163,10 @@ export default class WaxInPage {
     return response;
   }
 
+  setDeployerSeedPhrase(seed: string) {
+    this.deployerSeedPhrase = seed;
+  }
+
   async getContracts(
     runner: ethers.ContractRunner = this.ethersProvider,
   ): Promise<Contracts> {
@@ -161,6 +178,11 @@ export default class WaxInPage {
 
     const assumedEntryPoint = viewer.connectAssume(EntryPoint__factory, []);
 
+    const assumedAddressRegistry = viewer.connectAssume(
+      AddressRegistry__factory,
+      [],
+    );
+
     const contracts: Contracts = {
       greeter: viewer.connectAssume(Greeter__factory, ['']).connect(runner),
       entryPoint: assumedEntryPoint,
@@ -170,6 +192,15 @@ export default class WaxInPage {
       ),
       safe: viewer.connectAssume(Safe__factory, []),
       safeECDSAFactory: viewer.connectAssume(SafeECDSAFactory__factory, []),
+      safeCompressionFactory: viewer.connectAssume(
+        SafeCompressionFactory__factory,
+        [],
+      ),
+      fallbackDecompressor: viewer.connectAssume(
+        FallbackDecompressor__factory,
+        [await assumedAddressRegistry.getAddress()],
+      ),
+      addressRegistry: assumedAddressRegistry,
     };
 
     if (this.#contractsDeployed) {
@@ -191,6 +222,11 @@ export default class WaxInPage {
 
     const entryPoint = await factory.connectOrDeploy(EntryPoint__factory, []);
 
+    const addressRegistry = await factory.connectOrDeploy(
+      AddressRegistry__factory,
+      [],
+    );
+
     const deployments: {
       [C in keyof Contracts]: () => Promise<Contracts[C]>;
     } = {
@@ -203,6 +239,13 @@ export default class WaxInPage {
       safe: () => factory.connectOrDeploy(Safe__factory, []),
       safeECDSAFactory: () =>
         factory.connectOrDeploy(SafeECDSAFactory__factory, []),
+      safeCompressionFactory: () =>
+        factory.connectOrDeploy(SafeCompressionFactory__factory, []),
+      fallbackDecompressor: async () =>
+        factory.connectOrDeploy(FallbackDecompressor__factory, [
+          await addressRegistry.getAddress(),
+        ]),
+      addressRegistry: () => Promise.resolve(addressRegistry),
     };
 
     for (const deployment of Object.values(deployments)) {
@@ -241,7 +284,12 @@ export default class WaxInPage {
           popup.getWindow().document.getElementById('root')!,
         ).render(
           <React.StrictMode>
-            <AdminPopup purpose={purpose} resolve={resolve} reject={reject} />
+            <AdminPopup
+              purpose={purpose}
+              resolve={resolve}
+              reject={reject}
+              deployerSeedPhrase={this.deployerSeedPhrase}
+            />
           </React.StrictMode>,
         );
 
@@ -295,7 +343,21 @@ export default class WaxInPage {
     await this.storage.connectedAccounts.clear();
   }
 
-  async _getAccount(waxPrivateParam: symbol): Promise<IAccount> {
+  async _getAccount(waxPrivateParam: symbol): Promise<IAccount | undefined> {
+    if (waxPrivateParam !== waxPrivate) {
+      throw new Error('This method is private to the waxInPage library');
+    }
+
+    const existingAccounts = await this.storage.accounts.get();
+
+    if (existingAccounts.length === 0) {
+      return undefined;
+    }
+
+    return await makeAccountWrapper(existingAccounts[0], this);
+  }
+
+  async _getOrCreateAccount(waxPrivateParam: symbol): Promise<IAccount> {
     if (waxPrivateParam !== waxPrivate) {
       throw new Error('This method is private to the waxInPage library');
     }
@@ -308,30 +370,31 @@ export default class WaxInPage {
 
     const popup = await this.getPopup();
 
-    let choice: 'SimpleAccount' | 'SafeECDSAAccount';
+    let choice: 'SimpleAccount' | 'SafeECDSAAccount' | 'SafeCompressionAccount';
 
     try {
-      choice = await new Promise<'SimpleAccount' | 'SafeECDSAAccount'>(
-        (resolve, reject) => {
-          ReactDOM.createRoot(
-            popup.getWindow().document.getElementById('root')!,
-          ).render(
-            <React.StrictMode>
-              <ChoicePopup
-                heading="Choose an Account Type"
-                text="Different accounts can have different features."
-                choices={[
-                  'SimpleAccount' as const,
-                  'SafeECDSAAccount' as const,
-                ]}
-                resolve={resolve}
-              />
-            </React.StrictMode>,
-          );
+      choice = await new Promise<
+        'SimpleAccount' | 'SafeECDSAAccount' | 'SafeCompressionAccount'
+      >((resolve, reject) => {
+        ReactDOM.createRoot(
+          popup.getWindow().document.getElementById('root')!,
+        ).render(
+          <React.StrictMode>
+            <ChoicePopup
+              heading="Choose an Account Type"
+              text="Different accounts can have different features."
+              choices={[
+                'SimpleAccount' as const,
+                'SafeECDSAAccount' as const,
+                'SafeCompressionAccount' as const,
+              ]}
+              resolve={resolve}
+            />
+          </React.StrictMode>,
+        );
 
-          popup.events.on('unload', () => reject(new Error('Popup closed')));
-        },
-      );
+        popup.events.on('unload', () => reject(new Error('Popup closed')));
+      });
     } finally {
       popup.close();
     }
@@ -350,6 +413,27 @@ export default class WaxInPage {
       return account;
     }
 
+    if (choice === 'SafeCompressionAccount') {
+      const account = await SafeCompressionAccountWrapper.createRandom(this);
+      await this.storage.accounts.set([account.toData()]);
+
+      return account;
+    }
+
     never(choice);
+  }
+
+  logBytes(description: string, bytes: string) {
+    if (this.getConfig('logBytes')) {
+      // eslint-disable-next-line no-console
+      console.log(
+        'logBytes:',
+        description,
+        'is',
+        hexLen(bytes),
+        'bytes:',
+        bytes,
+      );
+    }
   }
 }

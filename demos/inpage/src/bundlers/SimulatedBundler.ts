@@ -1,3 +1,4 @@
+import { ethers } from 'ethers';
 import WaxInPage from '..';
 import EthereumRpc from '../EthereumRpc';
 import measureCalldataGas from '../measureCalldataGas';
@@ -27,9 +28,12 @@ export default class SimulatedBundler implements IBundler {
 
     // *not* the confirmation, just the response (don't add .wait(), that's
     // wrong).
-    await contracts.entryPoint
+    const txResponse = await contracts.entryPoint
       .connect(adminAccount)
       .handleOps([userOp], adminAccount.getAddress());
+
+    const tx = ethers.Transaction.from(txResponse);
+    this.#waxInPage.logBytes('EntryPoint tx', tx.serialized);
 
     return await contracts.entryPoint.getUserOpHash(userOp);
   }
@@ -38,7 +42,7 @@ export default class SimulatedBundler implements IBundler {
     userOp: EthereumRpc.UserOperation,
   ): Promise<EthereumRpc.UserOperationGasEstimate> {
     const contracts = await this.#waxInPage.getContracts();
-    const account = await this.#waxInPage._getAccount(waxPrivate);
+    const account = await this.#waxInPage._getOrCreateAccount(waxPrivate);
 
     // We need a beneficiary address to measure the encoded calldata, but
     // there's no need for it to be correct.

@@ -12,6 +12,8 @@ namespace EthereumRpc {
     blockNumber: z.union([z.string(), z.null()]),
     from: z.string(),
     gas: z.optional(z.string()),
+    gasUsed: z.optional(z.string()),
+    cumulativeGasUsed: z.optional(z.string()),
     hash: z.optional(z.string()),
     input: z.optional(z.string()),
     nonce: z.optional(z.string()),
@@ -27,6 +29,7 @@ namespace EthereumRpc {
     gasPrice: z.optional(z.string()),
     maxFeePerGas: z.optional(z.string()),
     maxPriorityFeePerGas: z.optional(z.string()),
+    logs: z.optional(z.array(z.unknown())),
   });
 
   export type TransactionReceipt = z.infer<typeof TransactionReceipt>;
@@ -104,6 +107,10 @@ namespace EthereumRpc {
       output: z.string(),
     },
     eth_getTransactionByHash: {
+      params: z.tuple([z.string()]),
+      output: z.union([z.null(), TransactionReceipt]),
+    },
+    eth_getTransactionReceipt: {
       params: z.tuple([z.string()]),
       output: z.union([z.null(), TransactionReceipt]),
     },
