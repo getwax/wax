@@ -38,7 +38,7 @@ abstract contract Safe4337Base is BaseAccount, HandlerContext {
         require(
             _msgSender() == address(entryPoint()) ||
             _msgSender() == address(_currentSafe()),
-            "account: not from EntryPoint"
+            "account: not from EntryPoint nor current safe"
         );
     }
 
