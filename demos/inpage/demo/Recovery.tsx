@@ -40,7 +40,7 @@ const Recovery = () => {
       <section className="recovery-section">
         <div>
           Current Owner:{' '}
-          {account && account instanceof SafeECDSAAccountWrapper && (
+          {account instanceof SafeECDSAAccountWrapper && (
             <Address
               value={account.toData().ownerAddress ?? ethers.ZeroAddress}
               short={false}
@@ -50,7 +50,7 @@ const Recovery = () => {
 
         <div>
           Recovery account:{' '}
-          {account && account instanceof SafeECDSAAccountWrapper && (
+          {account instanceof SafeECDSAAccountWrapper && (
             <Address
               value={account.toData().recoveryAddress ?? ethers.ZeroAddress}
               short={false}
@@ -73,9 +73,8 @@ const Recovery = () => {
           onPress={async () => {
             if (account instanceof SafeECDSAAccountWrapper) {
               await account.enableRecoveryModule(recoveryAddress);
-            } else {
-              // TODO: (merge-ok) handle this case
             }
+
             refresh();
           }}
         >
@@ -113,9 +112,8 @@ const Recovery = () => {
                   newOwnerAccountSeedPhrase,
                   recoveryAccountSeedPhrase,
                 );
-              } else {
-                // TODO: (merge-ok) handle this case
               }
+
               refresh();
             }}
           >

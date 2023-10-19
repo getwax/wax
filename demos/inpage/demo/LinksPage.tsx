@@ -5,6 +5,7 @@ import usePath from './usePath';
 import DemoContext from './DemoContext';
 import runAsync from './helpers/runAsync';
 import config from './config/config';
+import SafeECDSAAccountWrapper from '../src/accounts/SafeECDSAAccountWrapper';
 
 const addFundsDefault = (() => {
   if (config.rpcUrl === 'http://127.0.0.1:8545') {
@@ -65,14 +66,16 @@ const LinksPage = () => {
       <Button secondary onPress={() => setPath('/greeter')}>
         Greeter dApp
       </Button>
-      <Button
-        secondary
-        onPress={() => {
-          setPath('/recovery');
-        }}
-      >
-        Recovery Example
-      </Button>
+      {account instanceof SafeECDSAAccountWrapper && (
+        <Button
+          secondary
+          onPress={() => {
+            setPath('/recovery');
+          }}
+        >
+          Recovery Example
+        </Button>
+      )}
       <Button
         secondary
         onPress={async () => {
