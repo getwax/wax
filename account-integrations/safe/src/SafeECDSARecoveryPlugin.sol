@@ -44,6 +44,12 @@ contract SafeECDSARecoveryPlugin {
 
     constructor() {}
 
+    function getEcdsaRecoveryStorage(
+        address owner
+    ) external view returns (ECDSARecoveryStorage memory) {
+        return ecdsaRecoveryStorage[owner];
+    }
+
     modifier onlyRecoveryAccount(address currentOwner) {
         address recoveryAccount = ecdsaRecoveryStorage[currentOwner]
             .recoveryAccount;
