@@ -193,21 +193,18 @@ export default class SafeECDSAAccountWrapper implements IAccount {
     await this.waxInPage.storage.accounts.set([this.toData()]);
   }
 
-  async recoveryAccount(
-    newOwnerAccountSeedPhrase: string,
-    recoveryAddressSeedPhrase: string,
+  async recoverAccount(
+    newOwnerPrivateKey: string,
+    recoveryAccountPrivateKey: string,
   ) {
     const provider = this.waxInPage.ethersProvider;
     const owner = new ethers.Wallet(this.privateKey, provider);
 
-    const newOwnerWallet = ethers.Wallet.fromPhrase(
-      newOwnerAccountSeedPhrase,
-      provider,
-    );
+    const newOwnerWallet = new ethers.Wallet(newOwnerPrivateKey, provider);
     const newOwnerAddress = newOwnerWallet.address;
 
-    const recoveryWallet = ethers.Wallet.fromPhrase(
-      recoveryAddressSeedPhrase,
+    const recoveryWallet = new ethers.Wallet(
+      recoveryAccountPrivateKey,
       provider,
     );
 
@@ -216,14 +213,6 @@ export default class SafeECDSAAccountWrapper implements IAccount {
     const recoveryPlugin = contracts.safeECDSARecoveryPlugin;
 
     const ecdsaPlugin = this.getContract();
-
-    // TODO: (merge-ok) ensure wallet is already funded
-    await (
-      await owner.sendTransaction({
-        to: recoveryWallet.address,
-        value: ethers.parseEther('0.1'),
-      })
-    ).wait();
 
     const pluginAddress = await ecdsaPlugin.myAddress();
     await recoveryPlugin

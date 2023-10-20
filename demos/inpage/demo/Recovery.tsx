@@ -16,9 +16,8 @@ const Recovery = () => {
   const account = demo.useAccount();
 
   const [recoveryAddress, setRecoveryAddress] = useState('');
-  const [newOwnerAccountSeedPhrase, setNewOwnerAccountSeedPhrase] =
-    useState('');
-  const [recoveryAccountSeedPhrase, setRecoveryAccountSeedPhrase] =
+  const [newOwnerPrivateKey, setNewOwnerPrivateKey] = useState('');
+  const [recoveryAccountPrivateKey, setRecoveryAccountPrivateKey] =
     useState('');
 
   if (!contracts) {
@@ -86,20 +85,18 @@ const Recovery = () => {
         <section className="recovery-section">
           <Heading>Recover account</Heading>
           <div>
-            New owner account seed phrase:{' '}
+            New owner account private key:{' '}
             <input
               type="text"
-              onInput={(e) =>
-                setNewOwnerAccountSeedPhrase(e.currentTarget.value)
-              }
+              onInput={(e) => setNewOwnerPrivateKey(e.currentTarget.value)}
             />
           </div>
           <div>
-            Recovery account seed phrase:{' '}
+            Recovery account private key:{' '}
             <input
               type="text"
               onInput={(e) =>
-                setRecoveryAccountSeedPhrase(e.currentTarget.value)
+                setRecoveryAccountPrivateKey(e.currentTarget.value)
               }
             />
           </div>
@@ -108,9 +105,9 @@ const Recovery = () => {
             onPress={async () => {
               if (account instanceof SafeECDSAAccountWrapper) {
                 // TODO: (merge-ok) Handle recovery without passing seed phrases
-                await account.recoveryAccount(
-                  newOwnerAccountSeedPhrase,
-                  recoveryAccountSeedPhrase,
+                await account.recoverAccount(
+                  newOwnerPrivateKey,
+                  recoveryAccountPrivateKey,
                 );
               }
 
