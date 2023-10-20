@@ -56,18 +56,18 @@ contract SafeECDSARecoveryPlugin {
     // TODO: (merge-ok) prove recovery address owner possesses private key and proof cannot be replayed
     function addRecoveryAccount(
         address recoveryAccount,
-        address safeAddr,
+        address safe,
         address ecsdaPlugin
     ) external {
-        if (safeAddr == address(0)) revert SAFE_ZERO_ADDRESS();
+        if (safe == address(0)) revert SAFE_ZERO_ADDRESS();
 
-        address owner = ISafeECDSAPlugin(ecsdaPlugin).getOwner(safeAddr);
+        address owner = ISafeECDSAPlugin(ecsdaPlugin).getOwner(safe);
         if (msg.sender != owner)
             revert MSG_SENDER_NOT_PLUGIN_OWNER(msg.sender, owner);
 
         ecdsaRecoveryStorage[msg.sender] = ECDSARecoveryStorage(
             recoveryAccount,
-            safeAddr
+            safe
         );
     }
 
