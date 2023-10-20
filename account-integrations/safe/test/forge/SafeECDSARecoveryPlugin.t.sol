@@ -101,6 +101,53 @@ contract SafeECDSARecoveryPluginTest is TestHelper {
         assertEq(ecdsaRecoveryStorage.safe, safeAddress);
     }
 
+    function test_addRecoveryAccount_addMultipleRecoveryAccountsAndPlugins()
+        public
+    {
+        // Arrange
+        address recoveryAccount1 = BOB;
+        address recoveryAccount2 = CAROL;
+        address secondOwner = DAVE;
+
+        SafeECDSAPlugin secondSafeECDSAPlugin = new SafeECDSAPlugin(
+            entryPointAddress
+        );
+
+        vm.startPrank(safeAddress);
+        secondSafeECDSAPlugin.enable(abi.encodePacked(secondOwner));
+        vm.stopPrank();
+
+        // Act
+        vm.startPrank(owner);
+        safeECDSARecoveryPlugin.addRecoveryAccount(
+            recoveryAccount1,
+            safeAddress,
+            address(safeECDSAPlugin)
+        );
+
+        vm.startPrank(secondOwner);
+        safeECDSARecoveryPlugin.addRecoveryAccount(
+            recoveryAccount2,
+            safeAddress,
+            address(secondSafeECDSAPlugin)
+        );
+
+        // Assert
+        ECDSARecoveryStorage
+            memory ecdsaRecoveryStorage = safeECDSARecoveryPlugin
+                .getEcdsaRecoveryStorage(owner);
+
+        ECDSARecoveryStorage
+            memory ecdsaRecoveryStorage2 = safeECDSARecoveryPlugin
+                .getEcdsaRecoveryStorage(secondOwner);
+
+        assertEq(ecdsaRecoveryStorage.recoveryAccount, recoveryAccount1);
+        assertEq(ecdsaRecoveryStorage.safe, safeAddress);
+
+        assertEq(ecdsaRecoveryStorage2.recoveryAccount, recoveryAccount2);
+        assertEq(ecdsaRecoveryStorage2.safe, safeAddress);
+    }
+
     function test_resetEcdsaAddress_senderNotRecoveryAccount() public {
         // Arrange
         address newOwner = BOB;
