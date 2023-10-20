@@ -22,35 +22,75 @@ interface ISafe {
     ) external returns (bool success);
 }
 
+interface ISafeECDSAPlugin {
+    function getOwner(address safe) external view returns (address);
+}
+
+struct ECDSARecoveryStorage {
+    address recoveryAccount;
+    address safe;
+}
+
 contract SafeECDSARecoveryPlugin {
-    address private immutable storedEOA;
-    address public storedSafe;
+    mapping(address => ECDSARecoveryStorage) public ecdsaRecoveryStorage;
 
-    error SENDER_NOT_STORED_EOA(address sender);
-    error ATTEMPTING_RESET_ON_WRONG_SAFE(address attemptedSafe);
+    error SENDER_NOT_RECOVERY_ACCOUNT(address sender, address recoveryAccount);
+    error SAFE_ZERO_ADDRESS();
+    error MSG_SENDER_NOT_PLUGIN_OWNER(address sender, address pluginOwner);
+    error ATTEMPTING_RESET_ON_WRONG_SAFE(
+        address attemptedSafe,
+        address storedSafe
+    );
 
-    constructor(address _safe, address _eoa) {
-        storedSafe = _safe;
-        storedEOA = _eoa;
-    }
+    constructor() {}
 
-    modifier onlyStoredEOA {
-        if (msg.sender != storedEOA) {
-            revert SENDER_NOT_STORED_EOA(msg.sender);
+    modifier onlyRecoveryAccount(address currentOwner) {
+        address recoveryAccount = ecdsaRecoveryStorage[currentOwner]
+            .recoveryAccount;
+        if (msg.sender != recoveryAccount) {
+            revert SENDER_NOT_RECOVERY_ACCOUNT(msg.sender, recoveryAccount);
         }
         _;
     }
 
+    // TODO: (merge-ok) prove recovery address owner possesses private key and proof cannot be replayed
+    function addRecoveryAccount(
+        address recoveryAccount,
+        address safeAddr,
+        address ecsdaPlugin
+    ) external {
+        if (safeAddr == address(0)) revert SAFE_ZERO_ADDRESS();
+
+        address owner = ISafeECDSAPlugin(ecsdaPlugin).getOwner(safeAddr);
+        if (msg.sender != owner)
+            revert MSG_SENDER_NOT_PLUGIN_OWNER(msg.sender, owner);
+
+        ecdsaRecoveryStorage[msg.sender] = ECDSARecoveryStorage(
+            recoveryAccount,
+            safeAddr
+        );
+    }
+
     function resetEcdsaAddress(
         address safe,
-        address ecdsaPluginAddress,
-        address newValidatingEcdsaAddress
-    ) external onlyStoredEOA {
+        address ecdsaPlugin,
+        address currentOwner,
+        address newOwner
+    ) external onlyRecoveryAccount(currentOwner) {
+        address storedSafe = ecdsaRecoveryStorage[currentOwner].safe;
         if (safe != storedSafe) {
-            revert ATTEMPTING_RESET_ON_WRONG_SAFE(safe);
+            revert ATTEMPTING_RESET_ON_WRONG_SAFE(safe, storedSafe);
         }
 
-        bytes memory data = abi.encodeWithSignature("enable(bytes)", abi.encodePacked(newValidatingEcdsaAddress));
-        ISafe(safe).execTransactionFromModule(ecdsaPluginAddress, 0, data, Enum.Operation.Call);
+        bytes memory data = abi.encodeWithSignature(
+            "enable(bytes)",
+            abi.encodePacked(newOwner)
+        );
+        ISafe(safe).execTransactionFromModule(
+            ecdsaPlugin,
+            0,
+            data,
+            Enum.Operation.Call
+        );
     }
 }
