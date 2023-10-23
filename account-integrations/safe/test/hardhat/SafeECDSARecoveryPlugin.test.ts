@@ -102,9 +102,21 @@ describe("SafeECDSARecoveryPlugin", () => {
 
     const ecdsaPluginAddress = await safeECDSAPlugin.getAddress();
 
+    const encoder = ethers.AbiCoder.defaultAbiCoder();
+    const encodedMessage = encoder.encode(
+      ["address"],
+      [recoverySigner.address],
+    );
+    const setRecoveryHash = ethers.keccak256(encodedMessage);
+
+    const recoveryHashSig = await recoverySigner.signMessage(
+      ethers.getBytes(setRecoveryHash),
+    );
+
     await recoveryPlugin
       .connect(safeSigner)
       .addRecoveryAccount(
+        recoveryHashSig,
         recoverySigner.address,
         safeCounterfactualAddress,
         ecdsaPluginAddress,
@@ -114,14 +126,13 @@ describe("SafeECDSARecoveryPlugin", () => {
 
     const newEcdsaPluginSigner = ethers.Wallet.createRandom().connect(provider);
 
-    await recoveryPlugin
-      .connect(recoverySigner)
-      .resetEcdsaAddress(
-        await deployedSafe.getAddress(),
-        ecdsaPluginAddress,
-        safeSigner.address,
-        newEcdsaPluginSigner.address,
-      );
+    await recoveryPlugin.resetEcdsaAddress(
+      recoveryHashSig,
+      await deployedSafe.getAddress(),
+      ecdsaPluginAddress,
+      safeSigner.address,
+      newEcdsaPluginSigner.address,
+    );
 
     // Send tx with new key
 

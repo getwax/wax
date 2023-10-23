@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import {ECDSA} from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
+
 contract Enum {
     enum Operation {
         Call,
@@ -32,6 +34,8 @@ struct ECDSARecoveryStorage {
 }
 
 contract SafeECDSARecoveryPlugin {
+    using ECDSA for bytes32;
+
     mapping(address => ECDSARecoveryStorage) public ecdsaRecoveryStorage;
 
     error SENDER_NOT_RECOVERY_ACCOUNT(address sender, address recoveryAccount);
@@ -41,6 +45,8 @@ contract SafeECDSARecoveryPlugin {
         address attemptedSafe,
         address storedSafe
     );
+    error RECOVERY_ACCOUNT_DID_NOT_SIGN_MESSAGE();
+    error INVALID_RECOVERY_HASH();
 
     constructor() {}
 
@@ -50,17 +56,9 @@ contract SafeECDSARecoveryPlugin {
         return ecdsaRecoveryStorage[owner];
     }
 
-    modifier onlyRecoveryAccount(address currentOwner) {
-        address recoveryAccount = ecdsaRecoveryStorage[currentOwner]
-            .recoveryAccount;
-        if (msg.sender != recoveryAccount) {
-            revert SENDER_NOT_RECOVERY_ACCOUNT(msg.sender, recoveryAccount);
-        }
-        _;
-    }
-
-    // TODO: (merge-ok) prove recovery address owner possesses private key and proof cannot be replayed
+    // TODO: (merge-ok) prove signature cannot be replayed
     function addRecoveryAccount(
+        bytes memory recoveryHashSignature,
         address recoveryAccount,
         address safe,
         address ecsdaPlugin
@@ -71,6 +69,17 @@ contract SafeECDSARecoveryPlugin {
         if (msg.sender != owner)
             revert MSG_SENDER_NOT_PLUGIN_OWNER(msg.sender, owner);
 
+        bytes32 expectedRecoveryHash = keccak256(abi.encode(recoveryAccount));
+        bytes32 ethSignedRecoveryHash = expectedRecoveryHash
+            .toEthSignedMessageHash();
+
+        if (
+            recoveryAccount !=
+            ethSignedRecoveryHash.recover(recoveryHashSignature)
+        ) {
+            revert RECOVERY_ACCOUNT_DID_NOT_SIGN_MESSAGE();
+        }
+
         ecdsaRecoveryStorage[msg.sender] = ECDSARecoveryStorage(
             recoveryAccount,
             safe
@@ -78,14 +87,30 @@ contract SafeECDSARecoveryPlugin {
     }
 
     function resetEcdsaAddress(
+        bytes memory recoveryHashSignature,
         address safe,
         address ecdsaPlugin,
         address currentOwner,
         address newOwner
-    ) external onlyRecoveryAccount(currentOwner) {
-        address storedSafe = ecdsaRecoveryStorage[currentOwner].safe;
-        if (safe != storedSafe) {
-            revert ATTEMPTING_RESET_ON_WRONG_SAFE(safe, storedSafe);
+    ) external {
+        ECDSARecoveryStorage memory recoveryStorage = ecdsaRecoveryStorage[
+            currentOwner
+        ];
+        if (safe != recoveryStorage.safe) {
+            revert ATTEMPTING_RESET_ON_WRONG_SAFE(safe, recoveryStorage.safe);
+        }
+
+        bytes32 expectedRecoveryHash = keccak256(
+            abi.encode(recoveryStorage.recoveryAccount)
+        );
+        bytes32 ethSignedRecoveryHash = expectedRecoveryHash
+            .toEthSignedMessageHash();
+
+        if (
+            recoveryStorage.recoveryAccount !=
+            ethSignedRecoveryHash.recover(recoveryHashSignature)
+        ) {
+            revert INVALID_RECOVERY_HASH();
         }
 
         bytes memory data = abi.encodeWithSignature(
