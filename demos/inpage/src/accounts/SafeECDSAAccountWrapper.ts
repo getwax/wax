@@ -4,7 +4,6 @@ import {
   SafeECDSAPlugin,
   SafeECDSAPlugin__factory,
   SafeECDSARecoveryPlugin,
-  SafeECDSARecoveryPlugin__factory,
   Safe__factory,
 } from '../../hardhat/typechain-types';
 import EthereumRpc from '../EthereumRpc';
@@ -12,9 +11,6 @@ import IAccount from './IAccount';
 import WaxInPage from '..';
 import { SafeECDSAFactory } from '../../hardhat/typechain-types/lib/account-integrations/safe/src/SafeECDSAFactory';
 import receiptOf from '../helpers/receiptOf';
-import SafeSingletonFactory, {
-  SafeSingletonFactoryViewer,
-} from '../SafeSingletonFactory';
 import { executeContractCallWithSigners } from './execution';
 import assert from '../helpers/assert';
 
@@ -152,102 +148,84 @@ export default class SafeECDSAAccountWrapper implements IAccount {
   async enableRecoveryModule(recoveryAddress: string) {
     const provider = this.waxInPage.ethersProvider;
     const owner = new ethers.Wallet(this.privateKey, provider);
-    const { chainId } = provider._network;
 
-    const safeProxy = Safe__factory.connect(this.address, owner);
-    const safeProxyAddress = await safeProxy.getAddress();
+    const safeAddress = this.address;
+    const safe = Safe__factory.connect(safeAddress, owner);
 
-    const viewer = new SafeSingletonFactoryViewer(owner, chainId);
-    const recoveryPluginDeployed = await viewer.isDeployed(
-      SafeECDSARecoveryPlugin__factory,
-      [safeProxyAddress, recoveryAddress],
-    );
-
-    let recoveryPlugin: SafeECDSARecoveryPlugin;
-    if (recoveryPluginDeployed) {
-      recoveryPlugin = viewer.connectAssume(SafeECDSARecoveryPlugin__factory, [
-        safeProxyAddress,
-        recoveryAddress,
-      ]);
-    } else {
-      const admin = await this.waxInPage.requestAdminAccount(
-        'deploy-contracts',
-      );
-      const factory = await SafeSingletonFactory.init(admin);
-
-      // TODO: (merge-ok) deploy recovery plugin on initial contracts deploy
-      recoveryPlugin = await factory.connectOrDeploy(
-        SafeECDSARecoveryPlugin__factory,
-        [safeProxyAddress, recoveryAddress],
-      );
-    }
-
+    const contracts = await this.waxInPage.getContracts();
+    const recoveryPlugin = contracts.safeECDSARecoveryPlugin;
     const recoveryPluginAddress = await recoveryPlugin.getAddress();
 
-    let moduleEnabled = await safeProxy.isModuleEnabled(recoveryPluginAddress);
+    let moduleEnabled = await safe.isModuleEnabled(recoveryPluginAddress);
     if (!moduleEnabled) {
       // TODO: (merge-ok) try calling 'enableModule' via bundler
       await executeContractCallWithSigners(
-        safeProxy,
-        safeProxy,
+        safe,
+        safe,
         'enableModule',
         [recoveryPluginAddress],
         [owner],
       );
 
-      moduleEnabled = await safeProxy.isModuleEnabled(recoveryPluginAddress);
+      moduleEnabled = await safe.isModuleEnabled(recoveryPluginAddress);
       assert(moduleEnabled, 'module not enabled');
-
-      this.recoveryAddress = recoveryAddress;
-      await this.waxInPage.storage.accounts.set([this.toData()]);
     }
+
+    const ecdsaPluginAddress = await this.getContract().getAddress();
+
+    const addRecoveryAccountArgs = [
+      recoveryAddress,
+      safeAddress,
+      ecdsaPluginAddress,
+    ] satisfies Parameters<SafeECDSARecoveryPlugin['addRecoveryAccount']>;
+
+    await recoveryPlugin
+      .connect(owner)
+      .addRecoveryAccount.staticCall(...addRecoveryAccountArgs);
+
+    await receiptOf(
+      recoveryPlugin
+        .connect(owner)
+        .addRecoveryAccount(...addRecoveryAccountArgs),
+    );
+
+    this.recoveryAddress = recoveryAddress;
+    await this.waxInPage.storage.accounts.set([this.toData()]);
   }
 
-  async recoveryAccount(
-    newOwnerAccountSeedPhrase: string,
-    recoveryAddressSeedPhrase: string,
+  async recoverAccount(
+    newOwnerPrivateKey: string,
+    recoveryAccountPrivateKey: string,
   ) {
     const provider = this.waxInPage.ethersProvider;
     const owner = new ethers.Wallet(this.privateKey, provider);
-    const { chainId } = provider._network;
 
-    const newOwnerWallet = ethers.Wallet.fromPhrase(
-      newOwnerAccountSeedPhrase,
-      provider,
-    );
+    const newOwnerWallet = new ethers.Wallet(newOwnerPrivateKey, provider);
     const newOwnerAddress = newOwnerWallet.address;
 
-    const recoveryWallet = ethers.Wallet.fromPhrase(
-      recoveryAddressSeedPhrase,
+    const recoveryWallet = new ethers.Wallet(
+      recoveryAccountPrivateKey,
       provider,
     );
 
-    const safeProxy = Safe__factory.connect(this.address, owner);
-    const safeProxyAddress = await safeProxy.getAddress();
+    const safeAddress = this.address;
+    const contracts = await this.waxInPage.getContracts();
+    const recoveryPlugin = contracts.safeECDSARecoveryPlugin;
 
-    const viewer = new SafeSingletonFactoryViewer(owner, chainId);
-    const recoveryPlugin = await viewer.connectOrThrow(
-      SafeECDSARecoveryPlugin__factory,
-      [safeProxyAddress, recoveryWallet.address],
-    );
+    const ecdsaPlugin = this.getContract();
 
-    const plugin = this.getContract();
-
-    // TODO: (merge-ok) ensure wallet is already funded
-    await (
-      await owner.sendTransaction({
-        to: recoveryWallet.address,
-        value: ethers.parseEther('0.1'),
-      })
-    ).wait();
-
-    const pluginAddress = await plugin.myAddress();
+    const pluginAddress = await ecdsaPlugin.myAddress();
     await recoveryPlugin
       .connect(recoveryWallet)
-      .resetEcdsaAddress(safeProxyAddress, pluginAddress, newOwnerAddress);
+      .resetEcdsaAddress(
+        safeAddress,
+        pluginAddress,
+        owner.address,
+        newOwnerAddress,
+      );
 
-    const expectedNewOwnerAddress = await plugin.ecdsaOwnerStorage(
-      safeProxyAddress,
+    const expectedNewOwnerAddress = await ecdsaPlugin.ecdsaOwnerStorage(
+      safeAddress,
     );
     assert(
       newOwnerAddress === expectedNewOwnerAddress,

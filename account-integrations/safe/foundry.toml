@@ -1,8 +1,13 @@
 [profile.default]
 src = "src"
 out = "out"
-libs = ["lib"]
+libs = [
+    "lib",
+]
 
-allow_paths = ["../../primitives"]
+allow_paths = [
+    "../../primitives",
+    "src/compression",
+]
 
 # See more config options https://github.com/foundry-rs/foundry/tree/master/config

@@ -10,9 +10,11 @@ abstract contract TestHelper is Test {
     EntryPoint public entryPoint;
     address internal entryPointAddress;
 
-    address internal constant ALICE = address(1);
-    address internal constant BOB = address(2);
-    address[] internal testAccounts = [ALICE, BOB];
+    address internal constant ALICE = address(2); // don't start at 1 as clashes with safe contracts sentinel address
+    address internal constant BOB = address(3);
+    address internal constant CAROL = address(4);
+    address internal constant DAVE = address(5);
+    address[] internal testAccounts = [ALICE, BOB, CAROL, DAVE];
 
     constructor() {
         entryPoint = new EntryPoint();

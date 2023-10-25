@@ -37,7 +37,7 @@ describe("SafeECDSARecoveryPlugin", () => {
 
     const recoveryPlugin = await (
       await ethers.getContractFactory("SafeECDSARecoveryPlugin")
-    ).deploy(safeCounterfactualAddress, recoverySigner.address);
+    ).deploy();
     const recoveryPluginAddress = await recoveryPlugin.getAddress();
 
     // Enable recovery plugin on safe
@@ -74,7 +74,7 @@ describe("SafeECDSARecoveryPlugin", () => {
 
     const recoveryPlugin = await (
       await ethers.getContractFactory("SafeECDSARecoveryPlugin")
-    ).deploy(safeCounterfactualAddress, recoverySigner.address);
+    ).deploy();
     const recoveryPluginAddress = await recoveryPlugin.getAddress();
 
     const deployedSafe = await ethers.getContractAt(
@@ -98,18 +98,30 @@ describe("SafeECDSARecoveryPlugin", () => {
     );
     expect(isModuleEnabled).to.equal(true);
 
-    // Reset ecdsa address
+    // Add recovery account
 
     const ecdsaPluginAddress = await safeECDSAPlugin.getAddress();
+
+    await recoveryPlugin
+      .connect(safeSigner)
+      .addRecoveryAccount(
+        recoverySigner.address,
+        safeCounterfactualAddress,
+        ecdsaPluginAddress,
+      );
+
+    // Reset ecdsa address
+
     const newEcdsaPluginSigner = ethers.Wallet.createRandom().connect(provider);
 
-    const recoveryPluginSinger = recoveryPlugin.connect(recoverySigner);
-
-    await recoveryPluginSinger.resetEcdsaAddress(
-      await deployedSafe.getAddress(),
-      ecdsaPluginAddress,
-      newEcdsaPluginSigner.address,
-    );
+    await recoveryPlugin
+      .connect(recoverySigner)
+      .resetEcdsaAddress(
+        await deployedSafe.getAddress(),
+        ecdsaPluginAddress,
+        safeSigner.address,
+        newEcdsaPluginSigner.address,
+      );
 
     // Send tx with new key
 

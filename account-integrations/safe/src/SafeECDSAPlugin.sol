@@ -33,11 +33,19 @@ contract SafeECDSAPlugin is Safe4337Base {
 
     address internal constant _SENTINEL_MODULES = address(0x1);
 
-    event OWNER_UPDATED(address indexed safe, address indexed oldOwner, address indexed newOwner);
+    event OWNER_UPDATED(
+        address indexed safe,
+        address indexed oldOwner,
+        address indexed newOwner
+    );
 
     constructor(address entryPointAddress) {
         myAddress = address(this);
         _entryPoint = entryPointAddress;
+    }
+
+    function getOwner(address safe) external view returns (address owner) {
+        owner = ecdsaOwnerStorage[safe].owner;
     }
 
     function execTransaction(

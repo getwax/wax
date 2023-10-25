@@ -20,6 +20,8 @@ import {
   SafeCompressionFactory__factory,
   SafeECDSAFactory,
   SafeECDSAFactory__factory,
+  SafeECDSARecoveryPlugin,
+  SafeECDSARecoveryPlugin__factory,
   Safe__factory,
   SimpleAccountFactory,
   SimpleAccountFactory__factory,
@@ -72,6 +74,7 @@ export type Contracts = {
   safeCompressionFactory: SafeCompressionFactory;
   fallbackDecompressor: FallbackDecompressor;
   addressRegistry: AddressRegistry;
+  safeECDSARecoveryPlugin: SafeECDSARecoveryPlugin;
 };
 
 export default class WaxInPage {
@@ -201,6 +204,10 @@ export default class WaxInPage {
         [await assumedAddressRegistry.getAddress()],
       ),
       addressRegistry: assumedAddressRegistry,
+      safeECDSARecoveryPlugin: viewer.connectAssume(
+        SafeECDSARecoveryPlugin__factory,
+        [],
+      ),
     };
 
     if (this.#contractsDeployed) {
@@ -246,6 +253,8 @@ export default class WaxInPage {
           await addressRegistry.getAddress(),
         ]),
       addressRegistry: () => Promise.resolve(addressRegistry),
+      safeECDSARecoveryPlugin: () =>
+        factory.connectOrDeploy(SafeECDSARecoveryPlugin__factory, []),
     };
 
     for (const deployment of Object.values(deployments)) {
