@@ -103,21 +103,27 @@ describe("SafeECDSARecoveryPlugin", () => {
     const ecdsaPluginAddress = await safeECDSAPlugin.getAddress();
 
     const encoder = ethers.AbiCoder.defaultAbiCoder();
-    const encodedMessage = encoder.encode(
-      ["address"],
-      [recoverySigner.address],
-    );
-    const setRecoveryHash = ethers.keccak256(encodedMessage);
 
-    const recoveryHashSig = await recoverySigner.signMessage(
-      ethers.getBytes(setRecoveryHash),
+    const chainId = (await provider.getNetwork()).chainId;
+    const salt = "test salt";
+
+    const addRecoveryMessage = encoder.encode(
+      ["string", "address", "address", "address", "uint256", "string"],
+      [
+        "RECOVER_ACCOUNT_DOMAIN",
+        recoverySigner.address,
+        recoveryPluginAddress,
+        safeSigner.address,
+        chainId,
+        salt,
+      ],
     );
+    const guardianHash = ethers.keccak256(addRecoveryMessage);
 
     await recoveryPlugin
       .connect(safeSigner)
       .addRecoveryAccount(
-        recoveryHashSig,
-        recoverySigner.address,
+        guardianHash,
         safeCounterfactualAddress,
         ecdsaPluginAddress,
       );
@@ -125,14 +131,23 @@ describe("SafeECDSARecoveryPlugin", () => {
     // Reset ecdsa address
 
     const newEcdsaPluginSigner = ethers.Wallet.createRandom().connect(provider);
-
-    await recoveryPlugin.resetEcdsaAddress(
-      recoveryHashSig,
-      await deployedSafe.getAddress(),
-      ecdsaPluginAddress,
-      safeSigner.address,
-      newEcdsaPluginSigner.address,
+    const currentOwnerHash = ethers.keccak256(
+      encoder.encode(["address"], [safeSigner.address]),
     );
+    const addressSignature = await newEcdsaPluginSigner.signMessage(
+      ethers.getBytes(currentOwnerHash),
+    );
+
+    await recoveryPlugin
+      .connect(recoverySigner)
+      .resetEcdsaAddress(
+        addressSignature,
+        salt,
+        await deployedSafe.getAddress(),
+        ecdsaPluginAddress,
+        safeSigner.address,
+        newEcdsaPluginSigner.address,
+      );
 
     // Send tx with new key
 

@@ -29,24 +29,28 @@ interface ISafeECDSAPlugin {
 }
 
 struct ECDSARecoveryStorage {
-    address recoveryAccount;
+    bytes32 guardianHash;
     address safe;
 }
 
 contract SafeECDSARecoveryPlugin {
     using ECDSA for bytes32;
 
+    string public constant RECOVER_ACCOUNT_DOMAIN = "RECOVER_ACCOUNT_DOMAIN";
+
     mapping(address => ECDSARecoveryStorage) public ecdsaRecoveryStorage;
 
-    error SENDER_NOT_RECOVERY_ACCOUNT(address sender, address recoveryAccount);
+    error INVALID_GUARDIAN_HASH(
+        bytes32 guardianHash,
+        bytes32 expectedGuardianHash
+    );
     error SAFE_ZERO_ADDRESS();
     error MSG_SENDER_NOT_PLUGIN_OWNER(address sender, address pluginOwner);
     error ATTEMPTING_RESET_ON_WRONG_SAFE(
         address attemptedSafe,
         address storedSafe
     );
-    error RECOVERY_ACCOUNT_DID_NOT_SIGN_MESSAGE();
-    error INVALID_RECOVERY_HASH();
+    error INVALID_NEW_OWNER_SIGNATURE();
 
     constructor() {}
 
@@ -56,10 +60,8 @@ contract SafeECDSARecoveryPlugin {
         return ecdsaRecoveryStorage[owner];
     }
 
-    // TODO: (merge-ok) prove signature cannot be replayed
     function addRecoveryAccount(
-        bytes memory recoveryHashSignature,
-        address recoveryAccount,
+        bytes32 guardianHash,
         address safe,
         address ecsdaPlugin
     ) external {
@@ -69,25 +71,15 @@ contract SafeECDSARecoveryPlugin {
         if (msg.sender != owner)
             revert MSG_SENDER_NOT_PLUGIN_OWNER(msg.sender, owner);
 
-        bytes32 expectedRecoveryHash = keccak256(abi.encode(recoveryAccount));
-        bytes32 ethSignedRecoveryHash = expectedRecoveryHash
-            .toEthSignedMessageHash();
-
-        if (
-            recoveryAccount !=
-            ethSignedRecoveryHash.recover(recoveryHashSignature)
-        ) {
-            revert RECOVERY_ACCOUNT_DID_NOT_SIGN_MESSAGE();
-        }
-
         ecdsaRecoveryStorage[msg.sender] = ECDSARecoveryStorage(
-            recoveryAccount,
+            guardianHash,
             safe
         );
     }
 
     function resetEcdsaAddress(
-        bytes memory recoveryHashSignature,
+        bytes memory newOwnerSignature,
+        string memory salt,
         address safe,
         address ecdsaPlugin,
         address currentOwner,
@@ -96,27 +88,41 @@ contract SafeECDSARecoveryPlugin {
         ECDSARecoveryStorage memory recoveryStorage = ecdsaRecoveryStorage[
             currentOwner
         ];
+
+        // Identity of guardian is protected and it is only revealed on recovery
+        bytes32 expectedRecoveryHash = keccak256(
+            abi.encode(
+                RECOVER_ACCOUNT_DOMAIN,
+                msg.sender,
+                address(this),
+                currentOwner,
+                block.chainid,
+                salt
+            )
+        );
+
+        if (expectedRecoveryHash != recoveryStorage.guardianHash) {
+            revert INVALID_GUARDIAN_HASH(
+                recoveryStorage.guardianHash,
+                expectedRecoveryHash
+            );
+        }
+
         if (safe != recoveryStorage.safe) {
             revert ATTEMPTING_RESET_ON_WRONG_SAFE(safe, recoveryStorage.safe);
         }
 
-        bytes32 expectedRecoveryHash = keccak256(
-            abi.encode(recoveryStorage.recoveryAccount)
-        );
-        bytes32 ethSignedRecoveryHash = expectedRecoveryHash
-            .toEthSignedMessageHash();
+        bytes32 currentOwnerHash = keccak256(abi.encode(currentOwner));
+        bytes32 ethSignedHash = currentOwnerHash.toEthSignedMessageHash();
 
-        if (
-            recoveryStorage.recoveryAccount !=
-            ethSignedRecoveryHash.recover(recoveryHashSignature)
-        ) {
-            revert INVALID_RECOVERY_HASH();
-        }
+        if (newOwner != ethSignedHash.recover(newOwnerSignature))
+            revert INVALID_NEW_OWNER_SIGNATURE();
 
         bytes memory data = abi.encodeWithSignature(
             "enable(bytes)",
             abi.encodePacked(newOwner)
         );
+
         ISafe(safe).execTransactionFromModule(
             ecdsaPlugin,
             0,

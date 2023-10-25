@@ -8,10 +8,13 @@ import {SafeECDSARecoveryPlugin, ECDSARecoveryStorage} from "../../src/SafeECDSA
 import {SafeECDSAPlugin} from "../../src/SafeECDSAPlugin.sol";
 import {Safe} from "safe-contracts/contracts/Safe.sol";
 import {SafeProxy} from "safe-contracts/contracts/proxies/SafeProxy.sol";
+import {ECDSA} from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
 
 /* solhint-disable func-name-mixedcase */
 
 contract SafeECDSARecoveryPluginTest is TestHelper {
+    using ECDSA for bytes32;
+
     constructor() TestHelper() {}
 
     SafeECDSARecoveryPlugin public safeECDSARecoveryPlugin;
@@ -19,7 +22,7 @@ contract SafeECDSARecoveryPluginTest is TestHelper {
     Safe public safe;
     address public safeAddress;
 
-    address owner = ALICE;
+    address public owner;
 
     function setUp() public {
         safeECDSARecoveryPlugin = new SafeECDSARecoveryPlugin();
@@ -29,6 +32,7 @@ contract SafeECDSARecoveryPluginTest is TestHelper {
         SafeProxy safeProxy = new SafeProxy(address(safeSingleton));
 
         address[] memory owners = new address[](1);
+        owner = Alice.addr;
         owners[0] = owner;
 
         safe = Safe(payable(address(safeProxy)));
@@ -48,13 +52,25 @@ contract SafeECDSARecoveryPluginTest is TestHelper {
 
     function test_addRecoveryAccount_SafeZeroAddress() public {
         // Arrange
-        address recoveryAccount = BOB;
+        address recoveryAccount = Bob.addr;
+        string memory salt = "test salt";
+
+        bytes32 guardianHash = keccak256(
+            abi.encode(
+                "RECOVER_ACCOUNT_DOMAIN",
+                recoveryAccount,
+                address(safeECDSARecoveryPlugin),
+                owner,
+                block.chainid,
+                salt
+            )
+        );
         address safeZeroAddress = address(0);
 
         // Act & Assert
         vm.expectRevert(SafeECDSARecoveryPlugin.SAFE_ZERO_ADDRESS.selector);
         safeECDSARecoveryPlugin.addRecoveryAccount(
-            recoveryAccount,
+            guardianHash,
             safeZeroAddress,
             address(safeECDSAPlugin)
         );
@@ -62,7 +78,19 @@ contract SafeECDSARecoveryPluginTest is TestHelper {
 
     function test_addRecoveryAccount_MsgSenderNotPluginOwner() public {
         // Arrange
-        address recoveryAccount = BOB;
+        address recoveryAccount = Bob.addr;
+        string memory salt = "test salt";
+
+        bytes32 guardianHash = keccak256(
+            abi.encode(
+                "RECOVER_ACCOUNT_DOMAIN",
+                recoveryAccount,
+                address(safeECDSARecoveryPlugin),
+                owner,
+                block.chainid,
+                salt
+            )
+        );
 
         // Act & Assert
         vm.startPrank(recoveryAccount);
@@ -74,7 +102,7 @@ contract SafeECDSARecoveryPluginTest is TestHelper {
             )
         );
         safeECDSARecoveryPlugin.addRecoveryAccount(
-            recoveryAccount,
+            guardianHash,
             safeAddress,
             address(safeECDSAPlugin)
         );
@@ -82,12 +110,24 @@ contract SafeECDSARecoveryPluginTest is TestHelper {
 
     function test_addRecoveryAccount_recoveryAccountAdded() public {
         // Arrange
-        address recoveryAccount = BOB;
+        address recoveryAccount = Bob.addr;
+        string memory salt = "test salt";
+
+        bytes32 guardianHash = keccak256(
+            abi.encode(
+                "RECOVER_ACCOUNT_DOMAIN",
+                recoveryAccount,
+                address(safeECDSARecoveryPlugin),
+                owner,
+                block.chainid,
+                salt
+            )
+        );
 
         // Act
         vm.startPrank(owner);
         safeECDSARecoveryPlugin.addRecoveryAccount(
-            recoveryAccount,
+            guardianHash,
             safeAddress,
             address(safeECDSAPlugin)
         );
@@ -97,7 +137,7 @@ contract SafeECDSARecoveryPluginTest is TestHelper {
                 .getEcdsaRecoveryStorage(owner);
 
         // Assert
-        assertEq(ecdsaRecoveryStorage.recoveryAccount, recoveryAccount);
+        assertEq(ecdsaRecoveryStorage.guardianHash, guardianHash);
         assertEq(ecdsaRecoveryStorage.safe, safeAddress);
     }
 
@@ -105,9 +145,33 @@ contract SafeECDSARecoveryPluginTest is TestHelper {
         public
     {
         // Arrange
-        address recoveryAccount1 = BOB;
-        address recoveryAccount2 = CAROL;
-        address secondOwner = DAVE;
+        address recoveryAccount1 = Bob.addr;
+        string memory salt = "test salt";
+
+        bytes32 guardianHash1 = keccak256(
+            abi.encode(
+                "RECOVER_ACCOUNT_DOMAIN",
+                recoveryAccount1,
+                address(safeECDSARecoveryPlugin),
+                owner,
+                block.chainid,
+                salt
+            )
+        );
+
+        address recoveryAccount2 = Carol.addr;
+        address secondOwner = Dave.addr;
+
+        bytes32 guardianHash2 = keccak256(
+            abi.encode(
+                "RECOVER_ACCOUNT_DOMAIN",
+                recoveryAccount2,
+                address(safeECDSARecoveryPlugin),
+                secondOwner,
+                block.chainid,
+                salt
+            )
+        );
 
         SafeECDSAPlugin secondSafeECDSAPlugin = new SafeECDSAPlugin(
             entryPointAddress
@@ -120,14 +184,14 @@ contract SafeECDSARecoveryPluginTest is TestHelper {
         // Act
         vm.startPrank(owner);
         safeECDSARecoveryPlugin.addRecoveryAccount(
-            recoveryAccount1,
+            guardianHash1,
             safeAddress,
             address(safeECDSAPlugin)
         );
 
         vm.startPrank(secondOwner);
         safeECDSARecoveryPlugin.addRecoveryAccount(
-            recoveryAccount2,
+            guardianHash2,
             safeAddress,
             address(secondSafeECDSAPlugin)
         );
@@ -141,41 +205,42 @@ contract SafeECDSARecoveryPluginTest is TestHelper {
             memory ecdsaRecoveryStorage2 = safeECDSARecoveryPlugin
                 .getEcdsaRecoveryStorage(secondOwner);
 
-        assertEq(ecdsaRecoveryStorage.recoveryAccount, recoveryAccount1);
+        assertEq(ecdsaRecoveryStorage.guardianHash, guardianHash1);
         assertEq(ecdsaRecoveryStorage.safe, safeAddress);
 
-        assertEq(ecdsaRecoveryStorage2.recoveryAccount, recoveryAccount2);
+        assertEq(ecdsaRecoveryStorage2.guardianHash, guardianHash2);
         assertEq(ecdsaRecoveryStorage2.safe, safeAddress);
     }
 
-    function test_resetEcdsaAddress_senderNotRecoveryAccount() public {
+    function test_resetEcdsaAddress_invalidRecoveryHash() public {
         // Arrange
-        address newOwner = BOB;
-        address recoveryAccount = CAROL;
-        address expectedRecoveryAccount = address(0);
+        address recoveryAccount = Bob.addr;
+        string memory salt = "test salt";
 
-        // Act & Assert
-        vm.startPrank(recoveryAccount);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                SafeECDSARecoveryPlugin.SENDER_NOT_RECOVERY_ACCOUNT.selector,
+        bytes32 guardianHash = keccak256(
+            abi.encode(
+                "INVALID_DOMAIN",
                 recoveryAccount,
-                expectedRecoveryAccount
+                address(safeECDSARecoveryPlugin),
+                owner,
+                block.chainid,
+                salt
             )
         );
-        safeECDSARecoveryPlugin.resetEcdsaAddress(
-            safeAddress,
-            address(safeECDSAPlugin),
-            owner,
-            newOwner
-        );
-    }
 
-    function test_resetEcdsaAddress_attemptingResetOnWrongSafe() public {
-        // Arrange
-        address recoveryAccount = BOB;
-        address newOwner = CAROL;
-        address wrongSafeAddress = DAVE;
+        bytes32 expectedGuardianHash = keccak256(
+            abi.encode(
+                "RECOVER_ACCOUNT_DOMAIN",
+                recoveryAccount,
+                address(safeECDSARecoveryPlugin),
+                owner,
+                block.chainid,
+                salt
+            )
+        );
+        Vm.Wallet memory newOwner = Carol;
+
+        bytes memory newOwnerSignature = abi.encodePacked("dummy signature"); // note the order here is different from the tuple above.
 
         vm.startPrank(safeAddress);
         safe.enableModule(address(safeECDSARecoveryPlugin));
@@ -183,7 +248,62 @@ contract SafeECDSARecoveryPluginTest is TestHelper {
 
         vm.startPrank(owner);
         safeECDSARecoveryPlugin.addRecoveryAccount(
-            recoveryAccount,
+            guardianHash,
+            safeAddress,
+            address(safeECDSAPlugin)
+        );
+        vm.stopPrank();
+
+        ECDSARecoveryStorage
+            memory ecdsaRecoveryStorage = safeECDSARecoveryPlugin
+                .getEcdsaRecoveryStorage(owner);
+
+        // Act & Assert
+        vm.startPrank(recoveryAccount);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                SafeECDSARecoveryPlugin.INVALID_GUARDIAN_HASH.selector,
+                ecdsaRecoveryStorage.guardianHash,
+                expectedGuardianHash
+            )
+        );
+        safeECDSARecoveryPlugin.resetEcdsaAddress(
+            newOwnerSignature,
+            salt,
+            safeAddress,
+            address(safeECDSAPlugin),
+            owner,
+            newOwner.addr
+        );
+    }
+
+    function test_resetEcdsaAddress_attemptingResetOnWrongSafe() public {
+        // Arrange
+        address recoveryAccount = Bob.addr;
+        string memory salt = "test salt";
+
+        bytes32 guardianHash = keccak256(
+            abi.encode(
+                "RECOVER_ACCOUNT_DOMAIN",
+                recoveryAccount,
+                address(safeECDSARecoveryPlugin),
+                owner,
+                block.chainid,
+                salt
+            )
+        );
+        Vm.Wallet memory newOwner = Carol;
+        address wrongSafeAddress = Dave.addr;
+
+        bytes memory newOwnerSignature = abi.encodePacked("dummy signature");
+
+        vm.startPrank(safeAddress);
+        safe.enableModule(address(safeECDSARecoveryPlugin));
+        vm.stopPrank();
+
+        vm.startPrank(owner);
+        safeECDSARecoveryPlugin.addRecoveryAccount(
+            guardianHash,
             safeAddress,
             address(safeECDSAPlugin)
         );
@@ -199,17 +319,38 @@ contract SafeECDSARecoveryPluginTest is TestHelper {
             )
         );
         safeECDSARecoveryPlugin.resetEcdsaAddress(
+            newOwnerSignature,
+            salt,
             wrongSafeAddress,
             address(safeECDSAPlugin),
             owner,
-            newOwner
+            newOwner.addr
         );
     }
 
-    function test_resetEcdsaAddress_resetsEcdsaAddress() public {
+    function test_resetEcdsaAddress_invalidNewOwnerSignature() public {
         // Arrange
-        address recoveryAccount = BOB;
-        address newOwner = CAROL;
+        address recoveryAccount = Bob.addr;
+        string memory salt = "test salt";
+
+        bytes32 guardianHash = keccak256(
+            abi.encode(
+                "RECOVER_ACCOUNT_DOMAIN",
+                recoveryAccount,
+                address(safeECDSARecoveryPlugin),
+                owner,
+                block.chainid,
+                salt
+            )
+        );
+        Vm.Wallet memory newOwner = Carol;
+
+        bytes32 invalidOwnerHash = keccak256(
+            abi.encode("invalid address hash")
+        );
+        bytes32 ethSignedHash = invalidOwnerHash.toEthSignedMessageHash();
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(newOwner, ethSignedHash);
+        bytes memory newOwnerSignature = abi.encodePacked(r, s, v); // note the order here is different from the tuple above.
 
         vm.startPrank(safeAddress);
         safe.enableModule(address(safeECDSARecoveryPlugin));
@@ -217,7 +358,56 @@ contract SafeECDSARecoveryPluginTest is TestHelper {
 
         vm.startPrank(owner);
         safeECDSARecoveryPlugin.addRecoveryAccount(
-            recoveryAccount,
+            guardianHash,
+            safeAddress,
+            address(safeECDSAPlugin)
+        );
+        vm.stopPrank();
+
+        // Act & Assert
+        vm.startPrank(recoveryAccount);
+        vm.expectRevert(
+            SafeECDSARecoveryPlugin.INVALID_NEW_OWNER_SIGNATURE.selector
+        );
+        safeECDSARecoveryPlugin.resetEcdsaAddress(
+            newOwnerSignature,
+            salt,
+            safeAddress,
+            address(safeECDSAPlugin),
+            owner,
+            newOwner.addr
+        );
+    }
+
+    function test_resetEcdsaAddress_resetsEcdsaAddress() public {
+        // Arrange
+        address recoveryAccount = Bob.addr;
+        string memory salt = "test salt";
+
+        bytes32 guardianHash = keccak256(
+            abi.encode(
+                "RECOVER_ACCOUNT_DOMAIN",
+                recoveryAccount,
+                address(safeECDSARecoveryPlugin),
+                owner,
+                block.chainid,
+                salt
+            )
+        );
+        Vm.Wallet memory newOwner = Carol;
+
+        bytes32 currentOwnerHash = keccak256(abi.encode(owner));
+        bytes32 ethSignedHash = currentOwnerHash.toEthSignedMessageHash();
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(newOwner, ethSignedHash);
+        bytes memory newOwnerSignature = abi.encodePacked(r, s, v); // note the order here is different from the tuple above.
+
+        vm.startPrank(safeAddress);
+        safe.enableModule(address(safeECDSARecoveryPlugin));
+        vm.stopPrank();
+
+        vm.startPrank(owner);
+        safeECDSARecoveryPlugin.addRecoveryAccount(
+            guardianHash,
             safeAddress,
             address(safeECDSAPlugin)
         );
@@ -226,14 +416,16 @@ contract SafeECDSARecoveryPluginTest is TestHelper {
         // Act
         vm.startPrank(recoveryAccount);
         safeECDSARecoveryPlugin.resetEcdsaAddress(
+            newOwnerSignature,
+            salt,
             safeAddress,
             address(safeECDSAPlugin),
             owner,
-            newOwner
+            newOwner.addr
         );
 
         // Assert
         address updatedOwner = safeECDSAPlugin.getOwner(safeAddress);
-        assertEq(updatedOwner, newOwner);
+        assertEq(updatedOwner, newOwner.addr);
     }
 }

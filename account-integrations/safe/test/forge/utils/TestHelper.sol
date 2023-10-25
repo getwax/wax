@@ -5,24 +5,29 @@ import "forge-std/Test.sol";
 import {EntryPoint, UserOperation} from "account-abstraction/contracts/core/EntryPoint.sol";
 
 /* solhint-disable private-vars-leading-underscore */
+/* solhint-disable var-name-mixedcase */
 
 abstract contract TestHelper is Test {
     EntryPoint public entryPoint;
     address internal entryPointAddress;
 
-    address internal constant ALICE = address(2); // don't start at 1 as clashes with safe contracts sentinel address
-    address internal constant BOB = address(3);
-    address internal constant CAROL = address(4);
-    address internal constant DAVE = address(5);
-    address[] internal testAccounts = [ALICE, BOB, CAROL, DAVE];
+    Vm.Wallet internal Alice;
+    Vm.Wallet internal Bob;
+    Vm.Wallet internal Carol;
+    Vm.Wallet internal Dave;
 
     constructor() {
         entryPoint = new EntryPoint();
         entryPointAddress = address(entryPoint);
+
+        Alice = vm.createWallet("Alice");
+        Bob = vm.createWallet("Bob");
+        Carol = vm.createWallet("Carol");
+        Dave = vm.createWallet("Dave");
     }
 
-    function buildUserOp() public pure returns (UserOperation memory userOp) {
-        address sender = ALICE;
+    function buildUserOp() public view returns (UserOperation memory userOp) {
+        address sender = Alice.addr;
         uint256 nonce = 0;
         bytes memory initCode = hex"00";
         bytes memory callData = hex"00";
