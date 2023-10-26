@@ -110,7 +110,7 @@ describe("SafeECDSARecoveryPlugin", () => {
       ["RECOVERY_PLUGIN", 1, chainId, recoveryPluginAddress],
     );
 
-    const guardianHash = ethers.solidityPackedKeccak256(
+    const recoveryHash = ethers.solidityPackedKeccak256(
       ["bytes32", "address", "address", "string"],
       [recoveryhashDomain, recoverySigner.address, safeSigner.address, salt],
     );
@@ -118,7 +118,7 @@ describe("SafeECDSARecoveryPlugin", () => {
     await recoveryPlugin
       .connect(safeSigner)
       .addRecoveryAccount(
-        guardianHash,
+        recoveryHash,
         safeCounterfactualAddress,
         ecdsaPluginAddress,
       );

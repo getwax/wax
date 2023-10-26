@@ -29,7 +29,7 @@ interface ISafeECDSAPlugin {
 }
 
 struct ECDSARecoveryStorage {
-    bytes32 guardianHash;
+    bytes32 recoveryHash;
     address safe;
 }
 
@@ -43,7 +43,7 @@ contract SafeECDSARecoveryPlugin {
     mapping(address => ECDSARecoveryStorage) public ecdsaRecoveryStorage;
 
     error INVALID_GUARDIAN_HASH(
-        bytes32 guardianHash,
+        bytes32 recoveryHash,
         bytes32 expectedGuardianHash
     );
     error SAFE_ZERO_ADDRESS();
@@ -72,7 +72,7 @@ contract SafeECDSARecoveryPlugin {
     }
 
     function addRecoveryAccount(
-        bytes32 guardianHash,
+        bytes32 recoveryHash,
         address safe,
         address ecsdaPlugin
     ) external {
@@ -83,7 +83,7 @@ contract SafeECDSARecoveryPlugin {
             revert MSG_SENDER_NOT_PLUGIN_OWNER(msg.sender, owner);
 
         ecdsaRecoveryStorage[msg.sender] = ECDSARecoveryStorage(
-            guardianHash,
+            recoveryHash,
             safe
         );
     }
@@ -110,9 +110,9 @@ contract SafeECDSARecoveryPlugin {
             )
         );
 
-        if (expectedRecoveryHash != recoveryStorage.guardianHash) {
+        if (expectedRecoveryHash != recoveryStorage.recoveryHash) {
             revert INVALID_GUARDIAN_HASH(
-                recoveryStorage.guardianHash,
+                recoveryStorage.recoveryHash,
                 expectedRecoveryHash
             );
         }
