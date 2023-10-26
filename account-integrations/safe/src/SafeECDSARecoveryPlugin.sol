@@ -32,7 +32,6 @@ interface ISafeECDSAPlugin {
 
 struct ECDSARecoveryStorage {
     bytes32 recoveryHash;
-    address safe;
 }
 
 contract SafeECDSARecoveryPlugin {
@@ -51,10 +50,6 @@ contract SafeECDSARecoveryPlugin {
     error SAFE_ZERO_ADDRESS();
     error MODULE_NOT_ENABLED();
     error MSG_SENDER_NOT_PLUGIN_OWNER(address sender, address pluginOwner);
-    error ATTEMPTING_RESET_ON_WRONG_SAFE(
-        address attemptedSafe,
-        address storedSafe
-    );
     error INVALID_NEW_OWNER_SIGNATURE();
 
     constructor() {
@@ -69,9 +64,9 @@ contract SafeECDSARecoveryPlugin {
     }
 
     function getEcdsaRecoveryStorage(
-        address owner
+        address safe
     ) external view returns (ECDSARecoveryStorage memory) {
-        return ecdsaRecoveryStorage[owner];
+        return ecdsaRecoveryStorage[safe];
     }
 
     function addRecoveryAccount(
@@ -88,10 +83,7 @@ contract SafeECDSARecoveryPlugin {
         if (msg.sender != owner)
             revert MSG_SENDER_NOT_PLUGIN_OWNER(msg.sender, owner);
 
-        ecdsaRecoveryStorage[msg.sender] = ECDSARecoveryStorage(
-            recoveryHash,
-            safe
-        );
+        ecdsaRecoveryStorage[safe] = ECDSARecoveryStorage(recoveryHash);
     }
 
     function resetEcdsaAddress(
@@ -103,7 +95,7 @@ contract SafeECDSARecoveryPlugin {
         address newOwner
     ) external {
         ECDSARecoveryStorage memory recoveryStorage = ecdsaRecoveryStorage[
-            currentOwner
+            safe
         ];
 
         // Identity of guardian is protected and it is only revealed on recovery
@@ -121,10 +113,6 @@ contract SafeECDSARecoveryPlugin {
                 recoveryStorage.recoveryHash,
                 expectedRecoveryHash
             );
-        }
-
-        if (safe != recoveryStorage.safe) {
-            revert ATTEMPTING_RESET_ON_WRONG_SAFE(safe, recoveryStorage.safe);
         }
 
         bytes32 currentOwnerHash = keccak256(abi.encodePacked(currentOwner));
