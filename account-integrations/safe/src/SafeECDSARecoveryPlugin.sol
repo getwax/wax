@@ -22,6 +22,8 @@ interface ISafe {
         bytes calldata data,
         Enum.Operation operation
     ) external returns (bool success);
+
+    function isModuleEnabled(address module) external view returns (bool);
 }
 
 interface ISafeECDSAPlugin {
@@ -47,6 +49,7 @@ contract SafeECDSARecoveryPlugin {
         bytes32 expectedGuardianHash
     );
     error SAFE_ZERO_ADDRESS();
+    error MODULE_NOT_ENABLED();
     error MSG_SENDER_NOT_PLUGIN_OWNER(address sender, address pluginOwner);
     error ATTEMPTING_RESET_ON_WRONG_SAFE(
         address attemptedSafe,
@@ -77,6 +80,9 @@ contract SafeECDSARecoveryPlugin {
         address ecsdaPlugin
     ) external {
         if (safe == address(0)) revert SAFE_ZERO_ADDRESS();
+
+        bool moduleEnabled = ISafe(safe).isModuleEnabled(address(this));
+        if (!moduleEnabled) revert MODULE_NOT_ENABLED();
 
         address owner = ISafeECDSAPlugin(ecsdaPlugin).getOwner(safe);
         if (msg.sender != owner)

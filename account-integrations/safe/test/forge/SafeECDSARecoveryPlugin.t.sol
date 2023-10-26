@@ -51,6 +51,10 @@ contract SafeECDSARecoveryPluginTest is TestHelper {
             payable(address(0))
         );
 
+        vm.startPrank(safeAddress);
+        safe.enableModule(address(safeECDSARecoveryPlugin));
+        vm.stopPrank();
+
         RECOVERY_HASH_DOMAIN = keccak256(
             abi.encodePacked(
                 "RECOVERY_PLUGIN",
@@ -76,6 +80,33 @@ contract SafeECDSARecoveryPluginTest is TestHelper {
         safeECDSARecoveryPlugin.addRecoveryAccount(
             recoveryHash,
             safeZeroAddress,
+            address(safeECDSAPlugin)
+        );
+    }
+
+    function test_addRecoveryAccount_ModuleNotEnabled() public {
+        // Arrange
+        address recoveryAccount = Bob.addr;
+        string memory salt = "test salt";
+
+        bytes32 recoveryHash = keccak256(
+            abi.encodePacked(RECOVERY_HASH_DOMAIN, recoveryAccount, owner, salt)
+        );
+
+        address prevModuleInLinkedList = address(0x1);
+        address moduleToDisable = address(safeECDSARecoveryPlugin);
+
+        // Act
+        vm.startPrank(safeAddress);
+        safe.disableModule(prevModuleInLinkedList, moduleToDisable);
+        vm.stopPrank();
+
+        // Assert
+        vm.startPrank(owner);
+        vm.expectRevert(SafeECDSARecoveryPlugin.MODULE_NOT_ENABLED.selector);
+        safeECDSARecoveryPlugin.addRecoveryAccount(
+            recoveryHash,
+            safeAddress,
             address(safeECDSAPlugin)
         );
     }
@@ -216,10 +247,6 @@ contract SafeECDSARecoveryPluginTest is TestHelper {
             abi.encodePacked(RECOVERY_HASH_DOMAIN, recoveryAccount, owner, salt)
         );
 
-        vm.startPrank(safeAddress);
-        safe.enableModule(address(safeECDSARecoveryPlugin));
-        vm.stopPrank();
-
         vm.startPrank(owner);
         safeECDSARecoveryPlugin.addRecoveryAccount(
             recoveryHash,
@@ -258,10 +285,6 @@ contract SafeECDSARecoveryPluginTest is TestHelper {
         bytes32 recoveryHash = keccak256(
             abi.encodePacked(RECOVERY_HASH_DOMAIN, recoveryAccount, owner, salt)
         );
-
-        vm.startPrank(safeAddress);
-        safe.enableModule(address(safeECDSARecoveryPlugin));
-        vm.stopPrank();
 
         vm.startPrank(owner);
         safeECDSARecoveryPlugin.addRecoveryAccount(
@@ -303,10 +326,6 @@ contract SafeECDSARecoveryPluginTest is TestHelper {
             abi.encodePacked(RECOVERY_HASH_DOMAIN, recoveryAccount, owner, salt)
         );
 
-        vm.startPrank(safeAddress);
-        safe.enableModule(address(safeECDSARecoveryPlugin));
-        vm.stopPrank();
-
         vm.startPrank(owner);
         safeECDSARecoveryPlugin.addRecoveryAccount(
             recoveryHash,
@@ -347,10 +366,6 @@ contract SafeECDSARecoveryPluginTest is TestHelper {
         bytes32 recoveryHash = keccak256(
             abi.encodePacked(RECOVERY_HASH_DOMAIN, recoveryAccount, owner, salt)
         );
-
-        vm.startPrank(safeAddress);
-        safe.enableModule(address(safeECDSARecoveryPlugin));
-        vm.stopPrank();
 
         vm.startPrank(owner);
         safeECDSARecoveryPlugin.addRecoveryAccount(
