@@ -24,6 +24,8 @@ contract SafeECDSARecoveryPluginTest is TestHelper {
 
     address public owner;
 
+    bytes32 RECOVERY_HASH_DOMAIN;
+
     function setUp() public {
         safeECDSARecoveryPlugin = new SafeECDSARecoveryPlugin();
         safeECDSAPlugin = new SafeECDSAPlugin(entryPointAddress);
@@ -48,6 +50,15 @@ contract SafeECDSARecoveryPluginTest is TestHelper {
             0,
             payable(address(0))
         );
+
+        RECOVERY_HASH_DOMAIN = keccak256(
+            abi.encodePacked(
+                "RECOVERY_PLUGIN",
+                uint256(1),
+                block.chainid,
+                address(safeECDSARecoveryPlugin)
+            )
+        );
     }
 
     function test_addRecoveryAccount_SafeZeroAddress() public {
@@ -56,14 +67,7 @@ contract SafeECDSARecoveryPluginTest is TestHelper {
         string memory salt = "test salt";
 
         bytes32 guardianHash = keccak256(
-            abi.encode(
-                "RECOVER_ACCOUNT_DOMAIN",
-                recoveryAccount,
-                address(safeECDSARecoveryPlugin),
-                owner,
-                block.chainid,
-                salt
-            )
+            abi.encodePacked(RECOVERY_HASH_DOMAIN, recoveryAccount, owner, salt)
         );
         address safeZeroAddress = address(0);
 
@@ -82,14 +86,7 @@ contract SafeECDSARecoveryPluginTest is TestHelper {
         string memory salt = "test salt";
 
         bytes32 guardianHash = keccak256(
-            abi.encode(
-                "RECOVER_ACCOUNT_DOMAIN",
-                recoveryAccount,
-                address(safeECDSARecoveryPlugin),
-                owner,
-                block.chainid,
-                salt
-            )
+            abi.encodePacked(RECOVERY_HASH_DOMAIN, recoveryAccount, owner, salt)
         );
 
         // Act & Assert
@@ -114,14 +111,7 @@ contract SafeECDSARecoveryPluginTest is TestHelper {
         string memory salt = "test salt";
 
         bytes32 guardianHash = keccak256(
-            abi.encode(
-                "RECOVER_ACCOUNT_DOMAIN",
-                recoveryAccount,
-                address(safeECDSARecoveryPlugin),
-                owner,
-                block.chainid,
-                salt
-            )
+            abi.encodePacked(RECOVERY_HASH_DOMAIN, recoveryAccount, owner, salt)
         );
 
         // Act
@@ -149,12 +139,10 @@ contract SafeECDSARecoveryPluginTest is TestHelper {
         string memory salt = "test salt";
 
         bytes32 guardianHash1 = keccak256(
-            abi.encode(
-                "RECOVER_ACCOUNT_DOMAIN",
+            abi.encodePacked(
+                RECOVERY_HASH_DOMAIN,
                 recoveryAccount1,
-                address(safeECDSARecoveryPlugin),
                 owner,
-                block.chainid,
                 salt
             )
         );
@@ -163,12 +151,10 @@ contract SafeECDSARecoveryPluginTest is TestHelper {
         address secondOwner = Dave.addr;
 
         bytes32 guardianHash2 = keccak256(
-            abi.encode(
-                "RECOVER_ACCOUNT_DOMAIN",
+            abi.encodePacked(
+                RECOVERY_HASH_DOMAIN,
                 recoveryAccount2,
-                address(safeECDSARecoveryPlugin),
-                secondOwner,
-                block.chainid,
+                owner,
                 salt
             )
         );
@@ -218,25 +204,16 @@ contract SafeECDSARecoveryPluginTest is TestHelper {
         string memory salt = "test salt";
 
         bytes32 guardianHash = keccak256(
-            abi.encode(
-                "INVALID_DOMAIN",
+            abi.encodePacked(
+                "INVALID_RECOVERY_HASH_DOMAIN",
                 recoveryAccount,
-                address(safeECDSARecoveryPlugin),
                 owner,
-                block.chainid,
                 salt
             )
         );
 
         bytes32 expectedGuardianHash = keccak256(
-            abi.encode(
-                "RECOVER_ACCOUNT_DOMAIN",
-                recoveryAccount,
-                address(safeECDSARecoveryPlugin),
-                owner,
-                block.chainid,
-                salt
-            )
+            abi.encodePacked(RECOVERY_HASH_DOMAIN, recoveryAccount, owner, salt)
         );
         Vm.Wallet memory newOwner = Carol;
 
@@ -283,14 +260,7 @@ contract SafeECDSARecoveryPluginTest is TestHelper {
         string memory salt = "test salt";
 
         bytes32 guardianHash = keccak256(
-            abi.encode(
-                "RECOVER_ACCOUNT_DOMAIN",
-                recoveryAccount,
-                address(safeECDSARecoveryPlugin),
-                owner,
-                block.chainid,
-                salt
-            )
+            abi.encodePacked(RECOVERY_HASH_DOMAIN, recoveryAccount, owner, salt)
         );
         Vm.Wallet memory newOwner = Carol;
         address wrongSafeAddress = Dave.addr;
@@ -334,19 +304,12 @@ contract SafeECDSARecoveryPluginTest is TestHelper {
         string memory salt = "test salt";
 
         bytes32 guardianHash = keccak256(
-            abi.encode(
-                "RECOVER_ACCOUNT_DOMAIN",
-                recoveryAccount,
-                address(safeECDSARecoveryPlugin),
-                owner,
-                block.chainid,
-                salt
-            )
+            abi.encodePacked(RECOVERY_HASH_DOMAIN, recoveryAccount, owner, salt)
         );
         Vm.Wallet memory newOwner = Carol;
 
         bytes32 invalidOwnerHash = keccak256(
-            abi.encode("invalid address hash")
+            abi.encodePacked("invalid address hash")
         );
         bytes32 ethSignedHash = invalidOwnerHash.toEthSignedMessageHash();
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(newOwner, ethSignedHash);
@@ -385,18 +348,11 @@ contract SafeECDSARecoveryPluginTest is TestHelper {
         string memory salt = "test salt";
 
         bytes32 guardianHash = keccak256(
-            abi.encode(
-                "RECOVER_ACCOUNT_DOMAIN",
-                recoveryAccount,
-                address(safeECDSARecoveryPlugin),
-                owner,
-                block.chainid,
-                salt
-            )
+            abi.encodePacked(RECOVERY_HASH_DOMAIN, recoveryAccount, owner, salt)
         );
         Vm.Wallet memory newOwner = Carol;
 
-        bytes32 currentOwnerHash = keccak256(abi.encode(owner));
+        bytes32 currentOwnerHash = keccak256(abi.encodePacked(owner));
         bytes32 ethSignedHash = currentOwnerHash.toEthSignedMessageHash();
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(newOwner, ethSignedHash);
         bytes memory newOwnerSignature = abi.encodePacked(r, s, v); // note the order here is different from the tuple above.

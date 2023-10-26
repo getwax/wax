@@ -36,7 +36,9 @@ struct ECDSARecoveryStorage {
 contract SafeECDSARecoveryPlugin {
     using ECDSA for bytes32;
 
-    string public constant RECOVER_ACCOUNT_DOMAIN = "RECOVER_ACCOUNT_DOMAIN";
+    bytes32 immutable RECOVERY_HASH_DOMAIN;
+    string public constant DOMAIN_NAME = "RECOVERY_PLUGIN";
+    uint256 public constant DOMAIN_VERSION = 1;
 
     mapping(address => ECDSARecoveryStorage) public ecdsaRecoveryStorage;
 
@@ -52,7 +54,16 @@ contract SafeECDSARecoveryPlugin {
     );
     error INVALID_NEW_OWNER_SIGNATURE();
 
-    constructor() {}
+    constructor() {
+        RECOVERY_HASH_DOMAIN = keccak256(
+            abi.encodePacked(
+                DOMAIN_NAME,
+                DOMAIN_VERSION,
+                block.chainid,
+                address(this)
+            )
+        );
+    }
 
     function getEcdsaRecoveryStorage(
         address owner
@@ -91,12 +102,10 @@ contract SafeECDSARecoveryPlugin {
 
         // Identity of guardian is protected and it is only revealed on recovery
         bytes32 expectedRecoveryHash = keccak256(
-            abi.encode(
-                RECOVER_ACCOUNT_DOMAIN,
+            abi.encodePacked(
+                RECOVERY_HASH_DOMAIN,
                 msg.sender,
-                address(this),
                 currentOwner,
-                block.chainid,
                 salt
             )
         );
@@ -112,7 +121,7 @@ contract SafeECDSARecoveryPlugin {
             revert ATTEMPTING_RESET_ON_WRONG_SAFE(safe, recoveryStorage.safe);
         }
 
-        bytes32 currentOwnerHash = keccak256(abi.encode(currentOwner));
+        bytes32 currentOwnerHash = keccak256(abi.encodePacked(currentOwner));
         bytes32 ethSignedHash = currentOwnerHash.toEthSignedMessageHash();
 
         if (newOwner != ethSignedHash.recover(newOwnerSignature))

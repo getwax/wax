@@ -102,23 +102,18 @@ describe("SafeECDSARecoveryPlugin", () => {
 
     const ecdsaPluginAddress = await safeECDSAPlugin.getAddress();
 
-    const encoder = ethers.AbiCoder.defaultAbiCoder();
-
     const chainId = (await provider.getNetwork()).chainId;
     const salt = "test salt";
 
-    const addRecoveryMessage = encoder.encode(
-      ["string", "address", "address", "address", "uint256", "string"],
-      [
-        "RECOVER_ACCOUNT_DOMAIN",
-        recoverySigner.address,
-        recoveryPluginAddress,
-        safeSigner.address,
-        chainId,
-        salt,
-      ],
+    const recoveryhashDomain = ethers.solidityPackedKeccak256(
+      ["string", "uint256", "uint256", "address"],
+      ["RECOVERY_PLUGIN", 1, chainId, recoveryPluginAddress],
     );
-    const guardianHash = ethers.keccak256(addRecoveryMessage);
+
+    const guardianHash = ethers.solidityPackedKeccak256(
+      ["bytes32", "address", "address", "string"],
+      [recoveryhashDomain, recoverySigner.address, safeSigner.address, salt],
+    );
 
     await recoveryPlugin
       .connect(safeSigner)
@@ -131,8 +126,9 @@ describe("SafeECDSARecoveryPlugin", () => {
     // Reset ecdsa address
 
     const newEcdsaPluginSigner = ethers.Wallet.createRandom().connect(provider);
-    const currentOwnerHash = ethers.keccak256(
-      encoder.encode(["address"], [safeSigner.address]),
+    const currentOwnerHash = ethers.solidityPackedKeccak256(
+      ["address"],
+      [safeSigner.address],
     );
     const addressSignature = await newEcdsaPluginSigner.signMessage(
       ethers.getBytes(currentOwnerHash),
