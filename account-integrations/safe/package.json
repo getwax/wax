@@ -8,6 +8,9 @@
   "scripts": {
     "lint": "eslint . --ext js,jsx,ts,tsx --report-unused-disable-directives --max-warnings 0"
   },
+  "dependencies": {
+    "@getwax/circuits": "../zkp"
+  },
   "devDependencies": {
     "@account-abstraction/contracts": "^0.6.0",
     "@account-abstraction/utils": "^0.6.0",

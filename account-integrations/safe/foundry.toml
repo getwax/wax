@@ -10,4 +10,8 @@ allow_paths = [
     "src/compression",
 ]
 
+remappings = [
+    "@getwax/circuits/=node_modules/@getwax/circuits",
+]
+
 # See more config options https://github.com/foundry-rs/foundry/tree/master/config
