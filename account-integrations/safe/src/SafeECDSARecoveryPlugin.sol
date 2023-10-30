@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import {ECDSA} from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
+
 contract Enum {
     enum Operation {
         Call,
@@ -20,6 +22,8 @@ interface ISafe {
         bytes calldata data,
         Enum.Operation operation
     ) external returns (bool success);
+
+    function isModuleEnabled(address module) external view returns (bool);
 }
 
 interface ISafeECDSAPlugin {
@@ -27,71 +31,101 @@ interface ISafeECDSAPlugin {
 }
 
 struct ECDSARecoveryStorage {
-    address recoveryAccount;
-    address safe;
+    bytes32 recoveryHash;
 }
 
 contract SafeECDSARecoveryPlugin {
+    using ECDSA for bytes32;
+
+    bytes32 immutable RECOVERY_HASH_DOMAIN;
+    string public constant DOMAIN_NAME = "RECOVERY_PLUGIN";
+    uint256 public constant DOMAIN_VERSION = 1;
+
     mapping(address => ECDSARecoveryStorage) public ecdsaRecoveryStorage;
 
-    error SENDER_NOT_RECOVERY_ACCOUNT(address sender, address recoveryAccount);
-    error SAFE_ZERO_ADDRESS();
-    error MSG_SENDER_NOT_PLUGIN_OWNER(address sender, address pluginOwner);
-    error ATTEMPTING_RESET_ON_WRONG_SAFE(
-        address attemptedSafe,
-        address storedSafe
+    error INVALID_GUARDIAN_HASH(
+        bytes32 recoveryHash,
+        bytes32 expectedGuardianHash
     );
+    error SAFE_ZERO_ADDRESS();
+    error MODULE_NOT_ENABLED();
+    error MSG_SENDER_NOT_PLUGIN_OWNER(address sender, address pluginOwner);
+    error INVALID_NEW_OWNER_SIGNATURE();
 
-    constructor() {}
+    constructor() {
+        RECOVERY_HASH_DOMAIN = keccak256(
+            abi.encodePacked(
+                DOMAIN_NAME,
+                DOMAIN_VERSION,
+                block.chainid,
+                address(this)
+            )
+        );
+    }
 
     function getEcdsaRecoveryStorage(
-        address owner
+        address safe
     ) external view returns (ECDSARecoveryStorage memory) {
-        return ecdsaRecoveryStorage[owner];
+        return ecdsaRecoveryStorage[safe];
     }
 
-    modifier onlyRecoveryAccount(address currentOwner) {
-        address recoveryAccount = ecdsaRecoveryStorage[currentOwner]
-            .recoveryAccount;
-        if (msg.sender != recoveryAccount) {
-            revert SENDER_NOT_RECOVERY_ACCOUNT(msg.sender, recoveryAccount);
-        }
-        _;
-    }
-
-    // TODO: (merge-ok) prove recovery address owner possesses private key and proof cannot be replayed
     function addRecoveryAccount(
-        address recoveryAccount,
+        bytes32 recoveryHash,
         address safe,
         address ecsdaPlugin
     ) external {
         if (safe == address(0)) revert SAFE_ZERO_ADDRESS();
 
+        bool moduleEnabled = ISafe(safe).isModuleEnabled(address(this));
+        if (!moduleEnabled) revert MODULE_NOT_ENABLED();
+
         address owner = ISafeECDSAPlugin(ecsdaPlugin).getOwner(safe);
         if (msg.sender != owner)
             revert MSG_SENDER_NOT_PLUGIN_OWNER(msg.sender, owner);
 
-        ecdsaRecoveryStorage[msg.sender] = ECDSARecoveryStorage(
-            recoveryAccount,
-            safe
-        );
+        ecdsaRecoveryStorage[safe] = ECDSARecoveryStorage(recoveryHash);
     }
 
     function resetEcdsaAddress(
+        bytes memory newOwnerSignature,
+        string memory salt,
         address safe,
         address ecdsaPlugin,
         address currentOwner,
         address newOwner
-    ) external onlyRecoveryAccount(currentOwner) {
-        address storedSafe = ecdsaRecoveryStorage[currentOwner].safe;
-        if (safe != storedSafe) {
-            revert ATTEMPTING_RESET_ON_WRONG_SAFE(safe, storedSafe);
+    ) external {
+        ECDSARecoveryStorage memory recoveryStorage = ecdsaRecoveryStorage[
+            safe
+        ];
+
+        // Identity of guardian is protected and it is only revealed on recovery
+        bytes32 expectedRecoveryHash = keccak256(
+            abi.encodePacked(
+                RECOVERY_HASH_DOMAIN,
+                msg.sender,
+                currentOwner,
+                salt
+            )
+        );
+
+        if (expectedRecoveryHash != recoveryStorage.recoveryHash) {
+            revert INVALID_GUARDIAN_HASH(
+                recoveryStorage.recoveryHash,
+                expectedRecoveryHash
+            );
         }
+
+        bytes32 currentOwnerHash = keccak256(abi.encodePacked(currentOwner));
+        bytes32 ethSignedHash = currentOwnerHash.toEthSignedMessageHash();
+
+        if (newOwner != ethSignedHash.recover(newOwnerSignature))
+            revert INVALID_NEW_OWNER_SIGNATURE();
 
         bytes memory data = abi.encodeWithSignature(
             "enable(bytes)",
             abi.encodePacked(newOwner)
         );
+
         ISafe(safe).execTransactionFromModule(
             ecdsaPlugin,
             0,

@@ -102,10 +102,23 @@ describe("SafeECDSARecoveryPlugin", () => {
 
     const ecdsaPluginAddress = await safeECDSAPlugin.getAddress();
 
+    const chainId = (await provider.getNetwork()).chainId;
+    const salt = "test salt";
+
+    const recoveryhashDomain = ethers.solidityPackedKeccak256(
+      ["string", "uint256", "uint256", "address"],
+      ["RECOVERY_PLUGIN", 1, chainId, recoveryPluginAddress],
+    );
+
+    const recoveryHash = ethers.solidityPackedKeccak256(
+      ["bytes32", "address", "address", "string"],
+      [recoveryhashDomain, recoverySigner.address, safeSigner.address, salt],
+    );
+
     await recoveryPlugin
       .connect(safeSigner)
       .addRecoveryAccount(
-        recoverySigner.address,
+        recoveryHash,
         safeCounterfactualAddress,
         ecdsaPluginAddress,
       );
@@ -113,10 +126,19 @@ describe("SafeECDSARecoveryPlugin", () => {
     // Reset ecdsa address
 
     const newEcdsaPluginSigner = ethers.Wallet.createRandom().connect(provider);
+    const currentOwnerHash = ethers.solidityPackedKeccak256(
+      ["address"],
+      [safeSigner.address],
+    );
+    const addressSignature = await newEcdsaPluginSigner.signMessage(
+      ethers.getBytes(currentOwnerHash),
+    );
 
     await recoveryPlugin
       .connect(recoverySigner)
       .resetEcdsaAddress(
+        addressSignature,
+        salt,
         await deployedSafe.getAddress(),
         ecdsaPluginAddress,
         safeSigner.address,
