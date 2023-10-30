@@ -1,34 +1,72 @@
-import { ethers } from "hardhat";
 import { expect } from "chai";
 import { AddressZero } from "@ethersproject/constants";
-import { getBytes, keccak256, solidityPacked } from "ethers";
+import { ethers, getBytes, keccak256, solidityPacked } from "ethers";
 import { UserOperationStruct } from "@account-abstraction/contracts";
 import { signer as hubbleBlsSigner } from "@thehubbleproject/bls";
 import { getUserOpHash } from "@account-abstraction/utils";
 import { calculateProxyAddress } from "./utils/calculateProxyAddress";
+import sendUserOpAndWait from "./utils/sendUserOpAndWait";
+import SafeSingletonFactory from "./utils/SafeSingletonFactory";
+import makeDevFaster from "./utils/makeDevFaster";
+import {
+  EntryPoint__factory,
+  SafeBlsPlugin__factory,
+  SafeProxyFactory__factory,
+  Safe__factory,
+} from "../../typechain-types";
+import receiptOf from "./utils/receiptOf";
+import sleep from "./utils/sleep";
+
+const ERC4337_TEST_ENV_VARIABLES_DEFINED =
+  typeof process.env.ERC4337_TEST_BUNDLER_URL !== "undefined" &&
+  typeof process.env.ERC4337_TEST_NODE_URL !== "undefined" &&
+  typeof process.env.MNEMONIC !== "undefined";
+
+const itif = ERC4337_TEST_ENV_VARIABLES_DEFINED ? it : it.skip;
+const BUNDLER_URL = process.env.ERC4337_TEST_BUNDLER_URL;
+const NODE_URL = process.env.ERC4337_TEST_NODE_URL;
+const MNEMONIC = process.env.MNEMONIC;
 
 const BLS_PRIVATE_KEY =
   "0xdbe3d601b1b25c42c50015a87855fdce00ea9b3a7e33c92d31c69aeb70708e08";
-const MNEMONIC = "test test test test test test test test test test test junk";
 
 describe("SafeBlsPlugin", () => {
   const setupTests = async () => {
-    const safeProxyFactory = await (
-      await ethers.getContractFactory("SafeProxyFactory")
-    ).deploy();
-    const safe = await (await ethers.getContractFactory("Safe")).deploy();
-    const entryPoint = await (
-      await ethers.getContractFactory("EntryPoint")
-    ).deploy();
+    const bundlerProvider = new ethers.JsonRpcProvider(BUNDLER_URL);
+    const provider = new ethers.JsonRpcProvider(NODE_URL);
+    await makeDevFaster(provider);
 
-    const provider = ethers.provider;
-    const userWallet = ethers.Wallet.fromPhrase(MNEMONIC).connect(provider);
+    const admin = ethers.Wallet.fromPhrase(MNEMONIC!).connect(provider);
+    const userWallet = ethers.Wallet.createRandom(provider);
+
+    await receiptOf(
+      await admin.sendTransaction({
+        to: userWallet.address,
+        value: ethers.parseEther("1"),
+      }),
+    );
+
+    const entryPoints = (await bundlerProvider.send(
+      "eth_supportedEntryPoints",
+      [],
+    )) as string[];
+
+    if (entryPoints.length === 0) {
+      throw new Error("No entry points found");
+    }
+
+    const ssf = await SafeSingletonFactory.init(admin);
 
     return {
-      safeProxyFactory,
-      safe,
-      entryPoint,
+      safeProxyFactory: await ssf.connectOrDeploy(
+        SafeProxyFactory__factory,
+        [],
+      ),
+      safe: await ssf.connectOrDeploy(Safe__factory, []),
+      entryPoints,
+      bundlerProvider,
       provider,
+      admin,
       userWallet,
     };
   };
@@ -40,24 +78,29 @@ describe("SafeBlsPlugin", () => {
    * 1. Deployment of the Safe with the ERC4337 plugin and handler is possible
    * 2. Executing a transaction is possible
    */
-  it("should pass the ERC4337 validation", async () => {
-    const { entryPoint, safe, safeProxyFactory, provider, userWallet } =
-      await setupTests();
+  itif("should pass the ERC4337 validation", async () => {
+    const {
+      entryPoints,
+      safe,
+      safeProxyFactory,
+      bundlerProvider,
+      provider,
+      admin,
+      userWallet,
+    } = await setupTests();
 
     const domain = getBytes(keccak256(Buffer.from("eip4337.bls.domain")));
     const signerFactory = await hubbleBlsSigner.BlsSignerFactory.new();
     const blsSigner = signerFactory.getSigner(domain, BLS_PRIVATE_KEY);
 
-    const ENTRYPOINT_ADDRESS = await entryPoint.getAddress();
+    const ENTRYPOINT_ADDRESS = entryPoints[0];
 
-    const safeBlsPluginFactory = (
-      await ethers.getContractFactory("SafeBlsPlugin")
-    ).connect(userWallet);
-    const safeBlsPlugin = await safeBlsPluginFactory.deploy(
+    const ssf = await SafeSingletonFactory.init(admin);
+
+    const safeBlsPlugin = await ssf.connectOrDeploy(SafeBlsPlugin__factory, [
       ENTRYPOINT_ADDRESS,
       blsSigner.pubkey,
-      { gasLimit: 30_000_000 },
-    );
+    ]);
 
     const feeData = await provider.getFeeData();
     if (!feeData.maxFeePerGas || !feeData.maxPriorityFeePerGas) {
@@ -116,23 +159,60 @@ describe("SafeBlsPlugin", () => {
     );
 
     // Native tokens for the pre-fund 💸
-    await userWallet.sendTransaction({
-      to: deployedAddress,
-      value: ethers.parseEther("100"),
-    });
+    await receiptOf(
+      admin.sendTransaction({
+        to: deployedAddress,
+        value: ethers.parseEther("10"),
+      }),
+    );
+    const encoder = ethers.AbiCoder.defaultAbiCoder();
+    const dummyHash = ethers.keccak256(
+      encoder.encode(["string"], ["dummyHash"]),
+    );
+    const dummySignature = solidityPacked(
+      ["uint256", "uint256"],
+      blsSigner.sign(dummyHash),
+    );
+
+    const userOperationWithoutGasFields = {
+      sender: deployedAddress,
+      nonce: "0x0",
+      initCode,
+      callData: userOpCallData,
+      callGasLimit: "0x00",
+      paymasterAndData: "0x",
+      signature: dummySignature,
+    };
+
+    const gasEstimate = (await bundlerProvider.send(
+      "eth_estimateUserOperationGas",
+      [userOperationWithoutGasFields, ENTRYPOINT_ADDRESS],
+    )) as {
+      verificationGasLimit: string;
+      preVerificationGas: string;
+      callGasLimit: string;
+    };
+
+    const safeVerificationGasLimit =
+      BigInt(gasEstimate.verificationGasLimit) +
+      BigInt(gasEstimate.verificationGasLimit) / 5n; // + 20%
+
+    const safePreVerificationGas =
+      BigInt(gasEstimate.preVerificationGas) +
+      BigInt(gasEstimate.preVerificationGas) / 50n; // + 2%
 
     const unsignedUserOperation = {
       sender: deployedAddress,
       nonce: "0x0",
       initCode,
       callData: userOpCallData,
-      verificationGasLimit: 1e6,
-      callGasLimit: 1e6,
-      preVerificationGas: 1e6,
+      callGasLimit: gasEstimate.callGasLimit,
+      verificationGasLimit: ethers.toBeHex(safeVerificationGasLimit),
+      preVerificationGas: ethers.toBeHex(safePreVerificationGas),
       maxFeePerGas,
       maxPriorityFeePerGas,
       paymasterAndData: "0x",
-      signature: "",
+      signature: dummySignature,
     } satisfies UserOperationStruct;
 
     const resolvedUserOp = await ethers.resolveProperties(
@@ -164,14 +244,15 @@ describe("SafeBlsPlugin", () => {
 
     const recipientBalanceBefore = await provider.getBalance(recipientAddress);
 
-    try {
-      const _rcpt = await entryPoint.handleOps(
-        [userOperation],
-        ENTRYPOINT_ADDRESS,
-      );
-    } catch (e) {
-      console.log("EntryPoint handleOps error=", e);
-    }
+    // TODO: #138 Send via bundler once BLS lib is 4337 compatible
+    // await sendUserOpAndWait(userOperation, ENTRYPOINT_ADDRESS, bundlerProvider);
+
+    const entryPoint = EntryPoint__factory.connect(ENTRYPOINT_ADDRESS, admin);
+
+    await entryPoint.connect(admin).handleOps([userOperation], admin.address);
+    await entryPoint.getUserOpHash(userOperation);
+    // TODO: why is this needed to prevent "nonce too low" error
+    await sleep(5000);
 
     const recipientBalanceAfter = await provider.getBalance(recipientAddress);
     const expectedRecipientBalance = recipientBalanceBefore + transferAmount;
