@@ -30,7 +30,15 @@ describe("SafeECDSAPlugin", () => {
     const bundlerProvider = new ethers.JsonRpcProvider(BUNDLER_URL);
     const provider = new ethers.JsonRpcProvider(NODE_URL);
     await makeDevFaster(provider);
-    const userWallet = ethers.Wallet.fromPhrase(MNEMONIC!).connect(provider);
+
+    const admin = ethers.Wallet.fromPhrase(MNEMONIC!).connect(provider);
+    const userWallet = ethers.Wallet.createRandom(provider);
+    await receiptOf(
+      await admin.sendTransaction({
+        to: userWallet.address,
+        value: ethers.parseEther("1"),
+      }),
+    );
 
     const entryPoints = (await bundlerProvider.send(
       "eth_supportedEntryPoints",
@@ -41,13 +49,14 @@ describe("SafeECDSAPlugin", () => {
       throw new Error("No entry points found");
     }
 
-    const ssf = await SafeSingletonFactory.init(userWallet);
+    const ssf = await SafeSingletonFactory.init(admin);
 
     return {
       factory: await ssf.connectOrDeploy(SafeProxyFactory__factory, []),
       singleton: await ssf.connectOrDeploy(Safe__factory, []),
       bundlerProvider,
       provider,
+      admin,
       userWallet,
       entryPoints,
     };
@@ -58,11 +67,17 @@ describe("SafeECDSAPlugin", () => {
     value: ethers.BigNumberish,
     data: ethers.BytesLike,
   ) {
-    const { singleton, provider, bundlerProvider, userWallet, entryPoints } =
-      await setupTests();
+    const {
+      singleton,
+      provider,
+      bundlerProvider,
+      admin,
+      userWallet,
+      entryPoints,
+    } = await setupTests();
     const ENTRYPOINT_ADDRESS = entryPoints[0];
 
-    const ssf = await SafeSingletonFactory.init(userWallet);
+    const ssf = await SafeSingletonFactory.init(admin);
 
     const safeECDSAFactory = await ssf.connectOrDeploy(
       SafeECDSAFactory__factory,
@@ -107,9 +122,9 @@ describe("SafeECDSAPlugin", () => {
 
     // Native tokens for the pre-fund 💸
     await receiptOf(
-      userWallet.sendTransaction({
+      admin.sendTransaction({
         to: accountAddress,
-        value: ethers.parseEther("100"),
+        value: ethers.parseEther("10"),
       }),
     );
 
@@ -162,6 +177,7 @@ describe("SafeECDSAPlugin", () => {
       provider,
       bundlerProvider,
       entryPoint: ENTRYPOINT_ADDRESS,
+      admin,
       userWallet,
       accountAddress,
     };
@@ -187,7 +203,7 @@ describe("SafeECDSAPlugin", () => {
   });
 
   itif("should not allow execTransaction from unrelated address", async () => {
-    const { accountAddress, userWallet, provider } = await setupDeployedAccount(
+    const { accountAddress, admin, provider } = await setupDeployedAccount(
       ethers.ZeroAddress,
       0,
       "0x",
@@ -196,7 +212,7 @@ describe("SafeECDSAPlugin", () => {
     const unrelatedWallet = ethers.Wallet.createRandom(provider);
 
     await receiptOf(
-      userWallet.sendTransaction({
+      admin.sendTransaction({
         to: unrelatedWallet.address,
         value: 100n * oneEther,
       }),

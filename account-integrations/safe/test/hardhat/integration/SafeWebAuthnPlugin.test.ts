@@ -28,7 +28,16 @@ describe("SafeWebAuthnPlugin", () => {
     const bundlerProvider = new ethers.JsonRpcProvider(BUNDLER_URL);
     const provider = new ethers.JsonRpcProvider(NODE_URL);
     await makeDevFaster(provider);
-    const userWallet = ethers.Wallet.fromPhrase(MNEMONIC!).connect(provider);
+
+    const admin = ethers.Wallet.fromPhrase(MNEMONIC!).connect(provider);
+    const userWallet = ethers.Wallet.createRandom(provider);
+
+    await receiptOf(
+      await admin.sendTransaction({
+        to: userWallet.address,
+        value: ethers.parseEther("1"),
+      }),
+    );
 
     const entryPoints = (await bundlerProvider.send(
       "eth_supportedEntryPoints",
@@ -39,13 +48,14 @@ describe("SafeWebAuthnPlugin", () => {
       throw new Error("No entry points found");
     }
 
-    const ssf = await SafeSingletonFactory.init(userWallet);
+    const ssf = await SafeSingletonFactory.init(admin);
 
     return {
       factory: await ssf.connectOrDeploy(SafeProxyFactory__factory, []),
       singleton: await ssf.connectOrDeploy(Safe__factory, []),
       bundlerProvider,
       provider,
+      admin,
       userWallet,
       entryPoints,
     };
@@ -116,6 +126,7 @@ describe("SafeWebAuthnPlugin", () => {
       factory,
       provider,
       bundlerProvider,
+      admin,
       userWallet,
       entryPoints,
     } = await setupTests();
@@ -124,7 +135,7 @@ describe("SafeWebAuthnPlugin", () => {
 
     const safeWebAuthnPluginFactory = (
       await hre.ethers.getContractFactory("SafeWebAuthnPlugin")
-    ).connect(userWallet);
+    ).connect(admin);
     const safeWebAuthnPlugin = await safeWebAuthnPluginFactory.deploy(
       ENTRYPOINT_ADDRESS,
       publicKey,
@@ -190,9 +201,9 @@ describe("SafeWebAuthnPlugin", () => {
 
     // Native tokens for the pre-fund 💸
     await receiptOf(
-      userWallet.sendTransaction({
+      admin.sendTransaction({
         to: deployedAddress,
-        value: ethers.parseEther("100"),
+        value: ethers.parseEther("10"), // TODO: increasing this from 1 to 10 prevents error of balance not updating for assertion??????
       }),
     );
 

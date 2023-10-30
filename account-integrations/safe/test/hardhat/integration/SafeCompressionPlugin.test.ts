@@ -14,6 +14,7 @@ import sendUserOpAndWait from "../utils/sendUserOpAndWait";
 import receiptOf from "../utils/receiptOf";
 import SafeSingletonFactory from "../utils/SafeSingletonFactory";
 import makeDevFaster from "../utils/makeDevFaster";
+import sleep from "../utils/sleep";
 
 const ERC4337_TEST_ENV_VARIABLES_DEFINED =
   typeof process.env.ERC4337_TEST_BUNDLER_URL !== "undefined" &&
@@ -31,7 +32,15 @@ describe("SafeCompressionPlugin", () => {
     const provider = new ethers.JsonRpcProvider(NODE_URL);
     await makeDevFaster(provider);
 
-    const userWallet = ethers.Wallet.fromPhrase(MNEMONIC!).connect(provider);
+    const admin = ethers.Wallet.fromPhrase(MNEMONIC!).connect(provider);
+    const userWallet = ethers.Wallet.createRandom(provider);
+
+    await receiptOf(
+      await admin.sendTransaction({
+        to: userWallet.address,
+        value: ethers.parseEther("1"),
+      }),
+    );
 
     const entryPoints = (await bundlerProvider.send(
       "eth_supportedEntryPoints",
@@ -42,13 +51,23 @@ describe("SafeCompressionPlugin", () => {
       throw new Error("No entry points found");
     }
 
-    const ssf = await SafeSingletonFactory.init(userWallet);
+    const ssf = await SafeSingletonFactory.init(admin);
+
+    const safeProxyFactory = await ssf.connectOrDeploy(
+      SafeProxyFactory__factory,
+      [],
+    );
+    await safeProxyFactory.waitForDeployment();
+
+    const safeSingleton = await ssf.connectOrDeploy(Safe__factory, []);
+    await safeSingleton.waitForDeployment();
 
     return {
-      factory: await ssf.connectOrDeploy(SafeProxyFactory__factory, []),
-      singleton: await ssf.connectOrDeploy(Safe__factory, []),
+      factory: safeProxyFactory,
+      singleton: safeSingleton,
       bundlerProvider,
       provider,
+      admin,
       userWallet,
       entryPoints,
     };
@@ -62,12 +81,18 @@ describe("SafeCompressionPlugin", () => {
    * 2. Executing a transaction is possible
    */
   itif("should pass the ERC4337 validation", async () => {
-    const { singleton, provider, bundlerProvider, userWallet, entryPoints } =
-      await setupTests();
+    const {
+      singleton,
+      provider,
+      bundlerProvider,
+      admin,
+      userWallet,
+      entryPoints,
+    } = await setupTests();
 
     const ENTRYPOINT_ADDRESS = entryPoints[0];
 
-    const ssf = await SafeSingletonFactory.init(userWallet);
+    const ssf = await SafeSingletonFactory.init(admin);
 
     const safeCompressionFactory = await ssf.connectOrDeploy(
       SafeCompressionFactory__factory,
@@ -87,9 +112,9 @@ describe("SafeCompressionPlugin", () => {
     const owner = ethers.Wallet.createRandom(provider);
 
     await receiptOf(
-      userWallet.sendTransaction({
+      admin.sendTransaction({
         to: owner.address,
-        value: ethers.parseEther("100"),
+        value: ethers.parseEther("1"),
       }),
     );
 
@@ -138,6 +163,8 @@ describe("SafeCompressionPlugin", () => {
       ],
       [],
     );
+    // TODO: why is this needed to prevent "nonce too low" error
+    await sleep(5000);
 
     const userOpCallData = compressionAccount.interface.encodeFunctionData(
       "decompressAndPerform",
@@ -146,10 +173,9 @@ describe("SafeCompressionPlugin", () => {
 
     // Native tokens for the pre-fund 💸
     await receiptOf(
-      userWallet.sendTransaction({
+      admin.sendTransaction({
         to: accountAddress,
-        value: ethers.parseEther("100"),
-        nonce: await userWallet.getNonce(),
+        value: ethers.parseEther("10"), // TODO: increasing this from 1 to 10 prevents error of balance not updating for assertion??????
       }),
     );
 
