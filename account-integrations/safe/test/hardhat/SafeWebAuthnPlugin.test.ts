@@ -4,14 +4,9 @@ import { AddressZero } from "@ethersproject/constants";
 import { concat, ethers, BigNumberish } from "ethers";
 import { UserOperationStruct } from "@account-abstraction/contracts";
 import { calculateProxyAddress } from "./utils/calculateProxyAddress";
-import {
-  SafeProxyFactory__factory,
-  Safe__factory,
-} from "../../typechain-types";
 import sendUserOpAndWait from "./utils/sendUserOpAndWait";
 import receiptOf from "./utils/receiptOf";
-import SafeSingletonFactory from "./utils/SafeSingletonFactory";
-import makeDevFaster from "./utils/makeDevFaster";
+import { setupTests } from "./utils/setupTests";
 
 const ERC4337_TEST_ENV_VARIABLES_DEFINED =
   typeof process.env.ERC4337_TEST_BUNDLER_URL !== "undefined" &&
@@ -19,48 +14,8 @@ const ERC4337_TEST_ENV_VARIABLES_DEFINED =
   typeof process.env.MNEMONIC !== "undefined";
 
 const itif = ERC4337_TEST_ENV_VARIABLES_DEFINED ? it : it.skip;
-const BUNDLER_URL = process.env.ERC4337_TEST_BUNDLER_URL;
-const NODE_URL = process.env.ERC4337_TEST_NODE_URL;
-const MNEMONIC = process.env.MNEMONIC;
 
 describe("SafeWebAuthnPlugin", () => {
-  const setupTests = async () => {
-    const bundlerProvider = new ethers.JsonRpcProvider(BUNDLER_URL);
-    const provider = new ethers.JsonRpcProvider(NODE_URL);
-    await makeDevFaster(provider);
-
-    const admin = ethers.Wallet.fromPhrase(MNEMONIC!).connect(provider);
-    const userWallet = ethers.Wallet.createRandom(provider);
-
-    await receiptOf(
-      await admin.sendTransaction({
-        to: userWallet.address,
-        value: ethers.parseEther("1"),
-      }),
-    );
-
-    const entryPoints = (await bundlerProvider.send(
-      "eth_supportedEntryPoints",
-      [],
-    )) as string[];
-
-    if (entryPoints.length === 0) {
-      throw new Error("No entry points found");
-    }
-
-    const ssf = await SafeSingletonFactory.init(admin);
-
-    return {
-      factory: await ssf.connectOrDeploy(SafeProxyFactory__factory, []),
-      singleton: await ssf.connectOrDeploy(Safe__factory, []),
-      bundlerProvider,
-      provider,
-      admin,
-      userWallet,
-      entryPoints,
-    };
-  };
-
   const getPublicKeyAndSignature = () => {
     const publicKey: [BigNumberish, BigNumberish] = [
       BigInt(
@@ -122,13 +77,13 @@ describe("SafeWebAuthnPlugin", () => {
    */
   itif("should pass the ERC4337 validation", async () => {
     const {
-      singleton,
-      factory,
-      provider,
       bundlerProvider,
+      provider,
       admin,
-      userWallet,
+      owner,
       entryPoints,
+      safeProxyFactory,
+      safeSingleton,
     } = await setupTests();
     const { publicKey, userOpSignature } = getPublicKeyAndSignature();
     const ENTRYPOINT_ADDRESS = entryPoints[0];
@@ -154,34 +109,37 @@ describe("SafeWebAuthnPlugin", () => {
     const maxPriorityFeePerGas = `0x${feeData.maxPriorityFeePerGas.toString()}`;
 
     const safeWebAuthnPluginAddress = await safeWebAuthnPlugin.getAddress();
-    const singletonAddress = await singleton.getAddress();
-    const factoryAddress = await factory.getAddress();
+    const singletonAddress = await safeSingleton.getAddress();
+    const factoryAddress = await safeProxyFactory.getAddress();
 
     const moduleInitializer =
       safeWebAuthnPlugin.interface.encodeFunctionData("enableMyself");
-    const encodedInitializer = singleton.interface.encodeFunctionData("setup", [
-      [userWallet.address],
-      1,
-      safeWebAuthnPluginAddress,
-      moduleInitializer,
-      safeWebAuthnPluginAddress,
-      AddressZero,
-      0,
-      AddressZero,
-    ]);
+    const encodedInitializer = safeSingleton.interface.encodeFunctionData(
+      "setup",
+      [
+        [owner.address],
+        1,
+        safeWebAuthnPluginAddress,
+        moduleInitializer,
+        safeWebAuthnPluginAddress,
+        AddressZero,
+        0,
+        AddressZero,
+      ],
+    );
 
     const deployedAddress = await calculateProxyAddress(
-      factory,
+      safeProxyFactory,
       singletonAddress,
       encodedInitializer,
       73,
     );
 
-    // The initCode contains 20 bytes of the factory address and the rest is the
+    // The initCode contains 20 bytes of the safeProxyFactory address and the rest is the
     // calldata to be forwarded
     const initCode = concat([
       factoryAddress,
-      factory.interface.encodeFunctionData("createProxyWithNonce", [
+      safeProxyFactory.interface.encodeFunctionData("createProxyWithNonce", [
         singletonAddress,
         encodedInitializer,
         73,

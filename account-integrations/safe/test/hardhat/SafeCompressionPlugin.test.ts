@@ -7,14 +7,12 @@ import {
   FallbackDecompressor__factory,
   SafeCompressionFactory__factory,
   SafeCompressionPlugin__factory,
-  SafeProxyFactory__factory,
-  Safe__factory,
 } from "../../typechain-types";
 import sendUserOpAndWait from "./utils/sendUserOpAndWait";
 import receiptOf from "./utils/receiptOf";
 import SafeSingletonFactory from "./utils/SafeSingletonFactory";
-import makeDevFaster from "./utils/makeDevFaster";
 import sleep from "./utils/sleep";
+import { setupTests } from "./utils/setupTests";
 
 const ERC4337_TEST_ENV_VARIABLES_DEFINED =
   typeof process.env.ERC4337_TEST_BUNDLER_URL !== "undefined" &&
@@ -22,57 +20,8 @@ const ERC4337_TEST_ENV_VARIABLES_DEFINED =
   typeof process.env.MNEMONIC !== "undefined";
 
 const itif = ERC4337_TEST_ENV_VARIABLES_DEFINED ? it : it.skip;
-const BUNDLER_URL = process.env.ERC4337_TEST_BUNDLER_URL;
-const NODE_URL = process.env.ERC4337_TEST_NODE_URL;
-const MNEMONIC = process.env.MNEMONIC;
 
 describe("SafeCompressionPlugin", () => {
-  const setupTests = async () => {
-    const bundlerProvider = new ethers.JsonRpcProvider(BUNDLER_URL);
-    const provider = new ethers.JsonRpcProvider(NODE_URL);
-    await makeDevFaster(provider);
-
-    const admin = ethers.Wallet.fromPhrase(MNEMONIC!).connect(provider);
-    const userWallet = ethers.Wallet.createRandom(provider);
-
-    await receiptOf(
-      await admin.sendTransaction({
-        to: userWallet.address,
-        value: ethers.parseEther("1"),
-      }),
-    );
-
-    const entryPoints = (await bundlerProvider.send(
-      "eth_supportedEntryPoints",
-      [],
-    )) as string[];
-
-    if (entryPoints.length === 0) {
-      throw new Error("No entry points found");
-    }
-
-    const ssf = await SafeSingletonFactory.init(admin);
-
-    const safeProxyFactory = await ssf.connectOrDeploy(
-      SafeProxyFactory__factory,
-      [],
-    );
-    await safeProxyFactory.waitForDeployment();
-
-    const safeSingleton = await ssf.connectOrDeploy(Safe__factory, []);
-    await safeSingleton.waitForDeployment();
-
-    return {
-      factory: safeProxyFactory,
-      singleton: safeSingleton,
-      bundlerProvider,
-      provider,
-      admin,
-      userWallet,
-      entryPoints,
-    };
-  };
-
   /**
    * This test verifies a ERC4337 transaction succeeds when sent via a plugin
    * The user operation deploys a Safe with the ERC4337 plugin and a handler
@@ -82,12 +31,12 @@ describe("SafeCompressionPlugin", () => {
    */
   itif("should pass the ERC4337 validation", async () => {
     const {
-      singleton,
-      provider,
       bundlerProvider,
+      provider,
       admin,
-      userWallet,
+      owner,
       entryPoints,
+      safeSingleton,
     } = await setupTests();
 
     const ENTRYPOINT_ADDRESS = entryPoints[0];
@@ -109,8 +58,6 @@ describe("SafeCompressionPlugin", () => {
     const maxFeePerGas = `0x${feeData.maxFeePerGas.toString()}`;
     const maxPriorityFeePerGas = `0x${feeData.maxPriorityFeePerGas.toString()}`;
 
-    const owner = ethers.Wallet.createRandom(provider);
-
     await receiptOf(
       admin.sendTransaction({
         to: owner.address,
@@ -129,7 +76,7 @@ describe("SafeCompressionPlugin", () => {
     );
 
     const createArgs = [
-      singleton,
+      safeSingleton,
       ENTRYPOINT_ADDRESS,
       await fallbackDecompressor.getAddress(),
       owner.address,
@@ -144,7 +91,7 @@ describe("SafeCompressionPlugin", () => {
 
     const compressionAccount = SafeCompressionPlugin__factory.connect(
       accountAddress,
-      userWallet,
+      owner,
     );
 
     const recipient = new ethers.Wallet(

@@ -5,17 +5,14 @@ import { UserOperationStruct } from "@account-abstraction/contracts";
 import { signer as hubbleBlsSigner } from "@thehubbleproject/bls";
 import { getUserOpHash } from "@account-abstraction/utils";
 import { calculateProxyAddress } from "./utils/calculateProxyAddress";
-import sendUserOpAndWait from "./utils/sendUserOpAndWait";
 import SafeSingletonFactory from "./utils/SafeSingletonFactory";
-import makeDevFaster from "./utils/makeDevFaster";
 import {
   EntryPoint__factory,
   SafeBlsPlugin__factory,
-  SafeProxyFactory__factory,
-  Safe__factory,
 } from "../../typechain-types";
 import receiptOf from "./utils/receiptOf";
 import sleep from "./utils/sleep";
+import { setupTests } from "./utils/setupTests";
 
 const ERC4337_TEST_ENV_VARIABLES_DEFINED =
   typeof process.env.ERC4337_TEST_BUNDLER_URL !== "undefined" &&
@@ -23,54 +20,11 @@ const ERC4337_TEST_ENV_VARIABLES_DEFINED =
   typeof process.env.MNEMONIC !== "undefined";
 
 const itif = ERC4337_TEST_ENV_VARIABLES_DEFINED ? it : it.skip;
-const BUNDLER_URL = process.env.ERC4337_TEST_BUNDLER_URL;
-const NODE_URL = process.env.ERC4337_TEST_NODE_URL;
-const MNEMONIC = process.env.MNEMONIC;
 
 const BLS_PRIVATE_KEY =
   "0xdbe3d601b1b25c42c50015a87855fdce00ea9b3a7e33c92d31c69aeb70708e08";
 
 describe("SafeBlsPlugin", () => {
-  const setupTests = async () => {
-    const bundlerProvider = new ethers.JsonRpcProvider(BUNDLER_URL);
-    const provider = new ethers.JsonRpcProvider(NODE_URL);
-    await makeDevFaster(provider);
-
-    const admin = ethers.Wallet.fromPhrase(MNEMONIC!).connect(provider);
-    const userWallet = ethers.Wallet.createRandom(provider);
-
-    await receiptOf(
-      await admin.sendTransaction({
-        to: userWallet.address,
-        value: ethers.parseEther("1"),
-      }),
-    );
-
-    const entryPoints = (await bundlerProvider.send(
-      "eth_supportedEntryPoints",
-      [],
-    )) as string[];
-
-    if (entryPoints.length === 0) {
-      throw new Error("No entry points found");
-    }
-
-    const ssf = await SafeSingletonFactory.init(admin);
-
-    return {
-      safeProxyFactory: await ssf.connectOrDeploy(
-        SafeProxyFactory__factory,
-        [],
-      ),
-      safe: await ssf.connectOrDeploy(Safe__factory, []),
-      entryPoints,
-      bundlerProvider,
-      provider,
-      admin,
-      userWallet,
-    };
-  };
-
   /**
    * This test verifies a ERC4337 transaction succeeds when sent via a plugin
    * The user operation deploys a Safe with the ERC4337 plugin and a handler
@@ -80,13 +34,13 @@ describe("SafeBlsPlugin", () => {
    */
   itif("should pass the ERC4337 validation", async () => {
     const {
-      entryPoints,
-      safe,
-      safeProxyFactory,
       bundlerProvider,
       provider,
       admin,
-      userWallet,
+      owner,
+      entryPoints,
+      safeProxyFactory,
+      safeSingleton,
     } = await setupTests();
 
     const domain = getBytes(keccak256(Buffer.from("eip4337.bls.domain")));
@@ -113,21 +67,24 @@ describe("SafeBlsPlugin", () => {
     const maxPriorityFeePerGas = `0x${feeData.maxPriorityFeePerGas.toString()}`;
 
     const safeBlsPluginAddress = await safeBlsPlugin.getAddress();
-    const singletonAddress = await safe.getAddress();
+    const singletonAddress = await safeSingleton.getAddress();
     const factoryAddress = await safeProxyFactory.getAddress();
 
     const moduleInitializer =
       safeBlsPlugin.interface.encodeFunctionData("enableMyself");
-    const encodedInitializer = safe.interface.encodeFunctionData("setup", [
-      [userWallet.address],
-      1,
-      safeBlsPluginAddress,
-      moduleInitializer,
-      safeBlsPluginAddress,
-      AddressZero,
-      0,
-      AddressZero,
-    ]);
+    const encodedInitializer = safeSingleton.interface.encodeFunctionData(
+      "setup",
+      [
+        [owner.address],
+        1,
+        safeBlsPluginAddress,
+        moduleInitializer,
+        safeBlsPluginAddress,
+        AddressZero,
+        0,
+        AddressZero,
+      ],
+    );
 
     const deployedAddress = await calculateProxyAddress(
       safeProxyFactory,

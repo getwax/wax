@@ -5,13 +5,11 @@ import { getUserOpHash } from "@account-abstraction/utils";
 import {
   SafeECDSAFactory__factory,
   SafeECDSAPlugin__factory,
-  SafeProxyFactory__factory,
-  Safe__factory,
 } from "../../typechain-types";
 import sendUserOpAndWait from "./utils/sendUserOpAndWait";
 import receiptOf from "./utils/receiptOf";
 import SafeSingletonFactory from "./utils/SafeSingletonFactory";
-import makeDevFaster from "./utils/makeDevFaster";
+import { setupTests } from "./utils/setupTests";
 
 const ERC4337_TEST_ENV_VARIABLES_DEFINED =
   typeof process.env.ERC4337_TEST_BUNDLER_URL !== "undefined" &&
@@ -19,61 +17,22 @@ const ERC4337_TEST_ENV_VARIABLES_DEFINED =
   typeof process.env.MNEMONIC !== "undefined";
 
 const itif = ERC4337_TEST_ENV_VARIABLES_DEFINED ? it : it.skip;
-const BUNDLER_URL = process.env.ERC4337_TEST_BUNDLER_URL;
-const NODE_URL = process.env.ERC4337_TEST_NODE_URL;
-const MNEMONIC = process.env.MNEMONIC;
 
 const oneEther = ethers.parseEther("1");
 
 describe("SafeECDSAPlugin", () => {
-  const setupTests = async () => {
-    const bundlerProvider = new ethers.JsonRpcProvider(BUNDLER_URL);
-    const provider = new ethers.JsonRpcProvider(NODE_URL);
-    await makeDevFaster(provider);
-
-    const admin = ethers.Wallet.fromPhrase(MNEMONIC!).connect(provider);
-    const userWallet = ethers.Wallet.createRandom(provider);
-    await receiptOf(
-      await admin.sendTransaction({
-        to: userWallet.address,
-        value: ethers.parseEther("1"),
-      }),
-    );
-
-    const entryPoints = (await bundlerProvider.send(
-      "eth_supportedEntryPoints",
-      [],
-    )) as string[];
-
-    if (entryPoints.length === 0) {
-      throw new Error("No entry points found");
-    }
-
-    const ssf = await SafeSingletonFactory.init(admin);
-
-    return {
-      factory: await ssf.connectOrDeploy(SafeProxyFactory__factory, []),
-      singleton: await ssf.connectOrDeploy(Safe__factory, []),
-      bundlerProvider,
-      provider,
-      admin,
-      userWallet,
-      entryPoints,
-    };
-  };
-
   async function setupDeployedAccount(
     to: ethers.AddressLike,
     value: ethers.BigNumberish,
     data: ethers.BytesLike,
   ) {
     const {
-      singleton,
-      provider,
       bundlerProvider,
+      provider,
       admin,
-      userWallet,
+      owner,
       entryPoints,
+      safeSingleton,
     } = await setupTests();
     const ENTRYPOINT_ADDRESS = entryPoints[0];
 
@@ -94,10 +53,8 @@ describe("SafeECDSAPlugin", () => {
     const maxFeePerGas = `0x${feeData.maxFeePerGas.toString()}`;
     const maxPriorityFeePerGas = `0x${feeData.maxPriorityFeePerGas.toString()}`;
 
-    const owner = ethers.Wallet.createRandom();
-
     const createArgs = [
-      singleton,
+      safeSingleton,
       ENTRYPOINT_ADDRESS,
       owner.address,
       0,
@@ -178,7 +135,7 @@ describe("SafeECDSAPlugin", () => {
       bundlerProvider,
       entryPoint: ENTRYPOINT_ADDRESS,
       admin,
-      userWallet,
+      owner,
       accountAddress,
     };
   }

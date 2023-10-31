@@ -8,37 +8,58 @@ import { UserOperationStruct } from "@account-abstraction/contracts";
 import { SafeProxyFactory } from "../../../typechain-types/lib/safe-contracts/contracts/proxies/SafeProxyFactory";
 import { Safe } from "../../../typechain-types/lib/safe-contracts/contracts/Safe";
 import { EntryPoint } from "../../../typechain-types/lib/account-abstraction/contracts/core/EntryPoint";
+import {
+  SafeProxyFactory__factory,
+  Safe__factory,
+} from "../../../typechain-types";
+import SafeSingletonFactory from "./SafeSingletonFactory";
+import receiptOf from "./receiptOf";
+import makeDevFaster from "./makeDevFaster";
 
-const MNEMONIC = "test test test test test test test test test test test junk";
+const BUNDLER_URL = process.env.ERC4337_TEST_BUNDLER_URL;
+const NODE_URL = process.env.ERC4337_TEST_NODE_URL;
+const MNEMONIC = process.env.MNEMONIC;
 
 export async function setupTests() {
-  const safeProxyFactory = await (
-    await ethers.getContractFactory("SafeProxyFactory")
-  ).deploy();
-  const safeContract = await (await ethers.getContractFactory("Safe")).deploy();
-  const entryPointContract = await (
-    await ethers.getContractFactory("EntryPoint")
-  ).deploy();
+  const bundlerProvider = new ethers.JsonRpcProvider(BUNDLER_URL);
+  const provider = new ethers.JsonRpcProvider(NODE_URL);
+  await makeDevFaster(provider);
 
-  const provider = ethers.provider;
-  const safeOwner = ethers.Wallet.fromPhrase(MNEMONIC).connect(provider);
+  const admin = ethers.Wallet.fromPhrase(MNEMONIC!).connect(provider);
+  const owner = ethers.Wallet.createRandom(provider);
 
-  const { safeEcdsaPluginContract, counterfactualAddress } =
-    await deploySafeAndECDSAPlugin(
-      safeOwner,
-      entryPointContract,
-      safeContract,
-      safeProxyFactory,
-    );
+  await receiptOf(
+    await admin.sendTransaction({
+      to: owner.address,
+      value: ethers.parseEther("1"),
+    }),
+  );
+
+  const entryPoints = (await bundlerProvider.send(
+    "eth_supportedEntryPoints",
+    [],
+  )) as string[];
+
+  if (entryPoints.length === 0) {
+    throw new Error("No entry points found");
+  }
+
+  const ssf = await SafeSingletonFactory.init(admin);
+
+  const safeProxyFactory = await ssf.connectOrDeploy(
+    SafeProxyFactory__factory,
+    [],
+  );
+  const safeSingleton = await ssf.connectOrDeploy(Safe__factory, []);
 
   return {
+    bundlerProvider,
     provider,
-    safeOwner,
+    admin,
+    owner,
+    entryPoints,
     safeProxyFactory,
-    safeContract,
-    entryPointContract,
-    safeEcdsaPluginContract,
-    counterfactualAddress,
+    safeSingleton,
   };
 }
 
