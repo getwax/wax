@@ -14,25 +14,11 @@ import receiptOf from "./utils/receiptOf";
 import sleep from "./utils/sleep";
 import { setupTests } from "./utils/setupTests";
 
-const ERC4337_TEST_ENV_VARIABLES_DEFINED =
-  typeof process.env.ERC4337_TEST_BUNDLER_URL !== "undefined" &&
-  typeof process.env.ERC4337_TEST_NODE_URL !== "undefined" &&
-  typeof process.env.MNEMONIC !== "undefined";
-
-const itif = ERC4337_TEST_ENV_VARIABLES_DEFINED ? it : it.skip;
-
 const BLS_PRIVATE_KEY =
   "0xdbe3d601b1b25c42c50015a87855fdce00ea9b3a7e33c92d31c69aeb70708e08";
 
 describe("SafeBlsPlugin", () => {
-  /**
-   * This test verifies a ERC4337 transaction succeeds when sent via a plugin
-   * The user operation deploys a Safe with the ERC4337 plugin and a handler
-   * and executes a transaction, thus verifying two things:
-   * 1. Deployment of the Safe with the ERC4337 plugin and handler is possible
-   * 2. Executing a transaction is possible
-   */
-  itif("should pass the ERC4337 validation", async () => {
+  it("should pass the ERC4337 validation", async () => {
     const {
       bundlerProvider,
       provider,
@@ -188,16 +174,6 @@ describe("SafeBlsPlugin", () => {
       ...unsignedUserOperation,
       signature: solidityPacked(["uint256", "uint256"], userOpSignature),
     };
-
-    // Uncomment to get a detailed debug message
-    // const DEBUG_MESSAGE = `
-    //         Using entry point: ${ENTRYPOINT_ADDRESS}
-    //         Deployed Safe address: ${deployedAddress}
-    //         Module/Handler address: ${safeBlsPluginAddress}
-    //         User operation:
-    //         ${JSON.stringify(userOperation, null, 2)}
-    //     `;
-    // console.log(DEBUG_MESSAGE);
 
     const recipientBalanceBefore = await provider.getBalance(recipientAddress);
 

@@ -8,13 +8,6 @@ import sendUserOpAndWait from "./utils/sendUserOpAndWait";
 import receiptOf from "./utils/receiptOf";
 import { setupTests } from "./utils/setupTests";
 
-const ERC4337_TEST_ENV_VARIABLES_DEFINED =
-  typeof process.env.ERC4337_TEST_BUNDLER_URL !== "undefined" &&
-  typeof process.env.ERC4337_TEST_NODE_URL !== "undefined" &&
-  typeof process.env.MNEMONIC !== "undefined";
-
-const itif = ERC4337_TEST_ENV_VARIABLES_DEFINED ? it : it.skip;
-
 describe("SafeWebAuthnPlugin", () => {
   const getPublicKeyAndSignature = () => {
     const publicKey: [BigNumberish, BigNumberish] = [
@@ -68,14 +61,7 @@ describe("SafeWebAuthnPlugin", () => {
     return { publicKey, userOpSignature };
   };
 
-  /**
-   * This test verifies a ERC4337 transaction succeeds when sent via a plugin
-   * The user operation deploys a Safe with the ERC4337 plugin and a handler
-   * and executes a transaction, thus verifying two things:
-   * 1. Deployment of the Safe with the ERC4337 plugin and handler is possible
-   * 2. Executing a transaction is possible
-   */
-  itif("should pass the ERC4337 validation", async () => {
+  it("should pass the ERC4337 validation", async () => {
     const {
       bundlerProvider,
       provider,
@@ -205,16 +191,6 @@ describe("SafeWebAuthnPlugin", () => {
       paymasterAndData: "0x",
       signature: userOpSignature,
     };
-
-    // Uncomment to get a detailed debug message
-    // const DEBUG_MESSAGE = `
-    //         Using entry point: ${ENTRYPOINT_ADDRESS}
-    //         Deployed Safe address: ${deployedAddress}
-    //         Module/Handler address: ${safeWebAuthnPluginAddress}
-    //         User operation:
-    //         ${JSON.stringify(userOperation, null, 2)}
-    //     `;
-    // console.log(DEBUG_MESSAGE);
 
     const recipientBalanceBefore = await provider.getBalance(recipientAddress);
 

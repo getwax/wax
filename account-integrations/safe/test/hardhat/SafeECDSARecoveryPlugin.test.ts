@@ -4,55 +4,23 @@ import { ethers } from "ethers";
 import { executeContractCallWithSigners } from "./utils/execution";
 
 import SafeSingletonFactory from "./utils/SafeSingletonFactory";
-import makeDevFaster from "./utils/makeDevFaster";
 import {
   SafeECDSAFactory__factory,
   SafeECDSAPlugin__factory,
   SafeECDSARecoveryPlugin,
   SafeECDSARecoveryPlugin__factory,
-  SafeProxyFactory__factory,
   Safe__factory,
 } from "../../typechain-types";
 import receiptOf from "./utils/receiptOf";
 import sleep from "./utils/sleep";
-
-const BUNDLER_URL = process.env.ERC4337_TEST_BUNDLER_URL;
-const NODE_URL = process.env.ERC4337_TEST_NODE_URL;
-const MNEMONIC = process.env.MNEMONIC;
+import { setupTests } from "./utils/setupTests";
 
 describe("SafeECDSARecoveryPlugin", () => {
-  async function setupTests() {
-    const bundlerProvider = new ethers.JsonRpcProvider(BUNDLER_URL);
-    const provider = new ethers.JsonRpcProvider(NODE_URL);
-    await makeDevFaster(provider);
-
-    const admin = ethers.Wallet.fromPhrase(MNEMONIC!).connect(provider);
-    const owner = ethers.Wallet.createRandom(provider);
-
-    await receiptOf(
-      admin.sendTransaction({
-        to: owner.address,
-        value: ethers.parseEther("1"),
-      }),
-    );
-
-    const entryPoints = (await bundlerProvider.send(
-      "eth_supportedEntryPoints",
-      [],
-    )) as string[];
-
-    if (entryPoints.length === 0) {
-      throw new Error("No entry points found");
-    }
+  it("Should enable a recovery plugin on a safe.", async () => {
+    const { provider, admin, owner, entryPoints, safeSingleton } =
+      await setupTests();
 
     const ssf = await SafeSingletonFactory.init(admin);
-
-    const safeProxyFactory = await ssf.connectOrDeploy(
-      SafeProxyFactory__factory,
-      [],
-    );
-    await safeProxyFactory.waitForDeployment();
-    const safeSingleton = await ssf.connectOrDeploy(Safe__factory, []);
 
     const safeECDSAFactory = await ssf.connectOrDeploy(
       SafeECDSAFactory__factory,
@@ -72,28 +40,6 @@ describe("SafeECDSARecoveryPlugin", () => {
     );
 
     await receiptOf(safeECDSAFactory.create(...createArgs));
-    const safeProxyWithEcdsaPluginInterface = SafeECDSAPlugin__factory.connect(
-      safeProxyAddress,
-      provider,
-    );
-
-    const safeECDSAPluginAddress =
-      await safeProxyWithEcdsaPluginInterface.myAddress();
-
-    return {
-      provider,
-      admin,
-      owner,
-      safeProxyFactory,
-      safeSingleton,
-      entryPoints,
-      safeProxyAddress,
-      safeECDSAPluginAddress,
-    };
-  }
-
-  it("Should enable a recovery plugin on a safe.", async () => {
-    const { provider, owner, admin, safeProxyAddress } = await setupTests();
 
     // Setup recovery plugin
     const recoverySigner = ethers.Wallet.createRandom(provider);
@@ -104,7 +50,6 @@ describe("SafeECDSARecoveryPlugin", () => {
         value: ethers.parseEther("1"),
       }),
     );
-    const ssf = await SafeSingletonFactory.init(admin);
 
     const recoveryPlugin = await ssf.connectOrDeploy(
       SafeECDSARecoveryPlugin__factory,
@@ -142,8 +87,36 @@ describe("SafeECDSARecoveryPlugin", () => {
   });
 
   it("Should use recovery plugin to reset signing key and then send tx with new key.", async () => {
-    const { provider, owner, admin, safeProxyAddress, safeECDSAPluginAddress } =
+    const { provider, admin, owner, entryPoints, safeSingleton } =
       await setupTests();
+
+    const ssf = await SafeSingletonFactory.init(admin);
+
+    const safeECDSAFactory = await ssf.connectOrDeploy(
+      SafeECDSAFactory__factory,
+      [],
+    );
+    await safeECDSAFactory.waitForDeployment();
+
+    const createArgs = [
+      safeSingleton,
+      entryPoints[0],
+      owner.address,
+      0,
+    ] satisfies Parameters<typeof safeECDSAFactory.create.staticCall>;
+
+    const safeProxyAddress = await safeECDSAFactory.create.staticCall(
+      ...createArgs,
+    );
+
+    await receiptOf(safeECDSAFactory.create(...createArgs));
+    const safeProxyWithEcdsaPluginInterface = SafeECDSAPlugin__factory.connect(
+      safeProxyAddress,
+      provider,
+    );
+
+    const safeECDSAPluginAddress =
+      await safeProxyWithEcdsaPluginInterface.myAddress();
 
     // Setup recovery plugin
     const recoverySigner = ethers.Wallet.createRandom(provider);
@@ -153,7 +126,6 @@ describe("SafeECDSARecoveryPlugin", () => {
         value: ethers.parseEther("1"),
       }),
     );
-    const ssf = await SafeSingletonFactory.init(admin);
 
     const recoveryPlugin = await ssf.connectOrDeploy(
       SafeECDSARecoveryPlugin__factory,

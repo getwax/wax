@@ -11,13 +11,6 @@ import receiptOf from "./utils/receiptOf";
 import SafeSingletonFactory from "./utils/SafeSingletonFactory";
 import { setupTests } from "./utils/setupTests";
 
-const ERC4337_TEST_ENV_VARIABLES_DEFINED =
-  typeof process.env.ERC4337_TEST_BUNDLER_URL !== "undefined" &&
-  typeof process.env.ERC4337_TEST_NODE_URL !== "undefined" &&
-  typeof process.env.MNEMONIC !== "undefined";
-
-const itif = ERC4337_TEST_ENV_VARIABLES_DEFINED ? it : it.skip;
-
 const oneEther = ethers.parseEther("1");
 
 describe("SafeECDSAPlugin", () => {
@@ -118,16 +111,6 @@ describe("SafeECDSAPlugin", () => {
       signature: userOpSignature,
     };
 
-    // Uncomment to get a detailed debug message
-    // const DEBUG_MESSAGE = `
-    //         Using entry point: ${ENTRYPOINT_ADDRESS}
-    //         Deployed Safe address: ${deployedAddress}
-    //         Module/Handler address: ${safeECDSAPluginAddress}
-    //         User operation:
-    //         ${JSON.stringify(userOperation, null, 2)}
-    //     `;
-    // console.log(DEBUG_MESSAGE);
-
     await sendUserOpAndWait(userOperation, ENTRYPOINT_ADDRESS, bundlerProvider);
 
     return {
@@ -140,14 +123,7 @@ describe("SafeECDSAPlugin", () => {
     };
   }
 
-  /**
-   * This test verifies a ERC4337 transaction succeeds when sent via a plugin
-   * The user operation deploys a Safe with the ERC4337 plugin and a handler
-   * and executes a transaction, thus verifying two things:
-   * 1. Deployment of the Safe with the ERC4337 plugin and handler is possible
-   * 2. Executing a transaction is possible
-   */
-  itif("should pass the ERC4337 validation", async () => {
+  it("should pass the ERC4337 validation", async () => {
     const recipient = ethers.Wallet.createRandom();
 
     const { provider } = await setupDeployedAccount(
@@ -159,7 +135,7 @@ describe("SafeECDSAPlugin", () => {
     expect(await provider.getBalance(recipient.address)).to.equal(oneEther);
   });
 
-  itif("should not allow execTransaction from unrelated address", async () => {
+  it("should not allow execTransaction from unrelated address", async () => {
     const { accountAddress, admin, provider } = await setupDeployedAccount(
       ethers.ZeroAddress,
       0,
