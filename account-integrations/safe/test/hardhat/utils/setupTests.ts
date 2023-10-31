@@ -1,13 +1,13 @@
 import { ethers } from "hardhat";
 import { HDNodeWallet, getBytes } from "ethers";
 import { AddressZero } from "@ethersproject/constants";
-import { calculateProxyAddress } from "./utils/calculateProxyAddress";
+import { calculateProxyAddress } from "./calculateProxyAddress";
 import { getUserOpHash } from "@account-abstraction/utils";
 import { UserOperationStruct } from "@account-abstraction/contracts";
 
-import { SafeProxyFactory } from "../../typechain-types/lib/safe-contracts/contracts/proxies/SafeProxyFactory";
-import { Safe } from "../../typechain-types/lib/safe-contracts/contracts/Safe";
-import { EntryPoint } from "../../typechain-types/lib/account-abstraction/contracts/core/EntryPoint";
+import { SafeProxyFactory } from "../../../typechain-types/lib/safe-contracts/contracts/proxies/SafeProxyFactory";
+import { Safe } from "../../../typechain-types/lib/safe-contracts/contracts/Safe";
+import { EntryPoint } from "../../../typechain-types/lib/account-abstraction/contracts/core/EntryPoint";
 
 const MNEMONIC = "test test test test test test test test test test test junk";
 

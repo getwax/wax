@@ -3,15 +3,15 @@ import { expect } from "chai";
 import { AddressZero } from "@ethersproject/constants";
 import { concat, ethers, BigNumberish } from "ethers";
 import { UserOperationStruct } from "@account-abstraction/contracts";
-import { calculateProxyAddress } from "../utils/calculateProxyAddress";
+import { calculateProxyAddress } from "./utils/calculateProxyAddress";
 import {
   SafeProxyFactory__factory,
   Safe__factory,
-} from "../../../typechain-types";
-import sendUserOpAndWait from "../utils/sendUserOpAndWait";
-import receiptOf from "../utils/receiptOf";
-import SafeSingletonFactory from "../utils/SafeSingletonFactory";
-import makeDevFaster from "../utils/makeDevFaster";
+} from "../../typechain-types";
+import sendUserOpAndWait from "./utils/sendUserOpAndWait";
+import receiptOf from "./utils/receiptOf";
+import SafeSingletonFactory from "./utils/SafeSingletonFactory";
+import makeDevFaster from "./utils/makeDevFaster";
 
 const ERC4337_TEST_ENV_VARIABLES_DEFINED =
   typeof process.env.ERC4337_TEST_BUNDLER_URL !== "undefined" &&

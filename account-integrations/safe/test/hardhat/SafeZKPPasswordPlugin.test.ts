@@ -3,17 +3,17 @@ import { getUserOpHash } from "@account-abstraction/utils";
 import { ERC4337ZKPPasswordClient } from "@getwax/circuits";
 import { expect } from "chai";
 import { resolveProperties, ethers, NonceManager } from "ethers";
-import makeDevFaster from "../utils/makeDevFaster";
-import SafeSingletonFactory from "../utils/SafeSingletonFactory";
-import sendUserOpAndWait from "../utils/sendUserOpAndWait";
-import receiptOf from "../utils/receiptOf";
+import makeDevFaster from "./utils/makeDevFaster";
+import SafeSingletonFactory from "./utils/SafeSingletonFactory";
+import sendUserOpAndWait from "./utils/sendUserOpAndWait";
+import receiptOf from "./utils/receiptOf";
 import {
   MockPasswordVerifier__factory,
   SafeZKPPasswordFactory__factory,
   SafeZKPPasswordPlugin__factory,
   SafeProxyFactory__factory,
   Safe__factory,
-} from "../../../typechain-types";
+} from "../../typechain-types";
 
 const ERC4337_TEST_ENV_VARIABLES_DEFINED =
   typeof process.env.ERC4337_TEST_BUNDLER_URL !== "undefined" &&

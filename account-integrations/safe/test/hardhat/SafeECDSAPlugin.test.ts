@@ -3,18 +3,15 @@ import { getBytes, resolveProperties, ethers } from "ethers";
 import { UserOperationStruct } from "@account-abstraction/contracts";
 import { getUserOpHash } from "@account-abstraction/utils";
 import {
-  AddressRegistry__factory,
-  FallbackDecompressor__factory,
-  SafeCompressionFactory__factory,
-  SafeCompressionPlugin__factory,
+  SafeECDSAFactory__factory,
+  SafeECDSAPlugin__factory,
   SafeProxyFactory__factory,
   Safe__factory,
-} from "../../../typechain-types";
-import sendUserOpAndWait from "../utils/sendUserOpAndWait";
-import receiptOf from "../utils/receiptOf";
-import SafeSingletonFactory from "../utils/SafeSingletonFactory";
-import makeDevFaster from "../utils/makeDevFaster";
-import sleep from "../utils/sleep";
+} from "../../typechain-types";
+import sendUserOpAndWait from "./utils/sendUserOpAndWait";
+import receiptOf from "./utils/receiptOf";
+import SafeSingletonFactory from "./utils/SafeSingletonFactory";
+import makeDevFaster from "./utils/makeDevFaster";
 
 const ERC4337_TEST_ENV_VARIABLES_DEFINED =
   typeof process.env.ERC4337_TEST_BUNDLER_URL !== "undefined" &&
@@ -26,7 +23,9 @@ const BUNDLER_URL = process.env.ERC4337_TEST_BUNDLER_URL;
 const NODE_URL = process.env.ERC4337_TEST_NODE_URL;
 const MNEMONIC = process.env.MNEMONIC;
 
-describe("SafeCompressionPlugin", () => {
+const oneEther = ethers.parseEther("1");
+
+describe("SafeECDSAPlugin", () => {
   const setupTests = async () => {
     const bundlerProvider = new ethers.JsonRpcProvider(BUNDLER_URL);
     const provider = new ethers.JsonRpcProvider(NODE_URL);
@@ -34,7 +33,6 @@ describe("SafeCompressionPlugin", () => {
 
     const admin = ethers.Wallet.fromPhrase(MNEMONIC!).connect(provider);
     const userWallet = ethers.Wallet.createRandom(provider);
-
     await receiptOf(
       await admin.sendTransaction({
         to: userWallet.address,
@@ -53,18 +51,9 @@ describe("SafeCompressionPlugin", () => {
 
     const ssf = await SafeSingletonFactory.init(admin);
 
-    const safeProxyFactory = await ssf.connectOrDeploy(
-      SafeProxyFactory__factory,
-      [],
-    );
-    await safeProxyFactory.waitForDeployment();
-
-    const safeSingleton = await ssf.connectOrDeploy(Safe__factory, []);
-    await safeSingleton.waitForDeployment();
-
     return {
-      factory: safeProxyFactory,
-      singleton: safeSingleton,
+      factory: await ssf.connectOrDeploy(SafeProxyFactory__factory, []),
+      singleton: await ssf.connectOrDeploy(Safe__factory, []),
       bundlerProvider,
       provider,
       admin,
@@ -73,14 +62,11 @@ describe("SafeCompressionPlugin", () => {
     };
   };
 
-  /**
-   * This test verifies a ERC4337 transaction succeeds when sent via a plugin
-   * The user operation deploys a Safe with the ERC4337 plugin and a handler
-   * and executes a transaction, thus verifying two things:
-   * 1. Deployment of the Safe with the ERC4337 plugin and handler is possible
-   * 2. Executing a transaction is possible
-   */
-  itif("should pass the ERC4337 validation", async () => {
+  async function setupDeployedAccount(
+    to: ethers.AddressLike,
+    value: ethers.BigNumberish,
+    data: ethers.BytesLike,
+  ) {
     const {
       singleton,
       provider,
@@ -89,13 +75,12 @@ describe("SafeCompressionPlugin", () => {
       userWallet,
       entryPoints,
     } = await setupTests();
-
     const ENTRYPOINT_ADDRESS = entryPoints[0];
 
     const ssf = await SafeSingletonFactory.init(admin);
 
-    const safeCompressionFactory = await ssf.connectOrDeploy(
-      SafeCompressionFactory__factory,
+    const safeECDSAFactory = await ssf.connectOrDeploy(
+      SafeECDSAFactory__factory,
       [],
     );
 
@@ -109,73 +94,37 @@ describe("SafeCompressionPlugin", () => {
     const maxFeePerGas = `0x${feeData.maxFeePerGas.toString()}`;
     const maxPriorityFeePerGas = `0x${feeData.maxPriorityFeePerGas.toString()}`;
 
-    const owner = ethers.Wallet.createRandom(provider);
-
-    await receiptOf(
-      admin.sendTransaction({
-        to: owner.address,
-        value: ethers.parseEther("1"),
-      }),
-    );
-
-    const addressRegistry = await ssf.connectOrDeploy(
-      AddressRegistry__factory,
-      [],
-    );
-
-    const fallbackDecompressor = await ssf.connectOrDeploy(
-      FallbackDecompressor__factory,
-      [await addressRegistry.getAddress()],
-    );
+    const owner = ethers.Wallet.createRandom();
 
     const createArgs = [
       singleton,
       ENTRYPOINT_ADDRESS,
-      await fallbackDecompressor.getAddress(),
       owner.address,
       0,
-    ] satisfies Parameters<typeof safeCompressionFactory.create.staticCall>;
+    ] satisfies Parameters<typeof safeECDSAFactory.create.staticCall>;
 
-    const accountAddress = await safeCompressionFactory.create.staticCall(
+    const accountAddress = await safeECDSAFactory.create.staticCall(
       ...createArgs,
     );
 
-    await receiptOf(safeCompressionFactory.create(...createArgs));
-
-    const compressionAccount = SafeCompressionPlugin__factory.connect(
-      accountAddress,
-      userWallet,
-    );
+    await receiptOf(safeECDSAFactory.create(...createArgs));
 
     const recipient = new ethers.Wallet(
       "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d",
     );
-
     const transferAmount = ethers.parseEther("1");
 
-    const compressedActions = await fallbackDecompressor.compress(
-      [
-        {
-          to: recipient.address,
-          value: transferAmount,
-          data: "0x",
-        },
-      ],
-      [],
-    );
-    // TODO: why is this needed to prevent "nonce too low" error
-    await sleep(5000);
-
-    const userOpCallData = compressionAccount.interface.encodeFunctionData(
-      "decompressAndPerform",
-      [compressedActions],
-    );
+    const userOpCallData =
+      SafeECDSAPlugin__factory.createInterface().encodeFunctionData(
+        "execTransaction",
+        [to, value, data],
+      );
 
     // Native tokens for the pre-fund 💸
     await receiptOf(
       admin.sendTransaction({
         to: accountAddress,
-        value: ethers.parseEther("10"), // TODO: increasing this from 1 to 10 prevents error of balance not updating for assertion??????
+        value: ethers.parseEther("10"),
       }),
     );
 
@@ -212,13 +161,74 @@ describe("SafeCompressionPlugin", () => {
       signature: userOpSignature,
     };
 
-    const recipientBalanceBefore = await provider.getBalance(recipient.address);
+    // Uncomment to get a detailed debug message
+    // const DEBUG_MESSAGE = `
+    //         Using entry point: ${ENTRYPOINT_ADDRESS}
+    //         Deployed Safe address: ${deployedAddress}
+    //         Module/Handler address: ${safeECDSAPluginAddress}
+    //         User operation:
+    //         ${JSON.stringify(userOperation, null, 2)}
+    //     `;
+    // console.log(DEBUG_MESSAGE);
 
     await sendUserOpAndWait(userOperation, ENTRYPOINT_ADDRESS, bundlerProvider);
 
-    const recipientBalanceAfter = await provider.getBalance(recipient.address);
+    return {
+      provider,
+      bundlerProvider,
+      entryPoint: ENTRYPOINT_ADDRESS,
+      admin,
+      userWallet,
+      accountAddress,
+    };
+  }
 
-    const expectedRecipientBalance = recipientBalanceBefore + transferAmount;
-    expect(recipientBalanceAfter).to.equal(expectedRecipientBalance);
+  /**
+   * This test verifies a ERC4337 transaction succeeds when sent via a plugin
+   * The user operation deploys a Safe with the ERC4337 plugin and a handler
+   * and executes a transaction, thus verifying two things:
+   * 1. Deployment of the Safe with the ERC4337 plugin and handler is possible
+   * 2. Executing a transaction is possible
+   */
+  itif("should pass the ERC4337 validation", async () => {
+    const recipient = ethers.Wallet.createRandom();
+
+    const { provider } = await setupDeployedAccount(
+      recipient.address,
+      oneEther,
+      "0x",
+    );
+
+    expect(await provider.getBalance(recipient.address)).to.equal(oneEther);
+  });
+
+  itif("should not allow execTransaction from unrelated address", async () => {
+    const { accountAddress, admin, provider } = await setupDeployedAccount(
+      ethers.ZeroAddress,
+      0,
+      "0x",
+    );
+
+    const unrelatedWallet = ethers.Wallet.createRandom(provider);
+
+    await receiptOf(
+      admin.sendTransaction({
+        to: unrelatedWallet.address,
+        value: 100n * oneEther,
+      }),
+    );
+
+    const account = SafeECDSAPlugin__factory.connect(
+      accountAddress,
+      unrelatedWallet,
+    );
+
+    const recipient = ethers.Wallet.createRandom(provider);
+
+    await expect(
+      receiptOf(account.execTransaction(recipient.address, oneEther, "0x")),
+    ).to.eventually.rejected;
+
+    await expect(provider.getBalance(recipient)).to.eventually.equal(0n);
   });
 });
