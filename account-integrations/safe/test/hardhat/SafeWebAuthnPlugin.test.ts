@@ -1,12 +1,11 @@
 import hre from "hardhat";
 import { expect } from "chai";
-import { AddressZero } from "@ethersproject/constants";
-import { concat, ethers, BigNumberish } from "ethers";
-import { UserOperationStruct } from "@account-abstraction/contracts";
-import { calculateProxyAddress } from "./utils/calculateProxyAddress";
+import { ethers, BigNumberish } from "ethers";
 import sendUserOpAndWait from "./utils/sendUserOpAndWait";
-import receiptOf from "./utils/receiptOf";
-import { setupTests } from "./utils/setupTests";
+import {
+  createUnsignedUserOperationWithInitCode,
+  setupTests,
+} from "./utils/setupTests";
 
 describe("SafeWebAuthnPlugin", () => {
   const getPublicKeyAndSignature = () => {
@@ -67,70 +66,21 @@ describe("SafeWebAuthnPlugin", () => {
       provider,
       admin,
       owner,
-      entryPoints,
+      entryPointAddress,
       safeProxyFactory,
       safeSingleton,
     } = await setupTests();
     const { publicKey, userOpSignature } = getPublicKeyAndSignature();
-    const ENTRYPOINT_ADDRESS = entryPoints[0];
 
     const safeWebAuthnPluginFactory = (
       await hre.ethers.getContractFactory("SafeWebAuthnPlugin")
     ).connect(admin);
     const safeWebAuthnPlugin = await safeWebAuthnPluginFactory.deploy(
-      ENTRYPOINT_ADDRESS,
+      entryPointAddress,
       publicKey,
       { gasLimit: 2_000_000 },
     );
     await safeWebAuthnPlugin.deploymentTransaction()?.wait();
-
-    const feeData = await provider.getFeeData();
-    if (!feeData.maxFeePerGas || !feeData.maxPriorityFeePerGas) {
-      throw new Error(
-        "maxFeePerGas or maxPriorityFeePerGas is null or undefined",
-      );
-    }
-
-    const maxFeePerGas = `0x${feeData.maxFeePerGas.toString()}`;
-    const maxPriorityFeePerGas = `0x${feeData.maxPriorityFeePerGas.toString()}`;
-
-    const safeWebAuthnPluginAddress = await safeWebAuthnPlugin.getAddress();
-    const singletonAddress = await safeSingleton.getAddress();
-    const factoryAddress = await safeProxyFactory.getAddress();
-
-    const moduleInitializer =
-      safeWebAuthnPlugin.interface.encodeFunctionData("enableMyself");
-    const encodedInitializer = safeSingleton.interface.encodeFunctionData(
-      "setup",
-      [
-        [owner.address],
-        1,
-        safeWebAuthnPluginAddress,
-        moduleInitializer,
-        safeWebAuthnPluginAddress,
-        AddressZero,
-        0,
-        AddressZero,
-      ],
-    );
-
-    const deployedAddress = await calculateProxyAddress(
-      safeProxyFactory,
-      singletonAddress,
-      encodedInitializer,
-      73,
-    );
-
-    // The initCode contains 20 bytes of the safeProxyFactory address and the rest is the
-    // calldata to be forwarded
-    const initCode = concat([
-      factoryAddress,
-      safeProxyFactory.interface.encodeFunctionData("createProxyWithNonce", [
-        singletonAddress,
-        encodedInitializer,
-        73,
-      ]),
-    ]);
 
     const signer = new ethers.Wallet(
       "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d",
@@ -138,63 +88,27 @@ describe("SafeWebAuthnPlugin", () => {
     const recipientAddress = signer.address;
     const transferAmount = ethers.parseEther("1");
 
-    const userOpCallData = safeWebAuthnPlugin.interface.encodeFunctionData(
-      "execTransaction",
-      [recipientAddress, transferAmount, "0x00"],
+    const unsignedUserOperation = await createUnsignedUserOperationWithInitCode(
+      provider,
+      bundlerProvider,
+      admin,
+      owner,
+      safeWebAuthnPlugin,
+      safeSingleton,
+      safeProxyFactory,
+      entryPointAddress,
+      recipientAddress,
+      transferAmount,
+      userOpSignature,
     );
-
-    // Native tokens for the pre-fund 💸
-    await receiptOf(
-      admin.sendTransaction({
-        to: deployedAddress,
-        value: ethers.parseEther("10"), // TODO: increasing this from 1 to 10 prevents error of balance not updating for assertion??????
-      }),
-    );
-
-    const userOperationWithoutGasFields = {
-      sender: deployedAddress,
-      nonce: "0x0",
-      initCode,
-      callData: userOpCallData,
-      callGasLimit: "0x00",
-      paymasterAndData: "0x",
-      signature: userOpSignature,
-    };
-
-    const gasEstimate = (await bundlerProvider.send(
-      "eth_estimateUserOperationGas",
-      [userOperationWithoutGasFields, ENTRYPOINT_ADDRESS],
-    )) as {
-      verificationGasLimit: string;
-      preVerificationGas: string;
-      callGasLimit: string;
-    };
-
-    const safeVerificationGasLimit =
-      BigInt(gasEstimate.verificationGasLimit) +
-      BigInt(gasEstimate.verificationGasLimit) / 10n; // + 10%
-
-    const safePreVerificationGas =
-      BigInt(gasEstimate.preVerificationGas) +
-      BigInt(gasEstimate.preVerificationGas) / 50n; // + 2%
-
-    const userOperation: UserOperationStruct = {
-      sender: deployedAddress,
-      nonce: "0x0",
-      initCode,
-      callData: userOpCallData,
-      callGasLimit: gasEstimate.callGasLimit,
-      verificationGasLimit: ethers.toBeHex(safeVerificationGasLimit),
-      preVerificationGas: ethers.toBeHex(safePreVerificationGas),
-      maxFeePerGas,
-      maxPriorityFeePerGas,
-      paymasterAndData: "0x",
-      signature: userOpSignature,
-    };
 
     const recipientBalanceBefore = await provider.getBalance(recipientAddress);
 
-    await sendUserOpAndWait(userOperation, ENTRYPOINT_ADDRESS, bundlerProvider);
+    await sendUserOpAndWait(
+      unsignedUserOperation,
+      entryPointAddress,
+      bundlerProvider,
+    );
 
     const recipientBalanceAfter = await provider.getBalance(recipientAddress);
 

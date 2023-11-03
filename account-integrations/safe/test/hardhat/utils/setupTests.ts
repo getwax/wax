@@ -1,15 +1,15 @@
-import { ethers } from "hardhat";
-import { HDNodeWallet, getBytes } from "ethers";
+import { ethers, NonceManager } from "ethers";
 import { AddressZero } from "@ethersproject/constants";
 import { calculateProxyAddress } from "./calculateProxyAddress";
-import { getUserOpHash } from "@account-abstraction/utils";
 import { UserOperationStruct } from "@account-abstraction/contracts";
 
 import { SafeProxyFactory } from "../../../typechain-types/lib/safe-contracts/contracts/proxies/SafeProxyFactory";
 import { Safe } from "../../../typechain-types/lib/safe-contracts/contracts/Safe";
-import { EntryPoint } from "../../../typechain-types/lib/account-abstraction/contracts/core/EntryPoint";
 import {
+  EntryPoint__factory,
+  SafeBlsPlugin,
   SafeProxyFactory__factory,
+  SafeWebAuthnPlugin,
   Safe__factory,
 } from "../../../typechain-types";
 import SafeSingletonFactory from "./SafeSingletonFactory";
@@ -39,7 +39,9 @@ export async function setupTests() {
   const provider = new ethers.JsonRpcProvider(NODE_URL);
   await makeDevFaster(provider);
 
-  const admin = ethers.Wallet.fromPhrase(MNEMONIC).connect(provider);
+  const admin = new NonceManager(
+    ethers.Wallet.fromPhrase(MNEMONIC).connect(provider),
+  );
   const owner = ethers.Wallet.createRandom(provider);
 
   await receiptOf(
@@ -58,6 +60,8 @@ export async function setupTests() {
     throw new Error("No entry points found");
   }
 
+  const entryPointAddress = entryPoints[0];
+
   const ssf = await SafeSingletonFactory.init(admin);
 
   const safeProxyFactory = await ssf.connectOrDeploy(
@@ -71,56 +75,63 @@ export async function setupTests() {
     provider,
     admin,
     owner,
-    entryPoints,
+    entryPointAddress,
     safeProxyFactory,
     safeSingleton,
   };
 }
 
-async function deploySafeAndECDSAPlugin(
-  wallet: HDNodeWallet,
-  entryPoint: EntryPoint,
-  safe: Safe,
+type Plugin = SafeBlsPlugin | SafeWebAuthnPlugin;
+
+export const createUnsignedUserOperationWithInitCode = async (
+  provider: ethers.JsonRpcProvider,
+  bundlerProvider: ethers.JsonRpcProvider,
+  admin: NonceManager,
+  owner: ethers.HDNodeWallet,
+  plugin: Plugin,
+  safeSingleton: Safe,
   safeProxyFactory: SafeProxyFactory,
-) {
-  const ENTRYPOINT_ADDRESS = await entryPoint.getAddress();
-
-  const safeECDSAPluginFactory = (
-    await ethers.getContractFactory("SafeECDSAPlugin")
-  ).connect(wallet);
-
-  const safeEcdsaPluginContract = await safeECDSAPluginFactory.deploy(
-    ENTRYPOINT_ADDRESS,
-    { gasLimit: 10_000_000 },
-  );
-
-  const safeECDSAPluginAddress = await safeEcdsaPluginContract.getAddress();
-  const singletonAddress = await safe.getAddress();
+  entryPointAddress: string,
+  recipientAddress: string,
+  transferAmount: bigint,
+  dummySignature: string,
+) => {
+  const pluginAddress = await plugin.getAddress();
+  const singletonAddress = await safeSingleton.getAddress();
   const factoryAddress = await safeProxyFactory.getAddress();
 
-  const moduleInitializer =
-    safeEcdsaPluginContract.interface.encodeFunctionData("enableMyself", [
-      wallet.address,
-    ]);
+  const moduleInitializer = plugin.interface.encodeFunctionData("enableMyself");
+  const encodedInitializer = safeSingleton.interface.encodeFunctionData(
+    "setup",
+    [
+      [owner.address],
+      1,
+      pluginAddress,
+      moduleInitializer,
+      pluginAddress,
+      AddressZero,
+      0,
+      AddressZero,
+    ],
+  );
 
-  const encodedInitializer = safe.interface.encodeFunctionData("setup", [
-    [wallet.address],
-    1,
-    safeECDSAPluginAddress,
-    moduleInitializer,
-    safeECDSAPluginAddress,
-    AddressZero,
-    0,
-    AddressZero,
-  ]);
-  const counterfactualAddress = await calculateProxyAddress(
+  const deployedAddress = await calculateProxyAddress(
     safeProxyFactory,
-    singletonAddress,
+    await safeSingleton.getAddress(),
     encodedInitializer,
     73,
   );
 
-  // The initCode contains 20 bytes of the factory address and the rest is the calldata to be forwarded
+  // Native tokens for the pre-fund 💸
+  await receiptOf(
+    admin.sendTransaction({
+      to: deployedAddress,
+      value: ethers.parseEther("10"),
+    }),
+  );
+
+  // The initCode contains 20 bytes of the factory address and the rest is the
+  // calldata to be forwarded
   const initCode = ethers.concat([
     factoryAddress,
     safeProxyFactory.interface.encodeFunctionData("createProxyWithNonce", [
@@ -130,84 +141,158 @@ async function deploySafeAndECDSAPlugin(
     ]),
   ]);
 
-  // Native tokens for the pre-fund 💸
-  await wallet.sendTransaction({
-    to: counterfactualAddress,
-    value: ethers.parseEther("100"),
-  });
-
-  await sendTx(
-    wallet,
-    entryPoint,
-    counterfactualAddress,
-    "0x0",
-    initCode,
-    "0x",
+  const userOpCallData = plugin.interface.encodeFunctionData(
+    "execTransaction",
+    [recipientAddress, transferAmount, "0x00"],
   );
 
-  return { safeEcdsaPluginContract, counterfactualAddress };
-}
+  const userOperationWithoutGasFields = {
+    sender: deployedAddress,
+    nonce: "0x0",
+    initCode,
+    callData: userOpCallData,
+    callGasLimit: "0x00",
+    paymasterAndData: "0x",
+    signature: dummySignature,
+  };
 
-export async function sendTx(
-  signer: HDNodeWallet,
-  entryPoint: EntryPoint,
-  sender: string,
-  nonce: string,
-  initCode?: string,
-  callData?: string,
-) {
-  const provider = ethers.provider;
-  const { maxFeePerGas, maxPriorityFeePerGas } = await getFeeData();
-  const entryPointAddress = await entryPoint.getAddress();
+  const {
+    callGasLimit,
+    verificationGasLimit,
+    preVerificationGas,
+    maxFeePerGas,
+    maxPriorityFeePerGas,
+  } = await getGasEstimates(
+    provider,
+    bundlerProvider,
+    userOperationWithoutGasFields,
+    entryPointAddress,
+  );
 
   const unsignedUserOperation = {
-    sender,
-    nonce,
-    initCode: initCode ?? "0x",
-    callData: callData ?? "0x",
-    verificationGasLimit: 1e6,
-    callGasLimit: 1e6,
-    preVerificationGas: 1e6,
+    sender: deployedAddress,
+    nonce: "0x0",
+    initCode,
+    callData: userOpCallData,
+    callGasLimit,
+    verificationGasLimit,
+    preVerificationGas,
     maxFeePerGas,
     maxPriorityFeePerGas,
     paymasterAndData: "0x",
-    signature: "",
+    signature: dummySignature,
   } satisfies UserOperationStruct;
 
-  const resolvedUserOp = await ethers.resolveProperties(unsignedUserOperation);
-  const userOpHash = getUserOpHash(
-    resolvedUserOp,
+  return await ethers.resolveProperties(unsignedUserOperation);
+};
+
+export const createUnsignedUserOperation = async (
+  provider: ethers.JsonRpcProvider,
+  bundlerProvider: ethers.JsonRpcProvider,
+  accountAddress: string,
+  userOpCallData: string,
+  entryPointAddress: string,
+  dummySignature: string,
+) => {
+  // Note: initCode is not used because we need to create both the safe
+  // proxy and the plugin, and 4337 currently only allows one contract
+  // creation in this step. Since we need an extra step anyway, it's simpler
+  // to do the whole create outside of 4337.
+  const initCode = "0x";
+
+  const entryPoint = EntryPoint__factory.connect(
     entryPointAddress,
-    Number((await provider.getNetwork()).chainId),
+    await provider.getSigner(),
   );
+  const nonce = await entryPoint.getNonce(accountAddress, "0x00");
+  const nonceHex = "0x0" + nonce.toString();
 
-  const userOpSignature = await signer.signMessage(getBytes(userOpHash));
-
-  const userOperation = {
-    ...unsignedUserOperation,
-    signature: userOpSignature,
+  const userOperationWithoutGasFields = {
+    sender: accountAddress,
+    nonce: nonceHex,
+    initCode,
+    callData: userOpCallData,
+    callGasLimit: "0x00",
+    paymasterAndData: "0x",
+    signature: dummySignature,
   };
 
-  try {
-    const _rcpt = await entryPoint.handleOps(
-      [userOperation],
-      entryPointAddress,
-    );
-  } catch (e) {
-    console.log("EntryPoint handleOps error=", e);
+  const {
+    callGasLimit,
+    verificationGasLimit,
+    preVerificationGas,
+    maxFeePerGas,
+    maxPriorityFeePerGas,
+  } = await getGasEstimates(
+    provider,
+    bundlerProvider,
+    userOperationWithoutGasFields,
+    entryPointAddress,
+  );
+
+  const unsignedUserOperation = {
+    sender: accountAddress,
+    nonce: nonceHex,
+    initCode,
+    callData: userOpCallData,
+    callGasLimit,
+    verificationGasLimit: "0x186A0",
+    // verificationGasLimit,
+    preVerificationGas,
+    maxFeePerGas,
+    maxPriorityFeePerGas,
+    paymasterAndData: "0x",
+    signature: dummySignature,
+  } satisfies UserOperationStruct;
+
+  return await ethers.resolveProperties(unsignedUserOperation);
+};
+
+export const getGasEstimates = async (
+  provider: ethers.JsonRpcProvider,
+  bundlerProvider: ethers.JsonRpcProvider,
+  userOperationWithoutGasFields: any,
+  entryPointAddress: string,
+) => {
+  const gasEstimate = (await bundlerProvider.send(
+    "eth_estimateUserOperationGas",
+    [userOperationWithoutGasFields, entryPointAddress],
+  )) as {
+    verificationGasLimit: string;
+    preVerificationGas: string;
+    callGasLimit: string;
+  };
+
+  const safeVerificationGasLimit =
+    BigInt(gasEstimate.verificationGasLimit) +
+    BigInt(gasEstimate.verificationGasLimit) / 5n; // + 20%
+  // BigInt(gasEstimate.verificationGasLimit); // / 2n; // + 20%
+
+  const safePreVerificationGas =
+    BigInt(gasEstimate.preVerificationGas) +
+    BigInt(gasEstimate.preVerificationGas) / 50n; // + 2%
+
+  const { maxFeePerGas, maxPriorityFeePerGas } = await getFeeData(provider);
+
+  return {
+    callGasLimit: gasEstimate.callGasLimit,
+    verificationGasLimit: ethers.toBeHex(safeVerificationGasLimit),
+    preVerificationGas: ethers.toBeHex(safePreVerificationGas),
+    maxFeePerGas,
+    maxPriorityFeePerGas,
+  };
+
+  async function getFeeData(provider: ethers.Provider) {
+    const feeData = await provider.getFeeData();
+    if (!feeData.maxFeePerGas || !feeData.maxPriorityFeePerGas) {
+      throw new Error(
+        "maxFeePerGas or maxPriorityFeePerGas is null or undefined",
+      );
+    }
+
+    const maxFeePerGas = "0x" + feeData.maxFeePerGas.toString();
+    const maxPriorityFeePerGas = "0x" + feeData.maxPriorityFeePerGas.toString();
+
+    return { maxFeePerGas, maxPriorityFeePerGas };
   }
-}
-
-async function getFeeData() {
-  const feeData = await ethers.provider.getFeeData();
-  if (!feeData.maxFeePerGas || !feeData.maxPriorityFeePerGas) {
-    throw new Error(
-      "maxFeePerGas or maxPriorityFeePerGas is null or undefined",
-    );
-  }
-
-  const maxFeePerGas = "0x" + feeData.maxFeePerGas.toString();
-  const maxPriorityFeePerGas = "0x" + feeData.maxPriorityFeePerGas.toString();
-
-  return { maxFeePerGas, maxPriorityFeePerGas };
-}
+};

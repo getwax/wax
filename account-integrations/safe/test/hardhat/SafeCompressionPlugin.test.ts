@@ -1,6 +1,5 @@
 import { expect } from "chai";
-import { getBytes, resolveProperties, ethers } from "ethers";
-import { UserOperationStruct } from "@account-abstraction/contracts";
+import { getBytes, ethers } from "ethers";
 import { getUserOpHash } from "@account-abstraction/utils";
 import {
   AddressRegistry__factory,
@@ -11,8 +10,7 @@ import {
 import sendUserOpAndWait from "./utils/sendUserOpAndWait";
 import receiptOf from "./utils/receiptOf";
 import SafeSingletonFactory from "./utils/SafeSingletonFactory";
-import sleep from "./utils/sleep";
-import { setupTests } from "./utils/setupTests";
+import { createUnsignedUserOperation, setupTests } from "./utils/setupTests";
 
 describe("SafeCompressionPlugin", () => {
   it("should pass the ERC4337 validation", async () => {
@@ -21,11 +19,9 @@ describe("SafeCompressionPlugin", () => {
       provider,
       admin,
       owner,
-      entryPoints,
+      entryPointAddress,
       safeSingleton,
     } = await setupTests();
-
-    const ENTRYPOINT_ADDRESS = entryPoints[0];
 
     const ssf = await SafeSingletonFactory.init(admin);
 
@@ -33,23 +29,7 @@ describe("SafeCompressionPlugin", () => {
       SafeCompressionFactory__factory,
       [],
     );
-
-    const feeData = await provider.getFeeData();
-    if (!feeData.maxFeePerGas || !feeData.maxPriorityFeePerGas) {
-      throw new Error(
-        "maxFeePerGas or maxPriorityFeePerGas is null or undefined",
-      );
-    }
-
-    const maxFeePerGas = `0x${feeData.maxFeePerGas.toString()}`;
-    const maxPriorityFeePerGas = `0x${feeData.maxPriorityFeePerGas.toString()}`;
-
-    await receiptOf(
-      admin.sendTransaction({
-        to: owner.address,
-        value: ethers.parseEther("1"),
-      }),
-    );
+    await safeCompressionFactory.waitForDeployment();
 
     const addressRegistry = await ssf.connectOrDeploy(
       AddressRegistry__factory,
@@ -63,7 +43,7 @@ describe("SafeCompressionPlugin", () => {
 
     const createArgs = [
       safeSingleton,
-      ENTRYPOINT_ADDRESS,
+      entryPointAddress,
       await fallbackDecompressor.getAddress(),
       owner.address,
       0,
@@ -83,7 +63,6 @@ describe("SafeCompressionPlugin", () => {
     const recipient = new ethers.Wallet(
       "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d",
     );
-
     const transferAmount = ethers.parseEther("1");
 
     const compressedActions = await fallbackDecompressor.compress(
@@ -97,12 +76,12 @@ describe("SafeCompressionPlugin", () => {
       [],
     );
     // TODO: why is this needed to prevent "nonce too low" error
-    await sleep(5000);
 
     const userOpCallData = compressionAccount.interface.encodeFunctionData(
       "decompressAndPerform",
       [compressedActions],
     );
+    const dummySignature = await owner.signMessage("dummy sig");
 
     // Native tokens for the pre-fund 💸
     await receiptOf(
@@ -112,30 +91,19 @@ describe("SafeCompressionPlugin", () => {
       }),
     );
 
-    const unsignedUserOperation: UserOperationStruct = {
-      sender: accountAddress,
-      nonce: "0x0",
+    const unsignedUserOperation = await createUnsignedUserOperation(
+      provider,
+      bundlerProvider,
+      accountAddress,
+      userOpCallData,
+      entryPointAddress,
+      dummySignature,
+    );
 
-      // Note: initCode is not used because we need to create both the safe
-      // proxy and the plugin, and 4337 currently only allows one contract
-      // creation in this step. Since we need an extra step anyway, it's simpler
-      // to do the whole create outside of 4337.
-      initCode: "0x",
-
-      callData: userOpCallData,
-      callGasLimit: "0x7A120",
-      verificationGasLimit: "0x7A120",
-      preVerificationGas: "0x186A0",
-      maxFeePerGas,
-      maxPriorityFeePerGas,
-      paymasterAndData: "0x",
-      signature: "",
-    };
-
-    const resolvedUserOp = await resolveProperties(unsignedUserOperation);
+    // const resolvedUserOp = await resolveProperties(unsignedUserOperation);
     const userOpHash = getUserOpHash(
-      resolvedUserOp,
-      ENTRYPOINT_ADDRESS,
+      unsignedUserOperation,
+      entryPointAddress,
       Number((await provider.getNetwork()).chainId),
     );
     const userOpSignature = await owner.signMessage(getBytes(userOpHash));
@@ -147,7 +115,7 @@ describe("SafeCompressionPlugin", () => {
 
     const recipientBalanceBefore = await provider.getBalance(recipient.address);
 
-    await sendUserOpAndWait(userOperation, ENTRYPOINT_ADDRESS, bundlerProvider);
+    await sendUserOpAndWait(userOperation, entryPointAddress, bundlerProvider);
 
     const recipientBalanceAfter = await provider.getBalance(recipient.address);
 
