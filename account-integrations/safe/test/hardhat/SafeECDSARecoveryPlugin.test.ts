@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { ethers } from "ethers";
+import { ethers, getBytes } from "ethers";
 
 import { executeContractCallWithSigners } from "./utils/execution";
 
@@ -7,17 +7,17 @@ import SafeSingletonFactory from "./utils/SafeSingletonFactory";
 import {
   SafeECDSAFactory__factory,
   SafeECDSAPlugin__factory,
-  SafeECDSARecoveryPlugin,
   SafeECDSARecoveryPlugin__factory,
   Safe__factory,
 } from "../../typechain-types";
 import receiptOf from "./utils/receiptOf";
-import sleep from "./utils/sleep";
-import { setupTests } from "./utils/setupTests";
+import { createUnsignedUserOperation, setupTests } from "./utils/setupTests";
+import { getUserOpHash } from "@account-abstraction/utils";
+import sendUserOpAndWait from "./utils/sendUserOpAndWait";
 
 describe("SafeECDSARecoveryPlugin", () => {
   it("Should enable a recovery plugin on a safe.", async () => {
-    const { provider, admin, owner, entryPoints, safeSingleton } =
+    const { provider, admin, owner, entryPointAddress, safeSingleton } =
       await setupTests();
 
     const ssf = await SafeSingletonFactory.init(admin);
@@ -30,7 +30,7 @@ describe("SafeECDSARecoveryPlugin", () => {
 
     const createArgs = [
       safeSingleton,
-      entryPoints[0],
+      entryPointAddress,
       owner.address,
       0,
     ] satisfies Parameters<typeof safeECDSAFactory.create.staticCall>;
@@ -87,8 +87,14 @@ describe("SafeECDSARecoveryPlugin", () => {
   });
 
   it("Should use recovery plugin to reset signing key and then send tx with new key.", async () => {
-    const { provider, admin, owner, entryPoints, safeSingleton } =
-      await setupTests();
+    const {
+      bundlerProvider,
+      provider,
+      admin,
+      owner,
+      entryPointAddress,
+      safeSingleton,
+    } = await setupTests();
 
     const ssf = await SafeSingletonFactory.init(admin);
 
@@ -100,7 +106,7 @@ describe("SafeECDSARecoveryPlugin", () => {
 
     const createArgs = [
       safeSingleton,
-      entryPoints[0],
+      entryPointAddress,
       owner.address,
       0,
     ] satisfies Parameters<typeof safeECDSAFactory.create.staticCall>;
@@ -110,6 +116,7 @@ describe("SafeECDSARecoveryPlugin", () => {
     );
 
     await receiptOf(safeECDSAFactory.create(...createArgs));
+
     const safeProxyWithEcdsaPluginInterface = SafeECDSAPlugin__factory.connect(
       safeProxyAddress,
       provider,
@@ -119,10 +126,11 @@ describe("SafeECDSARecoveryPlugin", () => {
       await safeProxyWithEcdsaPluginInterface.myAddress();
 
     // Setup recovery plugin
-    const recoverySigner = ethers.Wallet.createRandom(provider);
+    const guardianSigner = ethers.Wallet.createRandom(provider);
+    const guardianAddress = guardianSigner.address;
     await receiptOf(
       admin.sendTransaction({
-        to: recoverySigner.address,
+        to: guardianAddress,
         value: ethers.parseEther("1"),
       }),
     );
@@ -149,8 +157,6 @@ describe("SafeECDSARecoveryPlugin", () => {
         [owner],
       ),
     );
-    // TODO: why is this needed to prevent "nonce too low" error
-    await sleep(5000);
 
     // Add recovery account
 
@@ -164,18 +170,68 @@ describe("SafeECDSARecoveryPlugin", () => {
 
     const recoveryHash = ethers.solidityPackedKeccak256(
       ["bytes32", "address", "address", "string"],
-      [recoveryhashDomain, recoverySigner.address, owner.address, salt],
+      [recoveryhashDomain, guardianAddress, owner.address, salt],
     );
 
-    await receiptOf(
-      recoveryPlugin
-        .connect(owner)
-        .addRecoveryAccount(
-          recoveryHash,
-          safeProxyAddress,
-          safeECDSAPluginAddress,
-        ),
+    const addRecoveryAccountCalldata =
+      recoveryPlugin.interface.encodeFunctionData("addRecoveryAccount", [
+        recoveryHash,
+        owner.address,
+        safeECDSAPluginAddress,
+      ]);
+
+    let safeEcdsaPlugin = SafeECDSAPlugin__factory.connect(
+      safeProxyAddress,
+      owner,
     );
+
+    let userOpCallData = safeEcdsaPlugin.interface.encodeFunctionData(
+      "execTransaction",
+      [await recoveryPlugin.getAddress(), "0x00", addRecoveryAccountCalldata],
+    );
+
+    const dummySignature = await owner.signMessage("dummy sig");
+
+    // Native tokens for the pre-fund 💸
+    await receiptOf(
+      admin.sendTransaction({
+        to: safeProxyAddress,
+        value: ethers.parseEther("10"),
+      }),
+    );
+
+    const addRecoveryAccountUnsignedUserOp = await createUnsignedUserOperation(
+      provider,
+      bundlerProvider,
+      safeProxyAddress,
+      userOpCallData,
+      entryPointAddress,
+      dummySignature,
+    );
+
+    const addRecoveryAccountUserOpHash = getUserOpHash(
+      addRecoveryAccountUnsignedUserOp,
+      entryPointAddress,
+      Number((await provider.getNetwork()).chainId),
+    );
+    const addRecoveryAccountUserOpSignature = await owner.signMessage(
+      getBytes(addRecoveryAccountUserOpHash),
+    );
+
+    const addRecoveryAccountUserOp = {
+      ...addRecoveryAccountUnsignedUserOp,
+      signature: addRecoveryAccountUserOpSignature,
+    };
+
+    await sendUserOpAndWait(
+      addRecoveryAccountUserOp,
+      entryPointAddress,
+      bundlerProvider,
+    );
+
+    const storedRecoveryHash =
+      await recoveryPlugin.ecdsaRecoveryStorage(safeProxyAddress);
+    expect(recoveryHash).to.equal(storedRecoveryHash);
 
     // Reset ecdsa address
     const newEcdsaPluginSigner = ethers.Wallet.createRandom().connect(provider);
@@ -184,61 +240,101 @@ describe("SafeECDSARecoveryPlugin", () => {
       [owner.address],
     );
     const addressSignature = await newEcdsaPluginSigner.signMessage(
-      ethers.getBytes(currentOwnerHash),
+      getBytes(currentOwnerHash),
     );
 
-    // TODO: why is this needed to prevent "nonce too low" error
-    await sleep(5000);
+    const guardianSignature = await guardianSigner.signMessage(
+      getBytes(recoveryHash),
+    );
 
-    const resetEcdsaAddressArgs = [
-      addressSignature,
-      salt,
+    const resetEcdsaAddressCalldata =
+      recoveryPlugin.interface.encodeFunctionData("resetEcdsaAddress", [
+        addressSignature,
+        guardianSignature,
+        guardianAddress,
+        salt,
+        safeECDSAPluginAddress,
+        owner.address,
+        newEcdsaPluginSigner.address,
+      ]);
+
+    userOpCallData = safeEcdsaPlugin.interface.encodeFunctionData(
+      "execTransaction",
+      [await recoveryPlugin.getAddress(), "0x00", resetEcdsaAddressCalldata],
+    );
+
+    const resetEcdsaAddressUnsignedUserOp = await createUnsignedUserOperation(
+      provider,
+      bundlerProvider,
       safeProxyAddress,
-      safeECDSAPluginAddress,
-      owner.address,
-      newEcdsaPluginSigner.address,
-    ] satisfies Parameters<SafeECDSARecoveryPlugin["resetEcdsaAddress"]>;
-
-    await recoveryPlugin
-      .connect(recoverySigner)
-      .resetEcdsaAddress.staticCall(...resetEcdsaAddressArgs);
-
-    await receiptOf(
-      recoveryPlugin
-        .connect(recoverySigner)
-        .resetEcdsaAddress(...resetEcdsaAddressArgs),
+      userOpCallData,
+      entryPointAddress,
+      dummySignature,
     );
 
-    const safeEcdsaPlugin = SafeECDSAPlugin__factory.connect(
+    const resetEcdsaAddressUserOpHash = getUserOpHash(
+      resetEcdsaAddressUnsignedUserOp,
+      entryPointAddress,
+      Number((await provider.getNetwork()).chainId),
+    );
+    const resetEcdsaAddressUserOpSignature = await owner.signMessage(
+      getBytes(resetEcdsaAddressUserOpHash),
+    );
+
+    const resetEcdsaAddressUserOp = {
+      ...resetEcdsaAddressUnsignedUserOp,
+      signature: resetEcdsaAddressUserOpSignature,
+    };
+
+    await sendUserOpAndWait(
+      resetEcdsaAddressUserOp,
+      entryPointAddress,
+      bundlerProvider,
+    );
+
+    safeEcdsaPlugin = SafeECDSAPlugin__factory.connect(
       safeECDSAPluginAddress,
       newEcdsaPluginSigner,
     );
     const newOwner = await safeEcdsaPlugin.ecdsaOwnerStorage(safeProxyAddress);
     expect(newOwner).to.equal(newEcdsaPluginSigner.address);
 
-    // TODO: uncomment & update below
     // Send tx with new key
-    // const entryPoint = ssf.viewer.connectAssume(EntryPoint__factory, []);
+    const recipientAddress = ethers.Wallet.createRandom().address;
+    const transferAmount = ethers.parseEther("1");
+    const calldata = safeEcdsaPlugin.interface.encodeFunctionData(
+      "execTransaction",
+      [recipientAddress, transferAmount, "0x00"],
+    );
 
-    // const recipientAddress = ethers.Wallet.createRandom().address;
-    // const transferAmount = ethers.parseEther("1");
-    // const userOpCallData = safe?.interface.encodeFunctionData(
-    //   "execTransaction",
-    //   [recipientAddress, transferAmount, "0x00"],
-    // );
-    // const recipientBalanceBefore =
-    //   await provider.getBalance(recipientAddress);
-    // await sendTx(
-    //   newEcdsaPluginSigner,
-    //   entryPoint,
-    //   safeProxyAddress,
-    //   "0x1",
-    //   "0x",
-    //   userOpCallData,
-    // );
+    const unsignedUserOperation = await createUnsignedUserOperation(
+      provider,
+      bundlerProvider,
+      safeProxyAddress,
+      calldata,
+      entryPointAddress,
+      dummySignature,
+    );
 
-    // const recipientBalanceAfter = await provider.getBalance(recipientAddress);
-    // const expectedRecipientBalance = recipientBalanceBefore + transferAmount;
-    // expect(recipientBalanceAfter).to.equal(expectedRecipientBalance);
+    const userOpHash = getUserOpHash(
+      unsignedUserOperation,
+      entryPointAddress,
+      Number((await provider.getNetwork()).chainId),
+    );
+    const userOpSignature = await newEcdsaPluginSigner.signMessage(
+      getBytes(userOpHash),
+    );
+
+    const userOperation = {
+      ...unsignedUserOperation,
+      signature: userOpSignature,
+    };
+
+    const recipientBalanceBefore = await provider.getBalance(recipientAddress);
+    await sendUserOpAndWait(userOperation, entryPointAddress, bundlerProvider);
+
+    const recipientBalanceAfter = await provider.getBalance(recipientAddress);
+    const expectedRecipientBalance = recipientBalanceBefore + transferAmount;
+    expect(recipientBalanceAfter).to.equal(expectedRecipientBalance);
   });
 });

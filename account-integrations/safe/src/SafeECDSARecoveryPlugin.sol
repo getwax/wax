@@ -50,6 +50,7 @@ contract SafeECDSARecoveryPlugin {
     error SAFE_ZERO_ADDRESS();
     error MODULE_NOT_ENABLED();
     error MSG_SENDER_NOT_PLUGIN_OWNER(address sender, address pluginOwner);
+    error INVALID_NEW_GUARDIAN_SIGNATURE();
     error INVALID_NEW_OWNER_SIGNATURE();
 
     constructor() {
@@ -71,16 +72,17 @@ contract SafeECDSARecoveryPlugin {
 
     function addRecoveryAccount(
         bytes32 recoveryHash,
-        address safe,
+        address owner,
         address ecsdaPlugin
     ) external {
+        address safe = msg.sender;
         if (safe == address(0)) revert SAFE_ZERO_ADDRESS();
 
         bool moduleEnabled = ISafe(safe).isModuleEnabled(address(this));
         if (!moduleEnabled) revert MODULE_NOT_ENABLED();
 
-        address owner = ISafeECDSAPlugin(ecsdaPlugin).getOwner(safe);
-        if (msg.sender != owner)
+        address expectedOwner = ISafeECDSAPlugin(ecsdaPlugin).getOwner(safe);
+        if (owner != expectedOwner)
             revert MSG_SENDER_NOT_PLUGIN_OWNER(msg.sender, owner);
 
         ecdsaRecoveryStorage[safe] = ECDSARecoveryStorage(recoveryHash);
@@ -88,24 +90,22 @@ contract SafeECDSARecoveryPlugin {
 
     function resetEcdsaAddress(
         bytes memory newOwnerSignature,
+        bytes memory guardianSignature,
+        address guardian,
         string memory salt,
-        address safe,
         address ecdsaPlugin,
         address currentOwner,
         address newOwner
     ) external {
+        address safe = msg.sender;
+
         ECDSARecoveryStorage memory recoveryStorage = ecdsaRecoveryStorage[
             safe
         ];
 
         // Identity of guardian is protected and it is only revealed on recovery
         bytes32 expectedRecoveryHash = keccak256(
-            abi.encodePacked(
-                RECOVERY_HASH_DOMAIN,
-                msg.sender,
-                currentOwner,
-                salt
-            )
+            abi.encodePacked(RECOVERY_HASH_DOMAIN, guardian, currentOwner, salt)
         );
 
         if (expectedRecoveryHash != recoveryStorage.recoveryHash) {
@@ -115,8 +115,12 @@ contract SafeECDSARecoveryPlugin {
             );
         }
 
+        bytes32 ethSignedHash = expectedRecoveryHash.toEthSignedMessageHash();
+        if (guardian != ethSignedHash.recover(guardianSignature))
+            revert INVALID_NEW_GUARDIAN_SIGNATURE();
+
         bytes32 currentOwnerHash = keccak256(abi.encodePacked(currentOwner));
-        bytes32 ethSignedHash = currentOwnerHash.toEthSignedMessageHash();
+        ethSignedHash = currentOwnerHash.toEthSignedMessageHash();
 
         if (newOwner != ethSignedHash.recover(newOwnerSignature))
             revert INVALID_NEW_OWNER_SIGNATURE();
