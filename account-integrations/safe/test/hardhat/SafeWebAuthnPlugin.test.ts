@@ -1,11 +1,13 @@
-import hre from "hardhat";
 import { expect } from "chai";
 import { ethers, BigNumberish } from "ethers";
 import sendUserOpAndWait from "./utils/sendUserOpAndWait";
+import { setupTests } from "./utils/setupTests";
+import SafeSingletonFactory from "./utils/SafeSingletonFactory";
+import { SafeWebAuthnPlugin__factory } from "../../typechain-types";
 import {
-  createUnsignedUserOperationWithInitCode,
-  setupTests,
-} from "./utils/setupTests";
+  createInitCode,
+  createUnsignedUserOperation,
+} from "./utils/createUserOp";
 
 describe("SafeWebAuthnPlugin", () => {
   const getPublicKeyAndSignature = () => {
@@ -72,15 +74,11 @@ describe("SafeWebAuthnPlugin", () => {
     } = await setupTests();
     const { publicKey, userOpSignature } = getPublicKeyAndSignature();
 
-    const safeWebAuthnPluginFactory = (
-      await hre.ethers.getContractFactory("SafeWebAuthnPlugin")
-    ).connect(admin);
-    const safeWebAuthnPlugin = await safeWebAuthnPluginFactory.deploy(
-      entryPointAddress,
-      publicKey,
-      { gasLimit: 2_000_000 },
+    const ssf = await SafeSingletonFactory.init(admin);
+    const safeWebAuthnPlugin = await ssf.connectOrDeploy(
+      SafeWebAuthnPlugin__factory,
+      [entryPointAddress, publicKey],
     );
-    await safeWebAuthnPlugin.deploymentTransaction()?.wait();
 
     const signer = new ethers.Wallet(
       "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d",
@@ -88,21 +86,30 @@ describe("SafeWebAuthnPlugin", () => {
     const recipientAddress = signer.address;
     const transferAmount = ethers.parseEther("1");
 
-    const unsignedUserOperation = await createUnsignedUserOperationWithInitCode(
-      provider,
-      bundlerProvider,
+    const userOpCallData = safeWebAuthnPlugin.interface.encodeFunctionData(
+      "execTransaction",
+      [recipientAddress, transferAmount, "0x00"],
+    );
+
+    const { initCode, deployedAddress } = await createInitCode(
       admin,
       owner,
       safeWebAuthnPlugin,
       safeSingleton,
       safeProxyFactory,
-      entryPointAddress,
-      recipientAddress,
-      transferAmount,
-      userOpSignature,
     );
 
     const recipientBalanceBefore = await provider.getBalance(recipientAddress);
+
+    const unsignedUserOperation = await createUnsignedUserOperation(
+      provider,
+      bundlerProvider,
+      deployedAddress,
+      initCode,
+      userOpCallData,
+      entryPointAddress,
+      userOpSignature,
+    );
 
     await sendUserOpAndWait(
       unsignedUserOperation,

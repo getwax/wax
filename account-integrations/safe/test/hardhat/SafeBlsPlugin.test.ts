@@ -7,11 +7,12 @@ import {
   EntryPoint__factory,
   SafeBlsPlugin__factory,
 } from "../../typechain-types";
-import {
-  createUnsignedUserOperationWithInitCode,
-  setupTests,
-} from "./utils/setupTests";
+import { setupTests } from "./utils/setupTests";
 import receiptOf from "./utils/receiptOf";
+import {
+  createInitCode,
+  createUnsignedUserOperation,
+} from "./utils/createUserOp";
 
 const BLS_PRIVATE_KEY =
   "0xdbe3d601b1b25c42c50015a87855fdce00ea9b3a7e33c92d31c69aeb70708e08";
@@ -53,17 +54,26 @@ describe("SafeBlsPlugin", () => {
       blsSigner.sign(dummyHash),
     );
 
-    const unsignedUserOperation = await createUnsignedUserOperationWithInitCode(
-      provider,
-      bundlerProvider,
+    const userOpCallData = safeBlsPlugin.interface.encodeFunctionData(
+      "execTransaction",
+      [recipientAddress, transferAmount, "0x00"],
+    );
+
+    const { initCode, deployedAddress } = await createInitCode(
       admin,
       owner,
       safeBlsPlugin,
       safeSingleton,
       safeProxyFactory,
+    );
+
+    const unsignedUserOperation = await createUnsignedUserOperation(
+      provider,
+      bundlerProvider,
+      deployedAddress,
+      initCode,
+      userOpCallData,
       entryPointAddress,
-      recipientAddress,
-      transferAmount,
       dummySignature,
     );
 

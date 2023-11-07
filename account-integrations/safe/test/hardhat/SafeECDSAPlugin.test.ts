@@ -1,14 +1,13 @@
 import { expect } from "chai";
-import { getBytes, ethers } from "ethers";
-import { getUserOpHash } from "@account-abstraction/utils";
+import { ethers } from "ethers";
 import {
   SafeECDSAFactory__factory,
   SafeECDSAPlugin__factory,
 } from "../../typechain-types";
-import sendUserOpAndWait from "./utils/sendUserOpAndWait";
 import receiptOf from "./utils/receiptOf";
 import SafeSingletonFactory from "./utils/SafeSingletonFactory";
-import { createUnsignedUserOperation, setupTests } from "./utils/setupTests";
+import { setupTests } from "./utils/setupTests";
+import { createAndSendUserOpWithEcdsaSig } from "./utils/createUserOp";
 
 const oneEther = ethers.parseEther("1");
 
@@ -65,28 +64,22 @@ describe("SafeECDSAPlugin", () => {
       [recipient.address, transferAmount, "0x00"],
     );
 
-    const unsignedUserOperation = await createUnsignedUserOperation(
+    // Note: initCode is not used because we need to create both the safe
+    // proxy and the plugin, and 4337 currently only allows one contract
+    // creation in this step. Since we need an extra step anyway, it's simpler
+    // to do the whole create outside of 4337.
+    const initCode = "0x";
+
+    await createAndSendUserOpWithEcdsaSig(
       provider,
       bundlerProvider,
+      owner,
       accountAddress,
+      initCode,
       userOpCallData,
       entryPointAddress,
       dummySignature,
     );
-
-    const userOpHash = getUserOpHash(
-      unsignedUserOperation,
-      entryPointAddress,
-      Number((await provider.getNetwork()).chainId),
-    );
-    const userOpSignature = await owner.signMessage(getBytes(userOpHash));
-
-    const userOperation = {
-      ...unsignedUserOperation,
-      signature: userOpSignature,
-    };
-
-    await sendUserOpAndWait(userOperation, entryPointAddress, bundlerProvider);
 
     expect(await provider.getBalance(recipient.address)).to.equal(oneEther);
   });

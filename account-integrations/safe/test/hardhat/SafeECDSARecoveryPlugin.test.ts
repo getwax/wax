@@ -1,24 +1,48 @@
 import { expect } from "chai";
-import { ethers, getBytes } from "ethers";
+import {
+  HDNodeWallet,
+  JsonRpcProvider,
+  NonceManager,
+  ethers,
+  getBytes,
+} from "ethers";
 
 import { executeContractCallWithSigners } from "./utils/execution";
-
 import SafeSingletonFactory from "./utils/SafeSingletonFactory";
 import {
+  Safe,
   SafeECDSAFactory__factory,
   SafeECDSAPlugin__factory,
+  SafeECDSARecoveryPlugin,
   SafeECDSARecoveryPlugin__factory,
   Safe__factory,
 } from "../../typechain-types";
 import receiptOf from "./utils/receiptOf";
-import { createUnsignedUserOperation, setupTests } from "./utils/setupTests";
-import { getUserOpHash } from "@account-abstraction/utils";
-import sendUserOpAndWait from "./utils/sendUserOpAndWait";
+import { setupTests } from "./utils/setupTests";
+import { createAndSendUserOpWithEcdsaSig } from "./utils/createUserOp";
 
 describe("SafeECDSARecoveryPlugin", () => {
-  it("Should enable a recovery plugin on a safe.", async () => {
-    const { provider, admin, owner, entryPointAddress, safeSingleton } =
-      await setupTests();
+  let bundlerProvider: JsonRpcProvider;
+  let provider: JsonRpcProvider;
+  let admin: NonceManager;
+  let owner: HDNodeWallet;
+  let entryPointAddress: string;
+  let safeSingleton: Safe;
+
+  let safeProxyAddress: string;
+  let recoveryPlugin: SafeECDSARecoveryPlugin;
+  let guardianSigner: HDNodeWallet;
+
+  beforeEach(async () => {
+    const setup = await setupTests();
+    ({
+      provider,
+      bundlerProvider,
+      admin,
+      owner,
+      entryPointAddress,
+      safeSingleton,
+    } = setup);
 
     const ssf = await SafeSingletonFactory.init(admin);
 
@@ -35,32 +59,35 @@ describe("SafeECDSARecoveryPlugin", () => {
       0,
     ] satisfies Parameters<typeof safeECDSAFactory.create.staticCall>;
 
-    const safeProxyAddress = await safeECDSAFactory.create.staticCall(
-      ...createArgs,
-    );
+    safeProxyAddress = await safeECDSAFactory.create.staticCall(...createArgs);
 
     await receiptOf(safeECDSAFactory.create(...createArgs));
 
-    // Setup recovery plugin
-    const recoverySigner = ethers.Wallet.createRandom(provider);
-
+    // Native tokens for the pre-fund 💸
     await receiptOf(
       admin.sendTransaction({
-        to: recoverySigner.address,
-        value: ethers.parseEther("1"),
+        to: safeProxyAddress,
+        value: ethers.parseEther("10"),
       }),
     );
 
-    const recoveryPlugin = await ssf.connectOrDeploy(
+    recoveryPlugin = await ssf.connectOrDeploy(
       SafeECDSARecoveryPlugin__factory,
       [],
     );
     await recoveryPlugin.waitForDeployment();
 
+    guardianSigner = ethers.Wallet.createRandom(provider);
+    await receiptOf(
+      admin.sendTransaction({
+        to: guardianSigner.address,
+        value: ethers.parseEther("1"),
+      }),
+    );
+  });
+
+  it("Should enable a recovery plugin on a safe.", async () => {
     const recoveryPluginAddress = await recoveryPlugin.getAddress();
-
-    // Enable recovery plugin
-
     const safe = Safe__factory.connect(safeProxyAddress, owner);
 
     const isModuleEnabledBefore = await safe.isModuleEnabled(
@@ -87,66 +114,11 @@ describe("SafeECDSARecoveryPlugin", () => {
   });
 
   it("Should use recovery plugin to reset signing key and then send tx with new key.", async () => {
-    const {
-      bundlerProvider,
-      provider,
-      admin,
-      owner,
-      entryPointAddress,
-      safeSingleton,
-    } = await setupTests();
-
-    const ssf = await SafeSingletonFactory.init(admin);
-
-    const safeECDSAFactory = await ssf.connectOrDeploy(
-      SafeECDSAFactory__factory,
-      [],
-    );
-    await safeECDSAFactory.waitForDeployment();
-
-    const createArgs = [
-      safeSingleton,
-      entryPointAddress,
-      owner.address,
-      0,
-    ] satisfies Parameters<typeof safeECDSAFactory.create.staticCall>;
-
-    const safeProxyAddress = await safeECDSAFactory.create.staticCall(
-      ...createArgs,
-    );
-
-    await receiptOf(safeECDSAFactory.create(...createArgs));
-
-    const safeProxyWithEcdsaPluginInterface = SafeECDSAPlugin__factory.connect(
-      safeProxyAddress,
-      provider,
-    );
-
-    const safeECDSAPluginAddress =
-      await safeProxyWithEcdsaPluginInterface.myAddress();
-
-    // Setup recovery plugin
-    const guardianSigner = ethers.Wallet.createRandom(provider);
-    const guardianAddress = guardianSigner.address;
-    await receiptOf(
-      admin.sendTransaction({
-        to: guardianAddress,
-        value: ethers.parseEther("1"),
-      }),
-    );
-
-    const recoveryPlugin = await ssf.connectOrDeploy(
-      SafeECDSARecoveryPlugin__factory,
-      [],
-    );
-    await recoveryPlugin.waitForDeployment();
-
     const recoveryPluginAddress = await recoveryPlugin.getAddress();
-
-    // Enable recovery plugin
 
     const safe = Safe__factory.connect(safeProxyAddress, owner);
 
+    // Enable recovery plugin
     await receiptOf(
       executeContractCallWithSigners(
         safe,
@@ -159,7 +131,7 @@ describe("SafeECDSARecoveryPlugin", () => {
     );
 
     // Add recovery account
-
+    const guardianAddress = guardianSigner.address;
     const chainId = (await provider.getNetwork()).chainId;
     const salt = "test salt";
 
@@ -172,6 +144,13 @@ describe("SafeECDSARecoveryPlugin", () => {
       ["bytes32", "address", "address", "string"],
       [recoveryhashDomain, guardianAddress, owner.address, salt],
     );
+
+    const safeProxyWithEcdsaPluginInterface = SafeECDSAPlugin__factory.connect(
+      safeProxyAddress,
+      provider,
+    );
+    const safeECDSAPluginAddress =
+      await safeProxyWithEcdsaPluginInterface.myAddress();
 
     const addRecoveryAccountCalldata =
       recoveryPlugin.interface.encodeFunctionData("addRecoveryAccount", [
@@ -190,43 +169,18 @@ describe("SafeECDSARecoveryPlugin", () => {
       [await recoveryPlugin.getAddress(), "0x00", addRecoveryAccountCalldata],
     );
 
+    const initCode = "0x";
     const dummySignature = await owner.signMessage("dummy sig");
 
-    // Native tokens for the pre-fund 💸
-    await receiptOf(
-      admin.sendTransaction({
-        to: safeProxyAddress,
-        value: ethers.parseEther("10"),
-      }),
-    );
-
-    const addRecoveryAccountUnsignedUserOp = await createUnsignedUserOperation(
+    await createAndSendUserOpWithEcdsaSig(
       provider,
       bundlerProvider,
+      owner,
       safeProxyAddress,
+      initCode,
       userOpCallData,
       entryPointAddress,
       dummySignature,
-    );
-
-    const addRecoveryAccountUserOpHash = getUserOpHash(
-      addRecoveryAccountUnsignedUserOp,
-      entryPointAddress,
-      Number((await provider.getNetwork()).chainId),
-    );
-    const addRecoveryAccountUserOpSignature = await owner.signMessage(
-      getBytes(addRecoveryAccountUserOpHash),
-    );
-
-    const addRecoveryAccountUserOp = {
-      ...addRecoveryAccountUnsignedUserOp,
-      signature: addRecoveryAccountUserOpSignature,
-    };
-
-    await sendUserOpAndWait(
-      addRecoveryAccountUserOp,
-      entryPointAddress,
-      bundlerProvider,
     );
 
     const storedRecoveryHash =
@@ -263,33 +217,15 @@ describe("SafeECDSARecoveryPlugin", () => {
       [await recoveryPlugin.getAddress(), "0x00", resetEcdsaAddressCalldata],
     );
 
-    const resetEcdsaAddressUnsignedUserOp = await createUnsignedUserOperation(
+    await createAndSendUserOpWithEcdsaSig(
       provider,
       bundlerProvider,
+      owner, // TODO: owner is lost
       safeProxyAddress,
+      initCode,
       userOpCallData,
       entryPointAddress,
       dummySignature,
-    );
-
-    const resetEcdsaAddressUserOpHash = getUserOpHash(
-      resetEcdsaAddressUnsignedUserOp,
-      entryPointAddress,
-      Number((await provider.getNetwork()).chainId),
-    );
-    const resetEcdsaAddressUserOpSignature = await owner.signMessage(
-      getBytes(resetEcdsaAddressUserOpHash),
-    );
-
-    const resetEcdsaAddressUserOp = {
-      ...resetEcdsaAddressUnsignedUserOp,
-      signature: resetEcdsaAddressUserOpSignature,
-    };
-
-    await sendUserOpAndWait(
-      resetEcdsaAddressUserOp,
-      entryPointAddress,
-      bundlerProvider,
     );
 
     safeEcdsaPlugin = SafeECDSAPlugin__factory.connect(
@@ -302,36 +238,22 @@ describe("SafeECDSARecoveryPlugin", () => {
     // Send tx with new key
     const recipientAddress = ethers.Wallet.createRandom().address;
     const transferAmount = ethers.parseEther("1");
-    const calldata = safeEcdsaPlugin.interface.encodeFunctionData(
+    userOpCallData = safeEcdsaPlugin.interface.encodeFunctionData(
       "execTransaction",
       [recipientAddress, transferAmount, "0x00"],
     );
 
-    const unsignedUserOperation = await createUnsignedUserOperation(
+    const recipientBalanceBefore = await provider.getBalance(recipientAddress);
+    await createAndSendUserOpWithEcdsaSig(
       provider,
       bundlerProvider,
+      newEcdsaPluginSigner,
       safeProxyAddress,
-      calldata,
+      initCode,
+      userOpCallData,
       entryPointAddress,
       dummySignature,
     );
-
-    const userOpHash = getUserOpHash(
-      unsignedUserOperation,
-      entryPointAddress,
-      Number((await provider.getNetwork()).chainId),
-    );
-    const userOpSignature = await newEcdsaPluginSigner.signMessage(
-      getBytes(userOpHash),
-    );
-
-    const userOperation = {
-      ...unsignedUserOperation,
-      signature: userOpSignature,
-    };
-
-    const recipientBalanceBefore = await provider.getBalance(recipientAddress);
-    await sendUserOpAndWait(userOperation, entryPointAddress, bundlerProvider);
 
     const recipientBalanceAfter = await provider.getBalance(recipientAddress);
     const expectedRecipientBalance = recipientBalanceBefore + transferAmount;

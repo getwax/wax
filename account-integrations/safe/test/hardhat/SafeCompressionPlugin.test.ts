@@ -1,16 +1,15 @@
 import { expect } from "chai";
-import { getBytes, ethers } from "ethers";
-import { getUserOpHash } from "@account-abstraction/utils";
+import { ethers } from "ethers";
 import {
   AddressRegistry__factory,
   FallbackDecompressor__factory,
   SafeCompressionFactory__factory,
   SafeCompressionPlugin__factory,
 } from "../../typechain-types";
-import sendUserOpAndWait from "./utils/sendUserOpAndWait";
 import receiptOf from "./utils/receiptOf";
 import SafeSingletonFactory from "./utils/SafeSingletonFactory";
-import { createUnsignedUserOperation, setupTests } from "./utils/setupTests";
+import { setupTests } from "./utils/setupTests";
+import { createAndSendUserOpWithEcdsaSig } from "./utils/createUserOp";
 
 describe("SafeCompressionPlugin", () => {
   it("should pass the ERC4337 validation", async () => {
@@ -75,12 +74,18 @@ describe("SafeCompressionPlugin", () => {
       ],
       [],
     );
-    // TODO: why is this needed to prevent "nonce too low" error
 
     const userOpCallData = compressionAccount.interface.encodeFunctionData(
       "decompressAndPerform",
       [compressedActions],
     );
+
+    // Note: initCode is not used because we need to create both the safe
+    // proxy and the plugin, and 4337 currently only allows one contract
+    // creation in this step. Since we need an extra step anyway, it's simpler
+    // to do the whole create outside of 4337.
+    const initCode = "0x";
+
     const dummySignature = await owner.signMessage("dummy sig");
 
     // Native tokens for the pre-fund 💸
@@ -91,31 +96,18 @@ describe("SafeCompressionPlugin", () => {
       }),
     );
 
-    const unsignedUserOperation = await createUnsignedUserOperation(
+    const recipientBalanceBefore = await provider.getBalance(recipient.address);
+
+    await createAndSendUserOpWithEcdsaSig(
       provider,
       bundlerProvider,
+      owner,
       accountAddress,
+      initCode,
       userOpCallData,
       entryPointAddress,
       dummySignature,
     );
-
-    // const resolvedUserOp = await resolveProperties(unsignedUserOperation);
-    const userOpHash = getUserOpHash(
-      unsignedUserOperation,
-      entryPointAddress,
-      Number((await provider.getNetwork()).chainId),
-    );
-    const userOpSignature = await owner.signMessage(getBytes(userOpHash));
-
-    const userOperation = {
-      ...unsignedUserOperation,
-      signature: userOpSignature,
-    };
-
-    const recipientBalanceBefore = await provider.getBalance(recipient.address);
-
-    await sendUserOpAndWait(userOperation, entryPointAddress, bundlerProvider);
 
     const recipientBalanceAfter = await provider.getBalance(recipient.address);
 
