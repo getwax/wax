@@ -47,9 +47,8 @@ contract SafeECDSARecoveryPlugin {
         bytes32 recoveryHash,
         bytes32 expectedGuardianHash
     );
-    error SAFE_ZERO_ADDRESS();
     error MODULE_NOT_ENABLED();
-    error MSG_SENDER_NOT_PLUGIN_OWNER(address sender, address pluginOwner);
+    error INVALID_OWNER(address expectedOwner, address owner);
     error INVALID_NEW_OWNER_SIGNATURE();
 
     constructor() {
@@ -75,14 +74,12 @@ contract SafeECDSARecoveryPlugin {
         address ecsdaPlugin
     ) external {
         address safe = msg.sender;
-        if (safe == address(0)) revert SAFE_ZERO_ADDRESS();
 
         bool moduleEnabled = ISafe(safe).isModuleEnabled(address(this));
         if (!moduleEnabled) revert MODULE_NOT_ENABLED();
 
         address expectedOwner = ISafeECDSAPlugin(ecsdaPlugin).getOwner(safe);
-        if (owner != expectedOwner)
-            revert MSG_SENDER_NOT_PLUGIN_OWNER(msg.sender, owner);
+        if (owner != expectedOwner) revert INVALID_OWNER(expectedOwner, owner);
 
         ecdsaRecoveryStorage[safe] = ECDSARecoveryStorage(recoveryHash);
     }
