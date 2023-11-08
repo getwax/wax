@@ -361,7 +361,7 @@ describe("SafeECDSARecoveryPlugin", () => {
     await receiptOf(
       admin.sendTransaction({
         to: guardianSimpleAccountAddress,
-        value: ethers.parseEther("10"), // TODO: increasing this from 1 to 10 prevents error of balance not updating for assertion??????
+        value: ethers.parseEther("10"),
       }),
     );
 
