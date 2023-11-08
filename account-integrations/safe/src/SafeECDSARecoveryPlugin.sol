@@ -50,7 +50,6 @@ contract SafeECDSARecoveryPlugin {
     error SAFE_ZERO_ADDRESS();
     error MODULE_NOT_ENABLED();
     error MSG_SENDER_NOT_PLUGIN_OWNER(address sender, address pluginOwner);
-    error INVALID_NEW_GUARDIAN_SIGNATURE();
     error INVALID_NEW_OWNER_SIGNATURE();
 
     constructor() {
@@ -90,22 +89,24 @@ contract SafeECDSARecoveryPlugin {
 
     function resetEcdsaAddress(
         bytes memory newOwnerSignature,
-        bytes memory guardianSignature,
-        address guardian,
+        address safe,
         string memory salt,
         address ecdsaPlugin,
         address currentOwner,
         address newOwner
     ) external {
-        address safe = msg.sender;
-
         ECDSARecoveryStorage memory recoveryStorage = ecdsaRecoveryStorage[
             safe
         ];
 
         // Identity of guardian is protected and it is only revealed on recovery
         bytes32 expectedRecoveryHash = keccak256(
-            abi.encodePacked(RECOVERY_HASH_DOMAIN, guardian, currentOwner, salt)
+            abi.encodePacked(
+                RECOVERY_HASH_DOMAIN,
+                msg.sender,
+                currentOwner,
+                salt
+            )
         );
 
         if (expectedRecoveryHash != recoveryStorage.recoveryHash) {
@@ -115,12 +116,8 @@ contract SafeECDSARecoveryPlugin {
             );
         }
 
-        bytes32 ethSignedHash = expectedRecoveryHash.toEthSignedMessageHash();
-        if (guardian != ethSignedHash.recover(guardianSignature))
-            revert INVALID_NEW_GUARDIAN_SIGNATURE();
-
         bytes32 currentOwnerHash = keccak256(abi.encodePacked(currentOwner));
-        ethSignedHash = currentOwnerHash.toEthSignedMessageHash();
+        bytes32 ethSignedHash = currentOwnerHash.toEthSignedMessageHash();
 
         if (newOwner != ethSignedHash.recover(newOwnerSignature))
             revert INVALID_NEW_OWNER_SIGNATURE();

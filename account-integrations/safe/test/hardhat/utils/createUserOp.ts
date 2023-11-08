@@ -132,7 +132,7 @@ export const createAndSendUserOpWithEcdsaSig = async (
   provider: ethers.JsonRpcProvider,
   bundlerProvider: ethers.JsonRpcProvider,
   owner: HDNodeWallet,
-  safeProxyAddress: string,
+  accountAddress: string,
   initCode: string,
   userOpCallData: string,
   entryPointAddress: string,
@@ -141,7 +141,7 @@ export const createAndSendUserOpWithEcdsaSig = async (
   const unsignedUserOperation = await createUnsignedUserOperation(
     provider,
     bundlerProvider,
-    safeProxyAddress,
+    accountAddress,
     initCode,
     userOpCallData,
     entryPointAddress,
@@ -161,5 +161,9 @@ export const createAndSendUserOpWithEcdsaSig = async (
     signature: userOpSignature,
   };
 
-  await sendUserOpAndWait(userOperation, entryPointAddress, bundlerProvider);
+  return await sendUserOpAndWait(
+    userOperation,
+    entryPointAddress,
+    bundlerProvider,
+  );
 };
