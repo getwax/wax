@@ -2,6 +2,8 @@
 
 Based on https://github.com/privacy-scaling-explorations/zkp-app-boilerplate/tree/main/circuits
 
+WARNING: These circuits are unsafe and are currently not recommended for production use.
+
 ## Required
 
 - NodeJS >= 18
