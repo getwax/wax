@@ -2,7 +2,6 @@ import { expect } from "chai";
 import { ethers, getBytes, keccak256, solidityPacked } from "ethers";
 import { signer as hubbleBlsSigner } from "@thehubbleproject/bls";
 import { getUserOpHash } from "@account-abstraction/utils";
-import SafeSingletonFactory from "./utils/SafeSingletonFactory";
 import {
   EntryPoint__factory,
   SafeBlsPlugin__factory,
@@ -10,7 +9,7 @@ import {
 import { setupTests } from "./utils/setupTests";
 import receiptOf from "./utils/receiptOf";
 import {
-  createInitCode,
+  generateInitCodeAndAddress,
   createUnsignedUserOperation,
 } from "./utils/createUserOp";
 
@@ -25,20 +24,22 @@ describe("SafeBlsPlugin", () => {
       admin,
       owner,
       entryPointAddress,
+      ssf,
       safeProxyFactory,
       safeSingleton,
     } = await setupTests();
 
+    // Deploy bls plugin
     const domain = getBytes(keccak256(Buffer.from("eip4337.bls.domain")));
     const signerFactory = await hubbleBlsSigner.BlsSignerFactory.new();
     const blsSigner = signerFactory.getSigner(domain, BLS_PRIVATE_KEY);
 
-    const ssf = await SafeSingletonFactory.init(admin);
     const safeBlsPlugin = await ssf.connectOrDeploy(SafeBlsPlugin__factory, [
       entryPointAddress,
       blsSigner.pubkey,
     ]);
 
+    // Construct userOp
     const signer = new ethers.Wallet(
       "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d",
     );
@@ -59,7 +60,7 @@ describe("SafeBlsPlugin", () => {
       [recipientAddress, transferAmount, "0x00"],
     );
 
-    const { initCode, deployedAddress } = await createInitCode(
+    const { initCode, deployedAddress } = await generateInitCodeAndAddress(
       admin,
       owner,
       safeBlsPlugin,
@@ -83,7 +84,6 @@ describe("SafeBlsPlugin", () => {
       Number((await provider.getNetwork()).chainId),
     );
 
-    // Create BLS signature of the userOpHash
     const userOpSignature = blsSigner.sign(userOpHash);
 
     const userOperation = {
@@ -98,6 +98,7 @@ describe("SafeBlsPlugin", () => {
 
     const entryPoint = EntryPoint__factory.connect(entryPointAddress, admin);
 
+    // Send userOp
     await receiptOf(
       entryPoint
         .connect(admin)

@@ -30,6 +30,7 @@ describe("SafeECDSARecoveryPlugin", () => {
   let owner: HDNodeWallet;
   let entryPointAddress: string;
   let safeSingleton: Safe;
+  let ssf: SafeSingletonFactory;
 
   let safeProxyAddress: string;
   let recoveryPlugin: SafeECDSARecoveryPlugin;
@@ -43,10 +44,9 @@ describe("SafeECDSARecoveryPlugin", () => {
       admin,
       owner,
       entryPointAddress,
+      ssf,
       safeSingleton,
     } = setup);
-
-    const ssf = await SafeSingletonFactory.init(admin);
 
     const safeECDSAFactory = await ssf.connectOrDeploy(
       SafeECDSAFactory__factory,
@@ -65,7 +65,7 @@ describe("SafeECDSARecoveryPlugin", () => {
 
     await receiptOf(safeECDSAFactory.create(...createArgs));
 
-    // Native tokens for the pre-fund 💸
+    // Native tokens for the pre-fund
     await receiptOf(
       admin.sendTransaction({
         to: safeProxyAddress,
@@ -132,7 +132,7 @@ describe("SafeECDSARecoveryPlugin", () => {
       ),
     );
 
-    // Add recovery account
+    // Construct userOp to add recovery account
     const chainId = (await provider.getNetwork()).chainId;
     const salt = "test salt";
 
@@ -173,6 +173,7 @@ describe("SafeECDSARecoveryPlugin", () => {
     const initCode = "0x";
     const dummySignature = await owner.signMessage("dummy sig");
 
+    // Send userOp to add recovery account
     await createAndSendUserOpWithEcdsaSig(
       provider,
       bundlerProvider,
@@ -188,7 +189,7 @@ describe("SafeECDSARecoveryPlugin", () => {
       await recoveryPlugin.ecdsaRecoveryStorage(safeProxyAddress);
     expect(recoveryHash).to.equal(storedRecoveryHash);
 
-    // Reset ecdsa address
+    // Construct tx to reset ecdsa address
     const newEcdsaPluginSigner = ethers.Wallet.createRandom().connect(provider);
     const currentOwnerHash = ethers.solidityPackedKeccak256(
       ["address"],
@@ -211,6 +212,7 @@ describe("SafeECDSARecoveryPlugin", () => {
       .connect(guardianSigner)
       .resetEcdsaAddress.staticCall(...resetEcdsaAddressArgs);
 
+    // Send tx to reset ecdsa address
     await receiptOf(
       recoveryPlugin
         .connect(guardianSigner)
@@ -220,7 +222,7 @@ describe("SafeECDSARecoveryPlugin", () => {
     const newOwner = await safeEcdsaPlugin.ecdsaOwnerStorage(safeProxyAddress);
     expect(newOwner).to.equal(newEcdsaPluginSigner.address);
 
-    // Send tx with new key
+    // Send userOp with new owner
     const recipientAddress = ethers.Wallet.createRandom().address;
     const transferAmount = ethers.parseEther("1");
     userOpCallData = safeEcdsaPlugin.interface.encodeFunctionData(
@@ -262,9 +264,7 @@ describe("SafeECDSARecoveryPlugin", () => {
       ),
     );
 
-    const ssf = await SafeSingletonFactory.init(admin);
-
-    // deploy guardian smart account
+    // Deploy guardian smart account
     const simpleAccountFactory = await ssf.connectOrDeploy(
       SimpleAccountFactory__factory,
       [entryPointAddress],
@@ -274,7 +274,7 @@ describe("SafeECDSARecoveryPlugin", () => {
 
     await receiptOf(simpleAccountFactory.createAccount(guardianAddress, 0));
 
-    // Add recovery account
+    // Construct userOp to add recovery account
     const chainId = (await provider.getNetwork()).chainId;
     const salt = "test salt";
 
@@ -315,6 +315,7 @@ describe("SafeECDSARecoveryPlugin", () => {
     const initCode = "0x";
     const dummySignature = await owner.signMessage("dummy sig");
 
+    // Send userOp to add recovery account
     await createAndSendUserOpWithEcdsaSig(
       provider,
       bundlerProvider,
@@ -330,7 +331,7 @@ describe("SafeECDSARecoveryPlugin", () => {
       await recoveryPlugin.ecdsaRecoveryStorage(safeProxyAddress);
     expect(recoveryHash).to.equal(storedRecoveryHash);
 
-    // Reset ecdsa address
+    // Construct userOp to reset ecdsa address
     const newEcdsaPluginSigner = ethers.Wallet.createRandom().connect(provider);
     const currentOwnerHash = ethers.solidityPackedKeccak256(
       ["address"],
@@ -357,7 +358,7 @@ describe("SafeECDSARecoveryPlugin", () => {
       resetEcdsaAddressCalldata,
     ]);
 
-    // Native tokens for the pre-fund 💸
+    // Native tokens for the pre-fund
     await receiptOf(
       admin.sendTransaction({
         to: guardianSimpleAccountAddress,
@@ -365,12 +366,16 @@ describe("SafeECDSARecoveryPlugin", () => {
       }),
     );
 
+    // Send userOp to reset ecdsa address
+    // Note: Failing with an unrecognised custom error when attempting to first construct
+    // the init code and pass it into the recovery user op, so deploying account
+    // first and using empty init code here
     await createAndSendUserOpWithEcdsaSig(
       provider,
       bundlerProvider,
       guardianSigner,
       guardianSimpleAccountAddress,
-      initCode, // Failing with an unrecognised custom error when attempting to first construct the init code and pass it into the recovery user op
+      initCode,
       userOpCallData,
       entryPointAddress,
       dummySignature,
@@ -379,7 +384,7 @@ describe("SafeECDSARecoveryPlugin", () => {
     const newOwner = await safeEcdsaPlugin.ecdsaOwnerStorage(safeProxyAddress);
     expect(newOwner).to.equal(newEcdsaPluginSigner.address);
 
-    // Send tx with new key
+    // Send userOp with new owner
     const recipientAddress = ethers.Wallet.createRandom().address;
     const transferAmount = ethers.parseEther("1");
     userOpCallData = safeEcdsaPlugin.interface.encodeFunctionData(

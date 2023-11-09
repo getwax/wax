@@ -7,7 +7,6 @@ import {
   SafeCompressionPlugin__factory,
 } from "../../typechain-types";
 import receiptOf from "./utils/receiptOf";
-import SafeSingletonFactory from "./utils/SafeSingletonFactory";
 import { setupTests } from "./utils/setupTests";
 import { createAndSendUserOpWithEcdsaSig } from "./utils/createUserOp";
 
@@ -19,11 +18,11 @@ describe("SafeCompressionPlugin", () => {
       admin,
       owner,
       entryPointAddress,
+      ssf,
       safeSingleton,
     } = await setupTests();
 
-    const ssf = await SafeSingletonFactory.init(admin);
-
+    // Deploy compression contracts and compression plugin
     const safeCompressionFactory = await ssf.connectOrDeploy(
       SafeCompressionFactory__factory,
       [],
@@ -54,6 +53,7 @@ describe("SafeCompressionPlugin", () => {
 
     await receiptOf(safeCompressionFactory.create(...createArgs));
 
+    // construct userOp
     const compressionAccount = SafeCompressionPlugin__factory.connect(
       accountAddress,
       owner,
@@ -88,7 +88,7 @@ describe("SafeCompressionPlugin", () => {
 
     const dummySignature = await owner.signMessage("dummy sig");
 
-    // Native tokens for the pre-fund 💸
+    // Native tokens for the pre-fund
     await receiptOf(
       admin.sendTransaction({
         to: accountAddress,
@@ -98,6 +98,7 @@ describe("SafeCompressionPlugin", () => {
 
     const recipientBalanceBefore = await provider.getBalance(recipient.address);
 
+    // send userOp
     await createAndSendUserOpWithEcdsaSig(
       provider,
       bundlerProvider,

@@ -5,7 +5,6 @@ import {
   SafeECDSAPlugin__factory,
 } from "../../typechain-types";
 import receiptOf from "./utils/receiptOf";
-import SafeSingletonFactory from "./utils/SafeSingletonFactory";
 import { setupTests } from "./utils/setupTests";
 import { createAndSendUserOpWithEcdsaSig } from "./utils/createUserOp";
 
@@ -19,6 +18,7 @@ describe("SafeECDSAPlugin", () => {
       admin,
       owner,
       entryPointAddress,
+      ssf,
       safeSingleton,
     } = await setupTests();
 
@@ -26,8 +26,7 @@ describe("SafeECDSAPlugin", () => {
     const transferAmount = ethers.parseEther("1");
     const dummySignature = await owner.signMessage("dummy sig");
 
-    const ssf = await SafeSingletonFactory.init(admin);
-
+    // Deploy ecdsa plugin
     const safeECDSAFactory = await ssf.connectOrDeploy(
       SafeECDSAFactory__factory,
       [],
@@ -51,7 +50,7 @@ describe("SafeECDSAPlugin", () => {
       owner,
     );
 
-    // Native tokens for the pre-fund 💸
+    // Native tokens for the pre-fund
     await receiptOf(
       admin.sendTransaction({
         to: accountAddress,
@@ -59,6 +58,7 @@ describe("SafeECDSAPlugin", () => {
       }),
     );
 
+    // Construct userOp
     const userOpCallData = safeEcdsaPlugin.interface.encodeFunctionData(
       "execTransaction",
       [recipient.address, transferAmount, "0x00"],
@@ -70,6 +70,7 @@ describe("SafeECDSAPlugin", () => {
     // to do the whole create outside of 4337.
     const initCode = "0x";
 
+    // Send userOp
     await createAndSendUserOpWithEcdsaSig(
       provider,
       bundlerProvider,
@@ -85,10 +86,8 @@ describe("SafeECDSAPlugin", () => {
   });
 
   it("should not allow execTransaction from unrelated address", async () => {
-    const { provider, admin, owner, entryPointAddress, safeSingleton } =
+    const { provider, admin, owner, entryPointAddress, ssf, safeSingleton } =
       await setupTests();
-
-    const ssf = await SafeSingletonFactory.init(admin);
 
     const safeECDSAFactory = await ssf.connectOrDeploy(
       SafeECDSAFactory__factory,

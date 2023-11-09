@@ -2,10 +2,9 @@ import { expect } from "chai";
 import { ethers, BigNumberish } from "ethers";
 import sendUserOpAndWait from "./utils/sendUserOpAndWait";
 import { setupTests } from "./utils/setupTests";
-import SafeSingletonFactory from "./utils/SafeSingletonFactory";
 import { SafeWebAuthnPlugin__factory } from "../../typechain-types";
 import {
-  createInitCode,
+  generateInitCodeAndAddress,
   createUnsignedUserOperation,
 } from "./utils/createUserOp";
 
@@ -69,17 +68,19 @@ describe("SafeWebAuthnPlugin", () => {
       admin,
       owner,
       entryPointAddress,
+      ssf,
       safeProxyFactory,
       safeSingleton,
     } = await setupTests();
     const { publicKey, userOpSignature } = getPublicKeyAndSignature();
 
-    const ssf = await SafeSingletonFactory.init(admin);
+    // Deploy webauthn plugin
     const safeWebAuthnPlugin = await ssf.connectOrDeploy(
       SafeWebAuthnPlugin__factory,
       [entryPointAddress, publicKey],
     );
 
+    // Construct userOp
     const signer = new ethers.Wallet(
       "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d",
     );
@@ -91,7 +92,7 @@ describe("SafeWebAuthnPlugin", () => {
       [recipientAddress, transferAmount, "0x00"],
     );
 
-    const { initCode, deployedAddress } = await createInitCode(
+    const { initCode, deployedAddress } = await generateInitCodeAndAddress(
       admin,
       owner,
       safeWebAuthnPlugin,
@@ -111,6 +112,7 @@ describe("SafeWebAuthnPlugin", () => {
       userOpSignature,
     );
 
+    // Send userOp
     await sendUserOpAndWait(
       unsignedUserOperation,
       entryPointAddress,

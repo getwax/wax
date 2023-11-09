@@ -67,6 +67,7 @@ export async function setupTests() {
     admin,
     owner,
     entryPointAddress,
+    ssf,
     safeProxyFactory,
     safeSingleton,
   };

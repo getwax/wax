@@ -17,7 +17,7 @@ import sendUserOpAndWait from "./sendUserOpAndWait";
 
 type Plugin = SafeBlsPlugin | SafeWebAuthnPlugin;
 
-export const createInitCode = async (
+export const generateInitCodeAndAddress = async (
   admin: NonceManager,
   owner: ethers.HDNodeWallet,
   plugin: Plugin,
@@ -50,7 +50,7 @@ export const createInitCode = async (
     73,
   );
 
-  // Native tokens for the pre-fund 💸
+  // Native tokens for the pre-fund
   await receiptOf(
     admin.sendTransaction({
       to: deployedAddress,
