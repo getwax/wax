@@ -6,9 +6,10 @@ import {
 import SafeSingletonFactory from "./SafeSingletonFactory";
 import receiptOf from "./receiptOf";
 import makeDevFaster from "./makeDevFaster";
+import { getSigners } from "./getSigners";
 
 export async function setupTests() {
-  const { BUNDLER_URL, NODE_URL, MNEMONIC } = process.env;
+  const { BUNDLER_URL, NODE_URL } = process.env;
 
   if (!BUNDLER_URL) {
     throw new Error(
@@ -20,19 +21,13 @@ export async function setupTests() {
       "missing bundler env var NODE_URL. Make sure you have copied or created a .env file",
     );
   }
-  if (!MNEMONIC) {
-    throw new Error(
-      "missing bundler env var MNEMONIC. Make sure you have copied or created a .env file",
-    );
-  }
 
   const bundlerProvider = new ethers.JsonRpcProvider(BUNDLER_URL);
   const provider = new ethers.JsonRpcProvider(NODE_URL);
   await makeDevFaster(provider);
 
-  const admin = new NonceManager(
-    ethers.Wallet.fromPhrase(MNEMONIC).connect(provider),
-  );
+  const [, signer] = getSigners();
+  const admin = new NonceManager(signer.connect(provider));
   const owner = ethers.Wallet.createRandom(provider);
 
   await receiptOf(

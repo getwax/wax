@@ -12,6 +12,7 @@ import {
   generateInitCodeAndAddress,
   createUnsignedUserOperation,
 } from "./utils/createUserOp";
+import { getSigners } from "./utils/getSigners";
 
 const BLS_PRIVATE_KEY =
   "0xdbe3d601b1b25c42c50015a87855fdce00ea9b3a7e33c92d31c69aeb70708e08";
@@ -40,10 +41,9 @@ describe("SafeBlsPlugin", () => {
     ]);
 
     // Construct userOp
-    const signer = new ethers.Wallet(
-      "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d",
-    );
-    const recipientAddress = signer.address;
+    const [, , signer] = getSigners();
+
+    const recipientAddress = await signer.getAddress();
     const transferAmount = ethers.parseEther("1");
 
     const encoder = ethers.AbiCoder.defaultAbiCoder();

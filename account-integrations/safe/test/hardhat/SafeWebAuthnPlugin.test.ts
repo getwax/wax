@@ -7,6 +7,7 @@ import {
   generateInitCodeAndAddress,
   createUnsignedUserOperation,
 } from "./utils/createUserOp";
+import { getSigners } from "./utils/getSigners";
 
 describe("SafeWebAuthnPlugin", () => {
   const getPublicKeyAndSignature = () => {
@@ -81,10 +82,9 @@ describe("SafeWebAuthnPlugin", () => {
     );
 
     // Construct userOp
-    const signer = new ethers.Wallet(
-      "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d",
-    );
-    const recipientAddress = signer.address;
+    const [, , signer] = getSigners();
+
+    const recipientAddress = await signer.getAddress();
     const transferAmount = ethers.parseEther("1");
 
     const userOpCallData = safeWebAuthnPlugin.interface.encodeFunctionData(
