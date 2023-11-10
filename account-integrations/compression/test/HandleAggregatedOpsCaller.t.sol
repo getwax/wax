@@ -98,7 +98,7 @@ contract HandleAggregatedOpsCallerTest is Test {
         });
 
         assertEq(
-            entryPoint.params(),
+            entryPoint.handleAggregatedOpsParams(),
             abi.encode(bundle, payable(address(this)))
         );
     }
