@@ -3,18 +3,18 @@ pragma solidity ^0.8.20;
 
 import "forge-std/Test.sol";
 
-import {EntryPointCaller} from "../src/EntryPointCaller.sol";
+import {HandleAggregatedOpsCaller} from "../src/HandleAggregatedOpsCaller.sol";
 import {AddressRegistry} from "../src/AddressRegistry.sol";
 import {UserOperation, UserOpsPerAggregator} from "../src/I4337.sol";
 
 import {MockEntryPoint} from "./helpers/MockEntryPoint.sol";
 import {MockAggregator} from "./helpers/MockAggregator.sol";
 
-contract EntryPointCallerTest is Test {
+contract HandleAggregatedOpsCallerTest is Test {
     MockEntryPoint entryPoint;
     MockAggregator aggregator;
     AddressRegistry registry;
-    EntryPointCaller entryPointCaller;
+    HandleAggregatedOpsCaller handleAggregatedOpsCaller;
 
     bytes signature = (
         hex"000102030405060708090a0b0c0d0e0f"
@@ -28,7 +28,7 @@ contract EntryPointCallerTest is Test {
         aggregator = new MockAggregator();
         registry = new AddressRegistry();
 
-        entryPointCaller = new EntryPointCaller(
+        handleAggregatedOpsCaller = new HandleAggregatedOpsCaller(
             entryPoint,
             payable(address(this)),
             aggregator,
@@ -46,7 +46,7 @@ contract EntryPointCallerTest is Test {
     }
 
     function test_one() public {
-        (bool success,) = address(entryPointCaller).call(bytes.concat(
+        (bool success,) = address(handleAggregatedOpsCaller).call(bytes.concat(
             hex"01" // one operation
             hex"09" // bit stack: (1)001
                     // - 1: use registry for sender

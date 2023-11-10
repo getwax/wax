@@ -14,7 +14,7 @@ import {AddressRegistry} from "./AddressRegistry.sol";
 import {RegIndex} from "./RegIndex.sol";
 import {PseudoFloat} from "./PseudoFloat.sol";
 
-contract EntryPointCaller {
+contract HandleAggregatedOpsCaller {
     IEntryPoint entryPoint;
     address payable beneficiary;
     IAggregator aggregator;

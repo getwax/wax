@@ -44,7 +44,7 @@ paragraph more thoroughly and document it.)
 
 ## Requirements
 
-- The bundler needs to use [`EntryPointCaller`](./src/EntryPointCaller.sol)
+- The bundler needs to use [`HandleAggregatedOpsCaller`](./src/HandleAggregatedOpsCaller.sol)
   (or something better) (including the off-chain compression needed to call it
   correctly)
 - The account (aka SCW) needs to decompress its `userOp.calldata` field similar
