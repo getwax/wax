@@ -54,7 +54,7 @@ const ChooseAccountPage = () => {
                   <li>L2 Cost Savings</li>
                   <li>Multi-Action</li>
                   <li>ECDSA (BLS Future)</li>
-                  <li>(Built-in Safe)</li>
+                  <li>(Built in Safe)</li>
                 </ul>
               </div>
             </Button>
@@ -65,7 +65,7 @@ const ChooseAccountPage = () => {
               <div>
                 <ul style={{ textAlign: 'left' }}>
                   <li>Password auth</li>
-                  <li>(Built-in Safe)</li>
+                  <li>(Built in Safe)</li>
                 </ul>
               </div>
             </Button>
