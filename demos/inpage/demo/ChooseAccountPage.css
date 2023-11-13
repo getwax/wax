@@ -1,0 +1,11 @@
+.choose-account-page {
+  width: 100vw;
+  text-align: center;
+}
+
+.account-types {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 1rem;
+}
