@@ -9,3 +9,8 @@
   gap: 1rem;
   margin-top: 1rem;
 }
+
+.account-type-heading {
+  font-weight: bold;
+  margin: 1em;
+}

@@ -23,48 +23,44 @@ const ChooseAccountPage = () => {
         <div style={{ display: 'inline-block' }}>
           <div className="account-types">
             <Button
-              style={{ display: 'inline-block' }}
+              secondary
               type="button"
               onPress={async () => {
                 demo.waxInPage.preferredAccountType = 'SafeECDSAAccount';
                 await demo.requestAddress();
               }}
             >
-              <div>
-                <b>Recovery</b>
-              </div>
+              <div className="account-type-heading">Recovery</div>
               <div>
                 <ul style={{ textAlign: 'left' }}>
                   <li>Key Rotation</li>
-                  <li>ECDSA</li>
                   <li>Multi-Action</li>
-                  <li>(Built-in Safe)</li>
+                  <li>ECDSA</li>
+                  <li>(Built in Safe)</li>
                 </ul>
               </div>
             </Button>
             <Button
-              style={{ display: 'inline-block' }}
+              secondary
               type="button"
               onPress={async () => {
                 demo.waxInPage.preferredAccountType = 'SafeCompressionAccount';
                 await demo.requestAddress();
               }}
             >
-              <div>
-                <b>Compression</b>
-              </div>
+              <div className="account-type-heading">Compression</div>
               <div>
                 <ul style={{ textAlign: 'left' }}>
-                  <li>L2 Optimized</li>
-                  <li>ECDSA</li>
+                  <li>L2 Cost Savings</li>
                   <li>Multi-Action</li>
+                  <li>ECDSA (BLS Future)</li>
                   <li>(Built-in Safe)</li>
                 </ul>
               </div>
             </Button>
-            <Button style={{ display: 'inline-block' }} type="button" disabled>
-              <div>
-                <b>ZK Password (coming soon)</b>
+            <Button secondary type="button" disabled>
+              <div className="account-type-heading">
+                ZK Password (coming soon)
               </div>
               <div>
                 <ul style={{ textAlign: 'left' }}>
