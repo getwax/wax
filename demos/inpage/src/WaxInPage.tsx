@@ -36,13 +36,14 @@ import SimulatedBundler from './bundlers/SimulatedBundler';
 import NetworkBundler from './bundlers/NetworkBundler';
 import IBundler from './bundlers/IBundler';
 import IAccount from './accounts/IAccount';
-import { makeAccountWrapper } from './accounts/AccountData';
+import AccountData, { makeAccountWrapper } from './accounts/AccountData';
 import SafeECDSAAccountWrapper from './accounts/SafeECDSAAccountWrapper';
 import ChoicePopup from './ChoicePopup';
 import never from './helpers/never';
 import SimpleAccountWrapper from './accounts/SimpleAccountWrapper';
 import SafeCompressionAccountWrapper from './accounts/SafeCompressionAccountWrapper';
 import { hexLen } from './helpers/encodeUtils';
+import JsonRpcError from './JsonRpcError';
 
 type Config = {
   logRequests?: boolean;
@@ -87,6 +88,7 @@ export default class WaxInPage {
   storage: WaxStorage;
   ethersProvider: ethers.BrowserProvider;
   deployerSeedPhrase = '';
+  preferredAccountType?: AccountData['type'];
 
   constructor({
     rpcUrl,
@@ -352,6 +354,29 @@ export default class WaxInPage {
     await this.storage.connectedAccounts.clear();
   }
 
+  async requestAccountWithoutAutocreate() {
+    const connectedAccounts = await this.storage.connectedAccounts.get();
+
+    if (connectedAccounts.length > 0) {
+      return connectedAccounts[0];
+    }
+
+    const granted = await this.requestPermission(
+      'Allow this page to see your account address?',
+    );
+
+    if (!granted) {
+      throw new JsonRpcError({
+        code: 4001,
+        message: 'User rejected request',
+      });
+    }
+
+    const account = await this._getAccount(waxPrivate);
+
+    return account?.address;
+  }
+
   async _getAccount(waxPrivateParam: symbol): Promise<IAccount | undefined> {
     if (waxPrivateParam !== waxPrivate) {
       throw new Error('This method is private to the waxInPage library');
@@ -377,9 +402,40 @@ export default class WaxInPage {
       return await makeAccountWrapper(existingAccounts[0], this);
     }
 
+    const choice = await this.#getAccountType();
+
+    if (choice === 'SimpleAccount') {
+      const account = await SimpleAccountWrapper.createRandom(this);
+      await this.storage.accounts.set([account.toData()]);
+
+      return account;
+    }
+
+    if (choice === 'SafeECDSAAccount') {
+      const account = await SafeECDSAAccountWrapper.createRandom(this);
+      await this.storage.accounts.set([account.toData()]);
+
+      return account;
+    }
+
+    if (choice === 'SafeCompressionAccount') {
+      const account = await SafeCompressionAccountWrapper.createRandom(this);
+      await this.storage.accounts.set([account.toData()]);
+
+      return account;
+    }
+
+    never(choice);
+  }
+
+  async #getAccountType(): Promise<AccountData['type']> {
+    if (this.preferredAccountType !== undefined) {
+      return this.preferredAccountType;
+    }
+
     const popup = await this.getPopup();
 
-    let choice: 'SimpleAccount' | 'SafeECDSAAccount' | 'SafeCompressionAccount';
+    let choice: AccountData['type'];
 
     try {
       choice = await new Promise<
@@ -408,28 +464,7 @@ export default class WaxInPage {
       popup.close();
     }
 
-    if (choice === 'SimpleAccount') {
-      const account = await SimpleAccountWrapper.createRandom(this);
-      await this.storage.accounts.set([account.toData()]);
-
-      return account;
-    }
-
-    if (choice === 'SafeECDSAAccount') {
-      const account = await SafeECDSAAccountWrapper.createRandom(this);
-      await this.storage.accounts.set([account.toData()]);
-
-      return account;
-    }
-
-    if (choice === 'SafeCompressionAccount') {
-      const account = await SafeCompressionAccountWrapper.createRandom(this);
-      await this.storage.accounts.set([account.toData()]);
-
-      return account;
-    }
-
-    never(choice);
+    return choice;
   }
 
   logBytes(description: string, bytes: string) {
