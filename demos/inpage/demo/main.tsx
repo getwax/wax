@@ -32,6 +32,7 @@ if (config.pollingInterval !== undefined) {
 waxInPage.setConfig({
   logRequests: config.logRequests,
   logBytes: config.logBytes,
+  requirePermission: config.requirePermission,
 });
 
 const demoContext = new DemoContext(waxInPage);
