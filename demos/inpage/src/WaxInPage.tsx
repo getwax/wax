@@ -393,7 +393,7 @@ export default class WaxInPage {
               heading="Choose an Account Type"
               text="Different accounts can have different features."
               choices={[
-                'SimpleAccount' as const,
+                // 'SimpleAccount' as const, // <-- FIXME: currently broken :(
                 'SafeECDSAAccount' as const,
                 'SafeCompressionAccount' as const,
               ]}
