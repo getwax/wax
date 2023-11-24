@@ -2,7 +2,7 @@ import { UserOperationStruct } from "@account-abstraction/contracts";
 import { getUserOpHash } from "@account-abstraction/utils";
 import { ERC4337ZKPPasswordClient } from "@getwax/circuits";
 import { expect } from "chai";
-import { resolveProperties, ethers } from "ethers";
+import { resolveProperties, ethers, NonceManager } from "ethers";
 import makeDevFaster from "../utils/makeDevFaster";
 import SafeSingletonFactory from "../utils/SafeSingletonFactory";
 import sendUserOpAndWait from "../utils/sendUserOpAndWait";
@@ -32,7 +32,9 @@ describe("SafeZKPPasswordPlugin", () => {
     const bundlerProvider = new ethers.JsonRpcProvider(BUNDLER_URL);
     const provider = new ethers.JsonRpcProvider(NODE_URL);
     await makeDevFaster(provider);
-    const userWallet = ethers.Wallet.fromPhrase(MNEMONIC!).connect(provider);
+    const wallet = ethers.Wallet.fromPhrase(MNEMONIC!).connect(provider);
+    // Allows us to use same account as bundler
+    const userWallet = new NonceManager(wallet);
 
     const entryPoints = (await bundlerProvider.send(
       "eth_supportedEntryPoints",
@@ -129,9 +131,6 @@ describe("SafeZKPPasswordPlugin", () => {
       userWallet.sendTransaction({
         to: accountAddress,
         value: ethers.parseEther("100"),
-        // Re-sync nonce
-        // TODO (merge-ok) See if NonceManager could fix this.
-        nonce: await userWallet.getNonce(),
       }),
     );
 
