@@ -19,6 +19,7 @@ const config: ConfigType = {
   // bundler (sometimes this is the same as rpcUrl). Otherwise, a bundler will
   // be simulated inside the library.
   // bundlerRpcUrl: '',
+  requirePermission: false,
 };
 
 export default config;

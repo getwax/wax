@@ -6,6 +6,7 @@ type ConfigType = {
   pollingInterval?: number;
   addFundsEthAmount?: string;
   deployerSeedPhrase: string;
+  requirePermission?: boolean;
 };
 
 export default ConfigType;
