@@ -30,9 +30,10 @@ async function deploy() {
     Safe__factory,
   ];
 
-  const provider = new ethers.JsonRpcProvider(process.env.NODE_URL);
+  const { NODE_URL, MNEMONIC } = process.env;
+  const provider = new ethers.JsonRpcProvider(NODE_URL);
   await makeDevFaster(provider);
-  const hdNode = ethers.HDNodeWallet.fromPhrase(process.env.MNEMONIC!);
+  const hdNode = ethers.HDNodeWallet.fromPhrase(MNEMONIC!);
   const wallet = new ethers.Wallet(hdNode.privateKey, provider);
 
   const safeSingletonFactory = await SafeSingletonFactory.init(wallet);

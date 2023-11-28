@@ -25,3 +25,6 @@
 [submodule "primitives/lib/forge-std"]
 	path = primitives/lib/forge-std
 	url = https://github.com/foundry-rs/forge-std
+[submodule "account-integrations/zkp/lib/circom"]
+	path = account-integrations/zkp/lib/circom
+	url = https://github.com/iden3/circom.git
