@@ -5,7 +5,7 @@ import { setupTests } from "./utils/setupTests";
 import { SafeWebAuthnPlugin__factory } from "../../typechain-types";
 import {
   generateInitCodeAndAddress,
-  createUnsignedUserOperation,
+  createUserOperation,
 } from "./utils/createUserOp";
 import { getSigners } from "./utils/getSigners";
 
@@ -102,7 +102,7 @@ describe("SafeWebAuthnPlugin", () => {
 
     const recipientBalanceBefore = await provider.getBalance(recipientAddress);
 
-    const unsignedUserOperation = await createUnsignedUserOperation(
+    const userOperation = await createUserOperation(
       provider,
       bundlerProvider,
       deployedAddress,
@@ -113,11 +113,7 @@ describe("SafeWebAuthnPlugin", () => {
     );
 
     // Send userOp
-    await sendUserOpAndWait(
-      unsignedUserOperation,
-      entryPointAddress,
-      bundlerProvider,
-    );
+    await sendUserOpAndWait(userOperation, entryPointAddress, bundlerProvider);
 
     const recipientBalanceAfter = await provider.getBalance(recipientAddress);
 

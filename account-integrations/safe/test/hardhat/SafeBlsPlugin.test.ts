@@ -10,7 +10,7 @@ import { setupTests } from "./utils/setupTests";
 import receiptOf from "./utils/receiptOf";
 import {
   generateInitCodeAndAddress,
-  createUnsignedUserOperation,
+  createUserOperation,
 } from "./utils/createUserOp";
 import { getSigners } from "./utils/getSigners";
 
@@ -68,7 +68,7 @@ describe("SafeBlsPlugin", () => {
       safeProxyFactory,
     );
 
-    const unsignedUserOperation = await createUnsignedUserOperation(
+    const unsignedUserOperation = await createUserOperation(
       provider,
       bundlerProvider,
       deployedAddress,

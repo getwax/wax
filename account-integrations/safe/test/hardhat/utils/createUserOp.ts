@@ -72,7 +72,7 @@ export const generateInitCodeAndAddress = async (
   return { initCode, deployedAddress };
 };
 
-export const createUnsignedUserOperation = async (
+export const createUserOperation = async (
   provider: ethers.JsonRpcProvider,
   bundlerProvider: ethers.JsonRpcProvider,
   accountAddress: string,
@@ -138,7 +138,7 @@ export const createAndSendUserOpWithEcdsaSig = async (
   entryPointAddress: string,
   dummySignature: string,
 ) => {
-  const unsignedUserOperation = await createUnsignedUserOperation(
+  const unsignedUserOperation = await createUserOperation(
     provider,
     bundlerProvider,
     accountAddress,

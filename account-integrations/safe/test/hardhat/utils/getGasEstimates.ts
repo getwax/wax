@@ -21,7 +21,7 @@ export const getGasEstimates = async (
 
   const safePreVerificationGas =
     BigInt(gasEstimate.preVerificationGas) +
-    BigInt(gasEstimate.preVerificationGas) / 50n; // + 2%
+    BigInt(gasEstimate.preVerificationGas) / 10n; // + 10%
 
   const { maxFeePerGas, maxPriorityFeePerGas } = await getFeeData(provider);
 
