@@ -20,7 +20,7 @@
 
 DOCKER_NETWORK=account-integrations-safe-docker-network
 
-GETH_IMAGE=ethereum/client-go:v1.13.4
+GETH_IMAGE=ethereum/client-go:v1.13.5
 BUNDLER_IMAGE=accountabstraction/bundler:0.6.2
 
 GETH_CONTAINER=geth${RANDOM}

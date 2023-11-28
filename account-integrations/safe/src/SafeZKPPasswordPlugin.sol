@@ -4,7 +4,6 @@ pragma abicoder v2;
 
 import {IPasswordVerifier} from "./interface/IPasswordVerifier.sol";
 import {ISafe} from "./interface/ISafe.sol";
-import {MockPasswordVerifier} from "./utils/MockPasswordVerifier.sol";
 import {Safe4337Base} from "./utils/Safe4337Base.sol";
 import {IEntryPoint, UserOperation} from "account-abstraction/contracts/interfaces/IEntryPoint.sol";
 

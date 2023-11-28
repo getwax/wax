@@ -13,9 +13,10 @@ template ERC4337PasswordVerifier(passwordBytes, passwordBytesLen) {
     // public
     /* 
      * Ensure proof cannot be replayed on another UserOp.
-     * Since the UserOp & hash includes the nonce & chainid,
+     * Since the UserOp & hash includes the nonce,
      * we do not need to independently check those fields.
      */ 
+    // TODO We may need/want to check chainid as well
     signal input userOpHash;
     
     // private
