@@ -70,6 +70,12 @@ export default class DemoContext {
     this.setAddress(response[0]);
   }
 
+  async requestAddressWithoutAutoCreate() {
+    const address = await this.waxInPage.requestAccountWithoutAutocreate();
+
+    this.setAddress(address);
+  }
+
   useAddress = () => {
     const [address, setAddress] = useState(this.address);
 
