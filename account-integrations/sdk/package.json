@@ -1,6 +1,6 @@
 {
   "name": "@getwax/sdk",
-  "version": "0.0.1",
+  "version": "0.0.0-beta.0",
   "description": "",
   "main": "./dist/cjs/index.js",
   "module": "./dist/esm/index.js",
@@ -15,7 +15,10 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "dependencies": {},
+  "dependencies": {
+    "ethers": "6.6.4",
+    "zod": "^3.22.4"
+  },
   "devDependencies": {
     "typescript": "^5.2.2"
   }
