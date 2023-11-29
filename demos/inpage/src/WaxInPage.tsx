@@ -22,6 +22,8 @@ import {
   SafeECDSAFactory__factory,
   SafeECDSARecoveryPlugin,
   SafeECDSARecoveryPlugin__factory,
+  SafeZKPPasswordFactory,
+  SafeZKPPasswordFactory__factory,
   Safe__factory,
   SimpleAccountFactory,
   SimpleAccountFactory__factory,
@@ -42,6 +44,7 @@ import ChoicePopup from './ChoicePopup';
 import never from './helpers/never';
 import SimpleAccountWrapper from './accounts/SimpleAccountWrapper';
 import SafeCompressionAccountWrapper from './accounts/SafeCompressionAccountWrapper';
+import SafeZKPPasswordAccountWrapper from './accounts/SafeZKPPasswordAccountWrapper';
 import { hexLen } from './helpers/encodeUtils';
 import JsonRpcError from './JsonRpcError';
 
@@ -78,6 +81,7 @@ export type Contracts = {
   fallbackDecompressor: FallbackDecompressor;
   addressRegistry: AddressRegistry;
   safeECDSARecoveryPlugin: SafeECDSARecoveryPlugin;
+  safeZKPPasswordFactory: SafeZKPPasswordFactory;
 };
 
 export default class WaxInPage {
@@ -212,6 +216,9 @@ export default class WaxInPage {
         SafeECDSARecoveryPlugin__factory,
         [],
       ),
+      safeZKPPasswordFactory: viewer.connectAssume(
+        SafeZKPPasswordFactory__factory, []
+      ),
     };
 
     if (this.#contractsDeployed) {
@@ -259,6 +266,8 @@ export default class WaxInPage {
       addressRegistry: () => Promise.resolve(addressRegistry),
       safeECDSARecoveryPlugin: () =>
         factory.connectOrDeploy(SafeECDSARecoveryPlugin__factory, []),
+      safeZKPPasswordFactory: () =>
+        factory.connectOrDeploy(SafeZKPPasswordFactory__factory, []),
     };
 
     for (const deployment of Object.values(deployments)) {
@@ -422,6 +431,18 @@ export default class WaxInPage {
 
     if (choice === 'SafeCompressionAccount') {
       const account = await SafeCompressionAccountWrapper.createRandom(this);
+      await this.storage.accounts.set([account.toData()]);
+
+      return account;
+    }
+
+    if (choice === 'SafeZKPPasswordAccount') {
+      // TODO Allow setting of password? Would need to generate
+      // circuit on the fly, not sure if possible in this scope.
+      const account = await SafeZKPPasswordAccountWrapper.create(
+        this,
+        '👻🎃🕸🦇🕷🪦',
+      );
       await this.storage.accounts.set([account.toData()]);
 
       return account;

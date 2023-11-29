@@ -13,3 +13,5 @@ import {FallbackDecompressor} from "../lib/account-integrations/compression/src/
 import {AddressRegistry} from "../lib/account-integrations/compression/src/AddressRegistry.sol";
 import {HandleOpsCaller} from "../lib/account-integrations/compression/src/HandleOpsCaller.sol";
 import {SafeECDSARecoveryPlugin} from "../lib/account-integrations/safe/src/SafeECDSARecoveryPlugin.sol";
+import {SafeZKPPasswordPlugin} from "../lib/account-integrations/safe/src/SafeZKPPasswordPlugin.sol";
+import {SafeZKPPasswordFactory} from "../lib/account-integrations/safe/src/SafeZKPPasswordFactory.sol";

@@ -218,6 +218,8 @@ export default class SafeECDSAAccountWrapper implements IAccount {
     await recoveryPlugin
       .connect(recoveryWallet)
       .resetEcdsaAddress(
+        'TODO signature here',
+        '0',
         safeAddress,
         pluginAddress,
         owner.address,

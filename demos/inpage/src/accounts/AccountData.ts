@@ -11,11 +11,15 @@ import SafeECDSAAccountWrapper, {
 import SafeCompressionAccountWrapper, {
   SafeCompressionAccountData,
 } from './SafeCompressionAccountWrapper';
+import SafeZKPPasswordAccountWrapper, {
+  SafeZKPPasswordAccountData,
+} from './SafeZKPPasswordAccountWrapper';
 
 const AccountData = z.union([
   SimpleAccountData,
   SafeECDSAAccountData,
   SafeCompressionAccountData,
+  SafeZKPPasswordAccountData,
 ]);
 
 type AccountData = z.infer<typeof AccountData>;
@@ -37,6 +41,10 @@ export async function makeAccountWrapper(
 
   if (data.type === 'SafeCompressionAccount') {
     return SafeCompressionAccountWrapper.fromData(data, waxInPage);
+  }
+
+  if (data.type === 'SafeZKPPasswordAccount') {
+    return SafeZKPPasswordAccountWrapper.fromData(data, waxInPage);
   }
 
   return never(data);

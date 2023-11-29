@@ -1,9 +1,12 @@
 import { AbiCoder } from "ethers";
 import { readFile } from "fs/promises";
 import path from "path";
-import * as snarkjs from "snarkjs";
+import { Groth16Proof, ZKArtifact, groth16 } from "snarkjs";
+// TS does not like locally generated JS files. Not sure how else to do this.
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
 import buildCalculator from "../zk/circuits/ERC4337PasswordVerifier_js/witness_calculator";
-import { ContractProof, Groth16Proof } from "./types";
+import { ContractProof } from "./types";
 
 const abiEncodedProofTypes = ["uint256[2]", "uint256[2][2]", "uint256[2]"];
 
@@ -11,7 +14,7 @@ const abiEncodedProofTypes = ["uint256[2]", "uint256[2][2]", "uint256[2]"];
  * Calulates the merkle witness needed to generate the proof
  */
 interface WitnessCalculator {
-  calculateWTNSBin(inputs: Record<string, unknown>, sanityCheck: number): Promise<unknown>;
+  calculateWTNSBin(inputs: Record<string, unknown>, sanityCheck: number): Promise<ZKArtifact>;
 }
 
 /**
@@ -71,7 +74,7 @@ export class ERC4337ZKPPasswordClient {
     };
 
     const wtns = await this.calculator.calculateWTNSBin(inputs, 0);
-    const { proof } = await snarkjs.groth16.prove(this.zkey, wtns);
+    const { proof } = await groth16.prove(this.zkey, wtns);
 
     return {
       grothProof: proof,
@@ -88,8 +91,8 @@ export class ERC4337ZKPPasswordClient {
    * @returns whether the proof is valid for a given UserOp
    */
   public async verify(proof: Groth16Proof, userOpHash: string): Promise<boolean> {
-    const publicSignals = [BigInt(userOpHash)];
-    return snarkjs.groth16.verify(this.vkey, publicSignals, proof);
+    const publicSignals = [`${BigInt(userOpHash)}`];
+    return groth16.verify(this.vkey, publicSignals, proof);
   }
 
   /**
