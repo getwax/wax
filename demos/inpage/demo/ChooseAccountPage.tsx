@@ -5,6 +5,7 @@ import Button from '../src/Button';
 import Heading from '../src/Heading';
 import DemoContext from './DemoContext';
 import config from './config/config';
+import GithubLink from './GithubLink';
 
 const ChooseAccountPage = () => {
   const demo = DemoContext.use();
@@ -18,7 +19,9 @@ const ChooseAccountPage = () => {
   return (
     <div className="choose-account-page">
       <div>
-        <Heading>WAX</Heading>
+        <Heading>
+          WAX <GithubLink />
+        </Heading>
         <div>Choose an account type</div>
         <div style={{ display: 'inline-block' }}>
           <div className="account-types">
