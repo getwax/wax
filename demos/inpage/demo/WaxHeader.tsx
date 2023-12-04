@@ -6,6 +6,7 @@ import Loading from './Loading';
 import usePath from './usePath';
 import formatRoundedEther from './helpers/formatRoundedEther';
 import Address from './Address';
+import GithubLink from './GithubLink';
 
 const WaxHeader = () => {
   const demo = DemoContext.use();
@@ -21,7 +22,7 @@ const WaxHeader = () => {
   return (
     <div className="wax-header">
       <Heading onClick={() => setPath('/')} style={{ cursor: 'pointer' }}>
-        WAX
+        WAX <GithubLink />
       </Heading>
       <div className="account-fields">
         <div>
