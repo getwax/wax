@@ -61,10 +61,8 @@ const ChooseAccountPage = () => {
                 </ul>
               </div>
             </Button>
-            <Button secondary type="button" disabled>
-              <div className="account-type-heading">
-                ZK Password (coming soon)
-              </div>
+            <Button secondary type="button">
+              <div className="account-type-heading">ZK Password</div>
               <div>
                 <ul style={{ textAlign: 'left' }}>
                   <li>Password auth</li>
