@@ -1,11 +1,12 @@
 {
-  "name": "webauthn",
+  "name": "@getwax/safe",
   "private": true,
   "version": "0.1.0",
-  "description": "webauthn plugin for 4337 accounts",
+  "description": "Safe plugins for 4337 accounts",
   "repository": "https://github.com/getwax/wax",
   "license": "MIT",
   "scripts": {
+    "build": "hardhat compile",
     "lint": "eslint . --ext js,jsx,ts,tsx --report-unused-disable-directives --max-warnings 0"
   },
   "dependencies": {
