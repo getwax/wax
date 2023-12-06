@@ -61,8 +61,8 @@ export default class SimulatedBundler implements IBundler {
     }
 
     const tx = ethers.Transaction.from(txResponse);
-    this.#waxInPage.logBytes('Entrypoint calldata', tx.data);
-    this.#waxInPage.logBytes('EntryPoint tx', tx.serialized);
+    this.#waxInPage.logBytes('Top-level calldata', tx.data);
+    this.#waxInPage.logBytes('Top-level tx', tx.serialized);
 
     void txResponse.wait().then((receipt) => {
       if (!receipt) {
@@ -71,7 +71,7 @@ export default class SimulatedBundler implements IBundler {
       }
 
       if (receipt) {
-        console.log('EntryPoint gas used:', receipt.gasUsed.toString());
+        console.log('Top-level gas used:', receipt.gasUsed.toString());
       }
     });
 
