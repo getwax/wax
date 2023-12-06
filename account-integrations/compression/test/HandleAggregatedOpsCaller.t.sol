@@ -48,9 +48,10 @@ contract HandleAggregatedOpsCallerTest is Test {
     function test_one() public {
         (bool success,) = address(handleAggregatedOpsCaller).call(bytes.concat(
             hex"01" // one operation
-            hex"09" // bit stack: (1)001
+            hex"11" // bit stack: (1)0001
                     // - 1: use registry for sender
                     // - 0: no initCode
+                    // - 0: don't encode decompressAndPerform
                     // - 0: no paymaster
                     // - 1: end of stack
 
@@ -80,6 +81,80 @@ contract HandleAggregatedOpsCallerTest is Test {
             nonce: 3,
             initCode: hex"",
             callData: hex"000102030405060708090a",
+            callGasLimit: 67_100,
+            verificationGasLimit: 5_000,
+            preVerificationGas: 1_230_000,
+            maxFeePerGas: 1_000_000,
+            maxPriorityFeePerGas: 100_000,
+            paymasterAndData: hex"",
+            signature: hex""
+        });
+
+        UserOpsPerAggregator[] memory bundle = new UserOpsPerAggregator[](1);
+
+        bundle[0] = UserOpsPerAggregator({
+            userOps: ops,
+            aggregator: aggregator,
+            signature: signature
+        });
+
+        assertEq(
+            entryPoint.handleAggregatedOpsParams(),
+            abi.encode(bundle, payable(address(this)))
+        );
+    }
+
+    function test_decompressAndPerform() public {
+        (bool success,) = address(handleAggregatedOpsCaller).call(bytes.concat(
+            hex"01" // one operation
+            hex"15" // bit stack: (1)0101
+                    // - 1: use registry for sender
+                    // - 0: no initCode
+                    // - 1: encode decompressAndPerform
+                    // - 0: no paymaster
+                    // - 1: end of stack
+
+            hex"000004" // sender = 0xa via registry
+            hex"03" // nonce = 3
+
+            hex"0b" // 11 bytes of calldata
+            hex"000102030405060708090a" // calldata
+
+            hex"1f53" // callGasLimit = 67,100
+            hex"2500" // verificationGasLimit = 5,000
+            hex"2b0f" // preVerificationGas = 1,230,000
+
+            hex"3900" // maxFeePerGas = 0.001 gwei
+            hex"3100" // maxPriorityFeePerGas = 0.0001 gwei
+            ,
+
+            signature
+        ));
+
+        assertEq(success, true);
+
+        UserOperation[] memory ops = new UserOperation[](1);
+
+        ops[0] = UserOperation({
+            sender: address(0xa),
+            nonce: 3,
+            initCode: hex"",
+            callData: (
+                // Method signature of decompressAndPerform(bytes)
+                hex"2d1634c5"
+
+                // Location of bytes argument
+                hex"0000000000000000000000000000000000000000000000000000000000000020"
+
+                // Length of bytes argument
+                hex"000000000000000000000000000000000000000000000000000000000000000b"
+
+                // Actual data to be decompressed inside account
+                hex"000102030405060708090a"
+
+                // Padding
+                hex"000000000000000000000000000000000000000000"
+            ),
             callGasLimit: 67_100,
             verificationGasLimit: 5_000,
             preVerificationGas: 1_230_000,

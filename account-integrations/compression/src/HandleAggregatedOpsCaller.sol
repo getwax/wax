@@ -61,6 +61,14 @@ contract HandleAggregatedOpsCaller {
             }
 
             (op.callData, stream) = decodeBytes(stream);
+
+            bool usesDecompressAndPerform;
+            (usesDecompressAndPerform, bitStack) = BitStack.pop(bitStack);
+
+            if (usesDecompressAndPerform) {
+                op.callData = abi.encodeWithSignature("decompressAndPerform(bytes)", op.callData);
+            }
+
             (op.callGasLimit, stream) = PseudoFloat.decode(stream);
             (op.verificationGasLimit, stream) = PseudoFloat.decode(stream);
             (op.preVerificationGas, stream) = PseudoFloat.decode(stream);
