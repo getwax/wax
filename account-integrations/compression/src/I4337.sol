@@ -3,6 +3,11 @@ pragma solidity >=0.7.0 <0.9.0;
 pragma abicoder v2;
 
 interface IEntryPoint {
+    function handleOps(
+        UserOperation[] calldata ops,
+        address payable beneficiary
+    ) external;
+
     function handleAggregatedOps(
         UserOpsPerAggregator[] calldata opsPerAggregator,
         address payable beneficiary

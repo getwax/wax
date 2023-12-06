@@ -3,35 +3,29 @@ pragma solidity ^0.8.20;
 
 import "forge-std/Test.sol";
 
-import {EntryPointCaller} from "../src/EntryPointCaller.sol";
+import {HandleOpsCaller} from "../src/HandleOpsCaller.sol";
 import {AddressRegistry} from "../src/AddressRegistry.sol";
 import {UserOperation, UserOpsPerAggregator} from "../src/I4337.sol";
 
 import {MockEntryPoint} from "./helpers/MockEntryPoint.sol";
 import {MockAggregator} from "./helpers/MockAggregator.sol";
 
-contract EntryPointCallerTest is Test {
+contract HandleOpsCallerTest is Test {
     MockEntryPoint entryPoint;
-    MockAggregator aggregator;
     AddressRegistry registry;
-    EntryPointCaller entryPointCaller;
+    HandleOpsCaller handleOpsCaller;
 
     bytes signature = (
-        hex"000102030405060708090a0b0c0d0e0f"
-        hex"101112131415161718191a1b1c1d1e1f"
-        hex"202122232425262728292a2b2c2d2e2f"
-        hex"303132333435363738393a3b3c3d3e3f"
+        hex"0102030405"
     );
 
     function setUp() public {
         entryPoint = new MockEntryPoint();
-        aggregator = new MockAggregator();
         registry = new AddressRegistry();
 
-        entryPointCaller = new EntryPointCaller(
+        handleOpsCaller = new HandleOpsCaller(
             entryPoint,
             payable(address(this)),
-            aggregator,
             registry
         );
 
@@ -46,7 +40,7 @@ contract EntryPointCallerTest is Test {
     }
 
     function test_one() public {
-        (bool success,) = address(entryPointCaller).call(bytes.concat(
+        (bool success,) = address(handleOpsCaller).call(bytes.concat(
             hex"01" // one operation
             hex"09" // bit stack: (1)001
                     // - 1: use registry for sender
@@ -66,6 +60,8 @@ contract EntryPointCallerTest is Test {
 
             hex"3900" // maxFeePerGas = 0.001 gwei
             hex"3100" // maxPriorityFeePerGas = 0.0001 gwei
+
+            hex"05"   // 5 bytes for signature
             ,
 
             signature
@@ -86,20 +82,12 @@ contract EntryPointCallerTest is Test {
             maxFeePerGas: 1_000_000,
             maxPriorityFeePerGas: 100_000,
             paymasterAndData: hex"",
-            signature: hex""
-        });
-
-        UserOpsPerAggregator[] memory bundle = new UserOpsPerAggregator[](1);
-
-        bundle[0] = UserOpsPerAggregator({
-            userOps: ops,
-            aggregator: aggregator,
             signature: signature
         });
 
         assertEq(
-            entryPoint.params(),
-            abi.encode(bundle, payable(address(this)))
+            entryPoint.handleOpsParams(),
+            abi.encode(ops, payable(address(this)))
         );
     }
 }
