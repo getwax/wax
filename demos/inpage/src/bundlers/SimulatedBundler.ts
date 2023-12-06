@@ -18,6 +18,7 @@ import {
   encodeVLQ,
   hexJoin,
   hexLen,
+  roundUpPseudoFloat,
 } from '../helpers/encodeUtils';
 
 // This value is needed to account for the overheads of running the entry point
@@ -98,13 +99,19 @@ export default class SimulatedBundler implements IBundler {
       ],
     });
 
-    return {
+    let res = {
       preVerificationGas: `0x${(basePreVerificationGas + calldataGas).toString(
         16,
       )}`,
       verificationGasLimit: `0x${verificationGasLimit.toString(16)}`,
       callGasLimit,
     };
+
+    if (this.#waxInPage.getConfig('useTopLevelCompression')) {
+      res = SimulatedBundler.roundUpGasEstimate(res);
+    }
+
+    return res;
   }
 
   async eth_getUserOperationReceipt(
@@ -260,5 +267,20 @@ export default class SimulatedBundler implements IBundler {
     }
 
     return hexJoin([encodedLen, encodeBitStack(bits), ...encodedOps]);
+  }
+
+  static roundUpGasEstimate({
+    preVerificationGas,
+    verificationGasLimit,
+    callGasLimit,
+  }: EthereumRpc.UserOperationGasEstimate): EthereumRpc.UserOperationGasEstimate {
+    const roundUp = (x: string) =>
+      `0x${roundUpPseudoFloat(BigInt(x)).toString(16)}`;
+
+    return {
+      preVerificationGas: roundUp(preVerificationGas),
+      verificationGasLimit: roundUp(verificationGasLimit),
+      callGasLimit: roundUp(callGasLimit),
+    };
   }
 }

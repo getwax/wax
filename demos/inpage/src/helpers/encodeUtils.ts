@@ -117,3 +117,25 @@ export function encodeBitStack(bits: boolean[]) {
 export function encodeBytes(bytes: string) {
   return hexJoin([encodeVLQ(BigInt(hexLen(bytes))), bytes]);
 }
+
+export function roundUpPseudoFloat(x: bigint) {
+  let pow10 = 1n;
+
+  while (pow10 < x) {
+    pow10 *= 10n;
+  }
+
+  pow10 /= 1000n;
+
+  if (pow10 === 0n) {
+    return x;
+  }
+
+  const roundedDown = pow10 * (x / pow10);
+
+  if (roundedDown === x) {
+    return x;
+  }
+
+  return roundedDown + pow10;
+}
