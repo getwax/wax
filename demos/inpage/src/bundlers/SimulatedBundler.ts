@@ -1,9 +1,24 @@
+/* eslint-disable no-console */
+
 import { ethers } from 'ethers';
 import WaxInPage from '..';
 import EthereumRpc from '../EthereumRpc';
 import measureCalldataGas from '../measureCalldataGas';
 import waxPrivate from '../waxPrivate';
 import IBundler from './IBundler';
+import {
+  HandleOpsCaller,
+  HandleOpsCaller__factory,
+} from '../../hardhat/typechain-types';
+import SafeSingletonFactory from '../SafeSingletonFactory';
+import {
+  encodeBitStack,
+  encodeBytes,
+  encodePseudoFloat,
+  encodeVLQ,
+  hexJoin,
+  hexLen,
+} from '../helpers/encodeUtils';
 
 // This value is needed to account for the overheads of running the entry point
 // that are difficult to attribute directly to each user op. It should be
@@ -12,6 +27,7 @@ const basePreVerificationGas = 50_000n;
 
 export default class SimulatedBundler implements IBundler {
   #waxInPage: WaxInPage;
+  #handleOpsCaller?: HandleOpsCaller;
 
   constructor(waxInPage: WaxInPage) {
     this.#waxInPage = waxInPage;
@@ -28,12 +44,35 @@ export default class SimulatedBundler implements IBundler {
 
     // *not* the confirmation, just the response (don't add .wait(), that's
     // wrong).
-    const txResponse = await contracts.entryPoint
-      .connect(adminAccount)
-      .handleOps([userOp], adminAccount.getAddress());
+    let txResponse;
+
+    if (this.#waxInPage.getConfig('useTopLevelCompression')) {
+      const handleOpsCaller = await this.#getHandleOpsCaller();
+
+      txResponse = await adminAccount.sendTransaction({
+        to: handleOpsCaller.getAddress(),
+        data: SimulatedBundler.encodeHandleOps([userOp]),
+      });
+    } else {
+      txResponse = await contracts.entryPoint
+        .connect(adminAccount)
+        .handleOps([userOp], adminAccount.getAddress());
+    }
 
     const tx = ethers.Transaction.from(txResponse);
+    this.#waxInPage.logBytes('Entrypoint calldata', tx.data);
     this.#waxInPage.logBytes('EntryPoint tx', tx.serialized);
+
+    void txResponse.wait().then((receipt) => {
+      if (!receipt) {
+        console.error('Failed to get bundle receipt');
+        return;
+      }
+
+      if (receipt) {
+        console.log('EntryPoint gas used:', receipt.gasUsed.toString());
+      }
+    });
 
     return await contracts.entryPoint.getUserOpHash(userOp);
   }
@@ -44,22 +83,7 @@ export default class SimulatedBundler implements IBundler {
     const contracts = await this.#waxInPage.getContracts();
     const account = await this.#waxInPage._getOrCreateAccount(waxPrivate);
 
-    // We need a beneficiary address to measure the encoded calldata, but
-    // there's no need for it to be correct.
-    const fakeBeneficiary = userOp.sender;
-
-    const baselineData = contracts.entryPoint.interface.encodeFunctionData(
-      'handleOps',
-      [[], fakeBeneficiary],
-    );
-
-    const data = contracts.entryPoint.interface.encodeFunctionData(
-      'handleOps',
-      [[userOp], fakeBeneficiary],
-    );
-
-    const calldataGas =
-      measureCalldataGas(data) - measureCalldataGas(baselineData);
+    const calldataGas = await this.#calculateCalldataGas(userOp);
 
     const verificationGasLimit = await account.estimateVerificationGas(userOp);
 
@@ -139,5 +163,102 @@ export default class SimulatedBundler implements IBundler {
   async eth_supportedEntryPoints(): Promise<string[]> {
     const contracts = await this.#waxInPage.getContracts();
     return [await contracts.entryPoint.getAddress()];
+  }
+
+  async #getHandleOpsCaller(): Promise<HandleOpsCaller> {
+    if (this.#handleOpsCaller === undefined) {
+      const wallet = await this.#waxInPage.requestAdminAccount(
+        'deploy-contracts',
+      );
+
+      const contracts = await this.#waxInPage.getContracts();
+
+      const factory = await SafeSingletonFactory.init(wallet);
+
+      this.#handleOpsCaller = await factory.connectOrDeploy(
+        HandleOpsCaller__factory,
+        [
+          await contracts.entryPoint.getAddress(),
+          wallet.address,
+          await contracts.addressRegistry.getAddress(),
+        ],
+      );
+    }
+
+    return this.#handleOpsCaller;
+  }
+
+  async #calculateCalldataGas(
+    userOp: EthereumRpc.UserOperation,
+  ): Promise<bigint> {
+    const contracts = await this.#waxInPage.getContracts();
+
+    let baselineData: string;
+    let data: string;
+
+    if (this.#waxInPage.getConfig('useTopLevelCompression')) {
+      baselineData = SimulatedBundler.encodeHandleOps([]);
+      data = SimulatedBundler.encodeHandleOps([userOp]);
+    } else {
+      // We need a beneficiary address to measure the encoded calldata, but
+      // there's no need for it to be correct.
+      const fakeBeneficiary = userOp.sender;
+
+      baselineData = contracts.entryPoint.interface.encodeFunctionData(
+        'handleOps',
+        [[], fakeBeneficiary],
+      );
+
+      data = contracts.entryPoint.interface.encodeFunctionData('handleOps', [
+        [userOp],
+        fakeBeneficiary,
+      ]);
+    }
+
+    return measureCalldataGas(data) - measureCalldataGas(baselineData);
+  }
+
+  static encodeHandleOps(ops: EthereumRpc.UserOperation[]): string {
+    const encodedLen = encodeVLQ(BigInt(ops.length));
+
+    const bits: boolean[] = [];
+    const encodedOps: string[] = [];
+
+    for (const op of ops) {
+      const parts: string[] = [];
+
+      // TODO: Use event logs to figure out whether we can use the registry
+      bits.push(false); // Don't use registry for sender
+      parts.push(op.sender);
+
+      parts.push(encodeVLQ(BigInt(op.nonce)));
+
+      if (hexLen(op.initCode) === 0) {
+        bits.push(false);
+      } else {
+        bits.push(true);
+        parts.push(encodeBytes(op.initCode));
+      }
+
+      parts.push(encodeBytes(op.callData));
+      parts.push(encodePseudoFloat(BigInt(op.callGasLimit)));
+      parts.push(encodePseudoFloat(BigInt(op.verificationGasLimit)));
+      parts.push(encodePseudoFloat(BigInt(op.preVerificationGas)));
+      parts.push(encodePseudoFloat(BigInt(op.maxFeePerGas)));
+      parts.push(encodePseudoFloat(BigInt(op.maxPriorityFeePerGas)));
+
+      if (hexLen(op.paymasterAndData) === 0) {
+        bits.push(false);
+      } else {
+        bits.push(true);
+        parts.push(encodeBytes(op.paymasterAndData));
+      }
+
+      parts.push(encodeBytes(op.signature));
+
+      encodedOps.push(hexJoin(parts));
+    }
+
+    return hexJoin([encodedLen, encodeBitStack(bits), ...encodedOps]);
   }
 }

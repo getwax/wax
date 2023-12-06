@@ -113,3 +113,7 @@ export function encodeBitStack(bits: boolean[]) {
 
   return stackVLQ;
 }
+
+export function encodeBytes(bytes: string) {
+  return hexJoin([encodeVLQ(BigInt(hexLen(bytes))), bytes]);
+}

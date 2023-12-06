@@ -51,11 +51,13 @@ type Config = {
   requirePermission: boolean;
   deployContractsIfNeeded: boolean;
   ethersPollingInterval?: number;
+  useTopLevelCompression?: boolean;
 };
 
 const defaultConfig: Config = {
   requirePermission: true,
   deployContractsIfNeeded: true,
+  useTopLevelCompression: true,
 };
 
 let ethersDefaultPollingInterval = 4000;
