@@ -9,6 +9,7 @@ import IBundler from './bundlers/IBundler';
 import waxPrivate from './waxPrivate';
 import ethereumRequest from './ethereumRequest';
 import calculateUserOpHash from './helpers/calculateUserOpHash';
+import { roundUpPseudoFloat } from './helpers/encodeUtils';
 
 // We need a UserOperation in order to estimate the gas fields of a
 // UserOperation, so we use these values as placeholders.
@@ -315,9 +316,16 @@ export default class EthereumApi {
         initCode = '0x';
       }
 
-      const feeData = await this.#waxInPage.ethersProvider.getFeeData();
-      assert(feeData.maxFeePerGas !== null);
-      assert(feeData.maxPriorityFeePerGas !== null);
+      let { maxFeePerGas, maxPriorityFeePerGas } =
+        await this.#waxInPage.ethersProvider.getFeeData();
+
+      assert(maxFeePerGas !== null);
+      assert(maxPriorityFeePerGas !== null);
+
+      if (this.#waxInPage.getConfig('useTopLevelCompression')) {
+        maxFeePerGas = roundUpPseudoFloat(maxFeePerGas);
+        maxPriorityFeePerGas = roundUpPseudoFloat(maxPriorityFeePerGas);
+      }
 
       const userOp: StrictUserOperation = {
         sender,
@@ -327,11 +335,15 @@ export default class EthereumApi {
         callGasLimit: actions.map((a) => BigInt(a.gas)).reduce((a, b) => a + b),
         verificationGasLimit: temporaryEstimationGas,
         preVerificationGas: temporaryEstimationGas,
-        maxFeePerGas: feeData.maxFeePerGas,
-        maxPriorityFeePerGas: feeData.maxPriorityFeePerGas,
+        maxFeePerGas,
+        maxPriorityFeePerGas,
         paymasterAndData: '0x',
         signature: temporarySignature,
       } satisfies UserOperationStruct;
+
+      if (this.#waxInPage.getConfig('useTopLevelCompression')) {
+        userOp.callGasLimit = roundUpPseudoFloat(userOp.callGasLimit);
+      }
 
       let userOpHash = await this.#calculateUserOpHash(userOp);
 
