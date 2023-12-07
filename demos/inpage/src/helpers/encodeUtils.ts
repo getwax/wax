@@ -70,7 +70,7 @@ export function encodePseudoFloat(xParam: bigint) {
 
 export function encodeRegIndex(regIndex: bigint) {
   const vlqValue = regIndex / 0x010000n;
-  const fixedValue = Number(regIndex / 0x010000n);
+  const fixedValue = Number(regIndex % 0x010000n);
 
   return hexJoin([
     encodeVLQ(vlqValue),

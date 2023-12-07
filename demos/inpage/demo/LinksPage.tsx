@@ -78,6 +78,14 @@ const LinksPage = () => {
       )}
       <Button
         secondary
+        onPress={() => {
+          setPath('/registerAddress');
+        }}
+      >
+        Register Address
+      </Button>
+      <Button
+        secondary
         onPress={async () => {
           const granted = await demo.waxInPage.requestPermission(
             'This will reset the in-page wallet, including the stored private key. Are you sure?',
