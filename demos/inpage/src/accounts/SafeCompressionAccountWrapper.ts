@@ -16,6 +16,7 @@ import {
   encodeVLQ,
   hexJoin,
   hexLen,
+  lookupAddress,
 } from '../helpers/encodeUtils';
 
 export const SafeCompressionAccountData = z.object({
@@ -112,13 +113,16 @@ export default class SafeCompressionAccountWrapper implements IAccount {
 
   // eslint-disable-next-line @typescript-eslint/require-await, class-methods-use-this
   async encodeActions(actions: EthereumRpc.Action[]): Promise<string> {
+    const contracts = await this.waxInPage.getContracts();
+
     let stream = '0x';
     const bits: boolean[] = [];
 
     for (const action of actions) {
-      const addressIndex: bigint | undefined = undefined;
-
-      // TODO: Find addressIndex using event logs (see issue #122)
+      const addressIndex = await lookupAddress(
+        contracts.addressRegistry,
+        action.to,
+      );
 
       bits.push(addressIndex !== undefined);
 
