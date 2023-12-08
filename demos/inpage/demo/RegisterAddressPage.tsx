@@ -1,12 +1,11 @@
 import './RegisterAddressPage.scss';
 import { useState } from 'react';
-import { ethers } from 'ethers';
 import Button from '../src/Button';
 import Heading from '../src/Heading';
 import DemoContext from './DemoContext';
 import Loading from './Loading';
 import runAsync from './helpers/runAsync';
-import { encodeRegIndex } from '../src/helpers/encodeUtils';
+import { encodeRegIndex, lookupAddress } from '../src/helpers/encodeUtils';
 
 const RegisterAddressPage = () => {
   const demo = DemoContext.use();
@@ -34,21 +33,11 @@ const RegisterAddressPage = () => {
   }
 
   const lookup = async () => {
-    if (!ethers.isAddress(addressInput)) {
-      throw new Error('Address is not valid');
-    }
-
-    const { addressRegistry } = contracts;
-    const filter = addressRegistry.filters[
-      'AddressRegistered(uint256,address)'
-    ](undefined, addressInput);
-
-    const event = (await addressRegistry.queryFilter(filter))[0];
-    const id = event ? event.args[0] : 'none';
+    const id = await lookupAddress(contracts.addressRegistry, addressInput);
 
     setLookupResult({
       address: addressInput,
-      id,
+      id: id ?? 'none',
     });
   };
 
