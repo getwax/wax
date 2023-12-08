@@ -17,13 +17,14 @@ const addFundsDefault = (() => {
 
 const LinksPage = () => {
   const demo = DemoContext.use();
+  const balance = demo.useBalance();
   const [, setPath] = usePath();
   const account = demo.useAccount();
 
   return (
     <div className="links-page">
       <Button
-        secondary
+        secondary={balance === undefined || balance > 0n}
         disabled={account === undefined}
         onPress={async () => {
           if (account === undefined) {
