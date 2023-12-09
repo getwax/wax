@@ -61,8 +61,8 @@ export default class SimulatedBundler implements IBundler {
     }
 
     const tx = ethers.Transaction.from(txResponse);
-    this.#waxInPage.logBytes('Entrypoint calldata', tx.data);
-    this.#waxInPage.logBytes('EntryPoint tx', tx.serialized);
+    this.#waxInPage.logBytes('Top-level calldata', tx.data);
+    this.#waxInPage.logBytes('Top-level tx', tx.serialized);
 
     void txResponse.wait().then((receipt) => {
       if (!receipt) {
@@ -71,7 +71,7 @@ export default class SimulatedBundler implements IBundler {
       }
 
       if (receipt) {
-        console.log('EntryPoint gas used:', receipt.gasUsed.toString());
+        console.log('Top-level gas used:', receipt.gasUsed.toString());
       }
     });
 
@@ -247,7 +247,8 @@ export default class SimulatedBundler implements IBundler {
         parts.push(encodeBytes(op.initCode));
       }
 
-      parts.push(encodeBytes(op.callData));
+      SimulatedBundler.encodeUserOpCalldata(bits, parts, op.callData);
+
       parts.push(encodePseudoFloat(BigInt(op.callGasLimit)));
       parts.push(encodePseudoFloat(BigInt(op.verificationGasLimit)));
       parts.push(encodePseudoFloat(BigInt(op.preVerificationGas)));
@@ -269,6 +270,44 @@ export default class SimulatedBundler implements IBundler {
     return hexJoin([encodedLen, encodeBitStack(bits), ...encodedOps]);
   }
 
+  static encodeUserOpCalldata(
+    bits: boolean[],
+    parts: string[],
+    calldata: string,
+  ) {
+    let decompressAndPerformBytes: string | undefined;
+
+    if (calldata.startsWith(decompressAndPerformSelector)) {
+      const abiCoder = ethers.AbiCoder.defaultAbiCoder();
+
+      try {
+        const bytesArg = abiCoder.decode(
+          ['bytes'],
+          `0x${calldata.slice(10)}`,
+        )[0] as string;
+
+        if (
+          hexJoin([
+            decompressAndPerformSelector,
+            abiCoder.encode(['bytes'], [bytesArg]),
+          ]) === calldata
+        ) {
+          decompressAndPerformBytes = bytesArg;
+        }
+      } catch {
+        // Fallthrough to default that handles any calldata
+      }
+    }
+
+    if (decompressAndPerformBytes !== undefined) {
+      bits.push(true);
+      parts.push(encodeBytes(decompressAndPerformBytes));
+    } else {
+      bits.push(false);
+      parts.push(encodeBytes(calldata));
+    }
+  }
+
   static roundUpGasEstimate({
     preVerificationGas,
     verificationGasLimit,
@@ -284,3 +323,8 @@ export default class SimulatedBundler implements IBundler {
     };
   }
 }
+
+const decompressAndPerformSelector = ethers.FunctionFragment.getSelector(
+  'decompressAndPerform',
+  ['bytes'],
+);
