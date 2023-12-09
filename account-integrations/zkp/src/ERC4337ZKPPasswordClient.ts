@@ -1,11 +1,11 @@
 import { AbiCoder } from "ethers";
-import { readFile } from "fs/promises";
 import path from "path";
 import { Groth16Proof, ZKArtifact, groth16 } from "snarkjs";
 // TS does not like locally generated JS files. Not sure how else to do this.
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 import buildCalculator from "../zk/circuits/ERC4337PasswordVerifier_js/witness_calculator";
+import { readFile } from "./file";
 import { ContractProof } from "./types";
 
 const abiEncodedProofTypes = ["uint256[2]", "uint256[2][2]", "uint256[2]"];
