@@ -1,16 +1,19 @@
 {
   "compilerOptions": {
-    "module": "nodenext",
-    "target": "es2022",
+    "module": "es2020",
+    "target": "es5",
     "strict": true,
+    "moduleResolution": "node",
+    "skipLibCheck": true,
+    "allowSyntheticDefaultImports": true,
     "declaration": true,
     "sourceMap": true,
     "declarationMap": true,
     "esModuleInterop": true,
     "allowJs": true,
-    "resolveJsonModule": true,
     "outDir": "dist",
+    "declarationDir": "./dist/types",
   },
   "exclude": ["./dist", "node_modules"],
-  "include": ["./src"]
+  "include": ["./src", "./zk/circuits/**/*.js"]
 }

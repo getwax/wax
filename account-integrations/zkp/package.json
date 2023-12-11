@@ -4,25 +4,27 @@
   "description": "Simple ZKP verification for ERC-4337. Based on circuits in https://github.com/privacy-scaling-explorations/zkp-app-boilerplate",
   "repository": "https://github.com/getwax/wax/zkp/circuits",
   "author": "jacque006",
-  "main": "dist/src/index.js",
-  "types": "src/index.ts",
+  "main": "./dist/index.js",
+  "exports": {
+    "import": "./dist/index.mjs",
+    "require": "./dist/index.js",
+    "types": "./dist/types/index.d.ts"
+  },
+  "types": "./dist/types.d.ts",
   "files": [
-    "src",
-    "dist",
-    "zk",
-    "circuits",
-    "browser"
+    "src/",
+    "dist/"
   ],
   "scripts": {
     "pretest": "tsc -p tsconfig.json",
-    "test": "ts-mocha -p tsconfig.json test/**/*.ts --timeout 30000 --exit",
+    "test": "ts-mocha -p tsconfig.json -r ts-node/register test/**/*.ts --timeout 30000 --exit",
     "precompile": "scripts/prerequisites.sh && mkdir -p zk/circuits zk/zkeys zk/vkeys zk/verifiers",
     "compile": "for circuit in circuits/*.circom; do circom $circuit --r1cs --sym --wasm -o zk/circuits;done && tsc",
     "export:sample-zkey": "for circuit in zk/circuits/*.r1cs; do snarkjs groth16 setup $circuit powersOfTau28_hez_final_15.ptau zk/zkeys/$(basename -- $circuit .r1cs).zkey;done",
     "export:vkey": "for zkey in zk/zkeys/*.zkey; do snarkjs zkey export verificationkey $zkey zk/vkeys/$(basename -- $zkey .zkey).json;done",
     "export:verifier": "for zkey in zk/zkeys/*.zkey; do snarkjs zkey export solidityverifier $zkey zk/verifiers/$(basename -- $zkey .zkey | perl -nE 'say ucfirst').sol;done",
     "build": "yarn compile && yarn export:sample-zkey && yarn export:vkey && yarn export:verifier",
-    "postbuild": "cp -r ./zk/* ./dist/zk",
+    "postbuild": "cp -r ./zk/* ./dist/zk && rollup -c rollup.config.ts --configPlugin typescript",
     "prelink": "yarn build"
   },
   "license": "MIT",
@@ -31,6 +33,9 @@
     "snarkjs": "0.7.2"
   },
   "devDependencies": {
+    "@rollup/plugin-commonjs": "^25.0.7",
+    "@rollup/plugin-node-resolve": "^15.2.3",
+    "@rollup/plugin-typescript": "^11.1.5",
     "@types/chai": "^4.3.11",
     "@types/mocha": "^10.0.6",
     "@types/node": "^18",
@@ -48,6 +53,9 @@
     "eslint-plugin-prettier": "^5.0.1",
     "eslint-plugin-promise": "^6.1.1",
     "mocha": "^10.2.0",
+    "rollup": "^4.8.0",
+    "rollup-plugin-polyfill-node": "^0.13.0",
+    "rollup-plugin-typescript2": "^0.36.0",
     "ts-mocha": "^10.0.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.3.3"

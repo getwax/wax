@@ -5,10 +5,20 @@
  * https://github.com/davidmyersdev/vite-plugin-node-polyfills/issues/16
  */
 import fs from "fs";
-import util from "util";
-
-const readFileAsync = util.promisify(fs.readFile);
 
 export async function readFile(path: string): Promise<Buffer> {
-    return readFileAsync(path);
+    return new Promise((resolve, reject) => {
+        try {
+            fs.readFile(path, undefined, (err, data) => {
+                if (err) {
+                    reject(err);
+                    return;
+                }
+
+                resolve(data);
+            });
+        } catch (err) {
+            reject(err);
+        }
+    });
 }

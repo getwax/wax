@@ -2,15 +2,16 @@ import path from 'path';
 
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react-swc';
-import { nodePolyfills } from 'vite-plugin-node-polyfills';
 
-const plugins = [react(), nodePolyfills()];
+const defaultConfig = {
+  plugins: [react()],
+};
 
 // https://vitejs.dev/config/
 export default defineConfig(() => {
   if (process.env.BUILD_GLOBAL_SCRIPT) {
     return {
-      plugins,
+      ...defaultConfig,
       build: {
         lib: {
           entry: path.resolve(
@@ -27,7 +28,7 @@ export default defineConfig(() => {
   }
 
   return {
-    plugins,
+    ...defaultConfig,
     build: {
       outDir: 'build/demo',
     },
