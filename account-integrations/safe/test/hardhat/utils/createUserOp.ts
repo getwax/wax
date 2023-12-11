@@ -8,6 +8,8 @@ import { Safe } from "../../../typechain-types/lib/safe-contracts/contracts/Safe
 import {
   EntryPoint__factory,
   SafeBlsPlugin,
+  SafeECDSAPlugin,
+  SafeECDSAPluginStateless,
   SafeWebAuthnPlugin,
 } from "../../../typechain-types";
 import receiptOf from "./receiptOf";
@@ -15,7 +17,11 @@ import { calculateProxyAddress } from "./calculateProxyAddress";
 import { getGasEstimates } from "./getGasEstimates";
 import sendUserOpAndWait from "./sendUserOpAndWait";
 
-type Plugin = SafeBlsPlugin | SafeWebAuthnPlugin;
+type Plugin =
+  | SafeBlsPlugin
+  | SafeWebAuthnPlugin
+  | SafeECDSAPlugin
+  | SafeECDSAPluginStateless;
 
 export const generateInitCodeAndAddress = async (
   admin: NonceManager,
@@ -28,7 +34,16 @@ export const generateInitCodeAndAddress = async (
   const singletonAddress = await safeSingleton.getAddress();
   const factoryAddress = await safeProxyFactory.getAddress();
 
-  const moduleInitializer = plugin.interface.encodeFunctionData("enableMyself");
+  let moduleInitializer: string;
+
+  if ("getOwner" in plugin) {
+    moduleInitializer = plugin.interface.encodeFunctionData("enableMyself", [
+      owner.address,
+    ]);
+  } else {
+    moduleInitializer = plugin.interface.encodeFunctionData("enableMyself");
+  }
+
   const encodedInitializer = safeSingleton.interface.encodeFunctionData(
     "setup",
     [
