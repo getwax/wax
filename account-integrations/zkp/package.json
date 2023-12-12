@@ -8,17 +8,16 @@
   "exports": {
     "import": "./dist/index.mjs",
     "require": "./dist/index.js",
-    "types": "./dist/types/index.d.ts"
+    "types": "./dist/src/index.d.ts"
   },
-  "types": "./dist/types.d.ts",
+  "types": "./dist/src/index.d.ts",
   "files": [
     "src/",
     "dist/"
   ],
   "scripts": {
-    "pretest": "tsc -p tsconfig.json",
-    "test": "ts-mocha -p tsconfig.json -r ts-node/register test/**/*.ts --timeout 30000 --exit",
-    "precompile": "scripts/prerequisites.sh && mkdir -p zk/circuits zk/zkeys zk/vkeys zk/verifiers",
+    "test": "ts-mocha -p tsconfig.json -r ts-node/esm --exit test/**/*.ts",
+    "precompile": "scripts/prerequisites.sh && rm -rf dist && rm -rf zk && mkdir -p zk/circuits zk/zkeys zk/vkeys zk/verifiers",
     "compile": "for circuit in circuits/*.circom; do circom $circuit --r1cs --sym --wasm -o zk/circuits;done && tsc",
     "export:sample-zkey": "for circuit in zk/circuits/*.r1cs; do snarkjs groth16 setup $circuit powersOfTau28_hez_final_15.ptau zk/zkeys/$(basename -- $circuit .r1cs).zkey;done",
     "export:vkey": "for zkey in zk/zkeys/*.zkey; do snarkjs zkey export verificationkey $zkey zk/vkeys/$(basename -- $zkey .zkey).json;done",
@@ -40,8 +39,8 @@
     "@types/mocha": "^10.0.6",
     "@types/node": "^18",
     "@types/snarkjs": "^0.7.7",
-    "@typescript-eslint/eslint-plugin": "^6.13.2",
-    "@typescript-eslint/parser": "^6.13.2",
+    "@typescript-eslint/eslint-plugin": "^6.14.0",
+    "@typescript-eslint/parser": "^6.14.0",
     "chai": "^4.3.10",
     "circomlib": "2.0.5",
     "circomlibjs": "0.1.7",

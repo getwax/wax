@@ -1,19 +1,20 @@
 {
   "compilerOptions": {
-    "module": "es2020",
-    "target": "es5",
-    "strict": true,
+    "module": "esnext",
+    "target": "esnext",
     "moduleResolution": "node",
+
+    "strict": true,
     "skipLibCheck": true,
     "allowSyntheticDefaultImports": true,
-    "declaration": true,
-    "sourceMap": true,
-    "declarationMap": true,
     "esModuleInterop": true,
+
+    "sourceMap": true,
+    "declaration": true,
+    "declarationMap": true,
     "allowJs": true,
+
     "outDir": "dist",
-    "declarationDir": "./dist/types",
   },
-  "exclude": ["./dist", "node_modules"],
-  "include": ["./src", "./zk/circuits/**/*.js"]
+  "include": ["./src/**/*", "./zk/circuits/**/*.js"],
 }

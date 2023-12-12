@@ -21,7 +21,7 @@ interface WitnessCalculator {
  * as well as prove a ERC-4337 UserOp.
  */
 export class ERC4337ZKPPasswordClient {
-  static readonly zkRoot = path.join(__dirname, "../zk");
+  static readonly zkRoot = path.join(fileRoot, "../zk");
   static readonly circuitName = "ERC4337PasswordVerifier";
   static readonly wasmFilePath = path.join(
     this.zkRoot, `circuits/${this.circuitName}_js/${this.circuitName}.wasm`);

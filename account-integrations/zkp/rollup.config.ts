@@ -1,10 +1,11 @@
 import commonjs from "@rollup/plugin-commonjs";
 import { nodeResolve } from "@rollup/plugin-node-resolve";
 import nodePolyfills from 'rollup-plugin-polyfill-node';
-import * as fs from "fs";
+import { readFileSync } from "fs";
 import typescript from "rollup-plugin-typescript2";
 
-const pkg = JSON.parse(fs.readFileSync("./package.json", "utf-8"))
+const pkg = JSON.parse(readFileSync("./package.json", "utf8"));
+
 export default {
     input: "src/index.ts",
     output: [

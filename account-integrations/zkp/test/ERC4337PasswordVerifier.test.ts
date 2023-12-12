@@ -9,7 +9,7 @@ const userOpHash0 =
 const userOpHash1 =
   "0xc89efdaa54c0f20c7adf612882df0950f5a951637e0307cdcb4c672f298b8bc6";
 
-describe("ERC4337PasswordVerifier", function () {
+describe("ERC4337PasswordVerifier", () => {
   let client: ERC4337ZKPPasswordClient;
 
   beforeEach(async () => {
@@ -36,7 +36,7 @@ describe("ERC4337PasswordVerifier", function () {
   // TODO Fix, ethers.js Result type throws off deep equal
   // Likely need to convert in client
   it.skip("correctly encodes/decodes userOp signature", async function () {
-    const { signature, proof } = await client.signUserOp(emojiPassword, userOpHash0);
+    const { signature, proof } = await client.proveUserOp(emojiPassword, userOpHash0);
     const decodedSignature = client.decodeUserOpSig(signature);
 
     expect(decodedSignature).to.deep.equal(proof);
