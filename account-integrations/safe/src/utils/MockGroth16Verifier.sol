@@ -2,7 +2,7 @@
 pragma solidity >=0.7.0 <0.9.0;
 pragma abicoder v2;
 
-import {IPasswordVerifier} from "../interface/IPasswordVerifier.sol";
+import {IGroth16Verifier} from "../interface/IGroth16Verifier.sol";
 
 // Mock/stub of snarkjs Groth16 Solidity verifier that always returns true.
 // We can't allow the result to change as that would break
@@ -10,7 +10,7 @@ import {IPasswordVerifier} from "../interface/IPasswordVerifier.sol";
 //
 // This will eventually be removed in favor of real ZKP verfication contract.
 // https://github.com/getwax/wax/issues/143
-contract MockPasswordVerifier is IPasswordVerifier {
+contract MockGroth16Verifier is IGroth16Verifier {
     function verifyProof(
         uint256[2] memory a,
         uint256[2][2] memory b,
@@ -21,6 +21,11 @@ contract MockPasswordVerifier is IPasswordVerifier {
         b;
         c;
         publicSignals;
+
+        // arbitary condition to mock invalid verification
+        if (publicSignals[0] == 1) {
+            return r = false;
+        }
 
         r = true;
     }

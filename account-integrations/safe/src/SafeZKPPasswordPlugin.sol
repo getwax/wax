@@ -2,7 +2,7 @@
 pragma solidity >=0.7.0 <0.9.0;
 pragma abicoder v2;
 
-import {IPasswordVerifier} from "./interface/IPasswordVerifier.sol";
+import {IGroth16Verifier} from "./interface/IGroth16Verifier.sol";
 import {ISafe} from "./interface/ISafe.sol";
 import {Safe4337Base} from "./utils/Safe4337Base.sol";
 import {IEntryPoint, UserOperation} from "account-abstraction/contracts/interfaces/IEntryPoint.sol";
@@ -12,12 +12,11 @@ struct ZKPPasswordOwnerStorage {
 }
 
 contract SafeZKPPasswordPlugin is Safe4337Base {
-
     mapping(address => ZKPPasswordOwnerStorage) public zkpPasswordOwnerStorage;
 
     address public immutable myAddress; // Module address
     address private immutable _entryPoint;
-    IPasswordVerifier private immutable _verifier;
+    IGroth16Verifier private immutable _verifier;
 
     address internal constant _SENTINEL_MODULES = address(0x1);
 
@@ -27,7 +26,7 @@ contract SafeZKPPasswordPlugin is Safe4337Base {
         address indexed newOwner
     );
 
-    constructor(address entryPointAddress, IPasswordVerifier verifier) {
+    constructor(address entryPointAddress, IGroth16Verifier verifier) {
         myAddress = address(this);
         _entryPoint = entryPointAddress;
         _verifier = verifier;
@@ -98,10 +97,13 @@ contract SafeZKPPasswordPlugin is Safe4337Base {
     }
 
     // From https://ethereum.stackexchange.com/a/51234
-    function bytesToUint(bytes32 b) internal pure returns (uint256){
+    function bytesToUint(bytes32 b) internal pure returns (uint256) {
         uint256 number;
-        for(uint i=0;i<b.length;i++){
-            number = number + uint(uint8(b[i]))*(2**(8*(b.length-(i+1))));
+        for (uint i = 0; i < b.length; i++) {
+            number =
+                number +
+                uint(uint8(b[i])) *
+                (2 ** (8 * (b.length - (i + 1))));
         }
         return number;
     }

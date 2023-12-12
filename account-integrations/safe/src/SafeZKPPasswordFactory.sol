@@ -9,7 +9,7 @@ import {SafeProxy} from "safe-contracts/contracts/proxies/SafeProxy.sol";
 import {EntryPoint} from "account-abstraction/contracts/core/EntryPoint.sol";
 
 import {SafeZKPPasswordPlugin} from "./SafeZKPPasswordPlugin.sol";
-import {IPasswordVerifier} from "./interface/IPasswordVerifier.sol";
+import {IGroth16Verifier} from "./interface/IGroth16Verifier.sol";
 
 contract SafeZKPPasswordFactory {
     function create(
@@ -17,13 +17,13 @@ contract SafeZKPPasswordFactory {
         EntryPoint entryPoint,
         address owner,
         uint256 saltNonce,
-        IPasswordVerifier verifier
+        IGroth16Verifier verifier
     ) external returns (SafeZKPPasswordPlugin) {
         bytes32 salt = keccak256(abi.encodePacked(owner, saltNonce));
 
-        Safe safe = Safe(payable(new SafeProxy{salt: salt}(
-            address(safeSingleton)
-        )));
+        Safe safe = Safe(
+            payable(new SafeProxy{salt: salt}(address(safeSingleton)))
+        );
 
         address[] memory owners = new address[](1);
         owners[0] = owner;
