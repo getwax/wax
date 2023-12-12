@@ -1,5 +1,6 @@
 import { ethers } from 'ethers';
 import { z } from 'zod';
+import { ERC4337ZKPPasswordClient } from '@getwax/circuits';
 import {
   SafeZKPPasswordPlugin,
   SafeZKPPasswordPlugin__factory,
@@ -7,7 +8,6 @@ import {
 import EthereumRpc from '../EthereumRpc';
 import IAccount from './IAccount';
 import WaxInPage from '..';
-import { ERC4337ZKPPasswordClient } from '@getwax/circuits';
 import { SafeZKPPasswordFactory } from '../../hardhat/typechain-types/lib/account-integrations/safe/src/SafeZKPPasswordFactory';
 import receiptOf from '../helpers/receiptOf';
 

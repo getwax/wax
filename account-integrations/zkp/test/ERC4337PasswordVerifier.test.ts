@@ -12,7 +12,7 @@ const userOpHash1 =
 describe("ERC4337PasswordVerifier", () => {
   let client: ERC4337ZKPPasswordClient;
 
-  beforeEach(async () => {
+  beforeEach(async function () {
     client = await ERC4337ZKPPasswordClient.create();
   });
 
