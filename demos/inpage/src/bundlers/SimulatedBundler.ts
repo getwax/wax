@@ -7,6 +7,7 @@ import measureCalldataGas from '../measureCalldataGas';
 import waxPrivate from '../waxPrivate';
 import IBundler from './IBundler';
 import {
+  AddressRegistry,
   HandleOpsCaller,
   HandleOpsCaller__factory,
 } from '../../hardhat/typechain-types';
@@ -15,9 +16,11 @@ import {
   encodeBitStack,
   encodeBytes,
   encodePseudoFloat,
+  encodeRegIndex,
   encodeVLQ,
   hexJoin,
   hexLen,
+  lookupAddress,
   roundUpPseudoFloat,
 } from '../helpers/encodeUtils';
 
@@ -52,7 +55,10 @@ export default class SimulatedBundler implements IBundler {
 
       txResponse = await adminAccount.sendTransaction({
         to: handleOpsCaller.getAddress(),
-        data: SimulatedBundler.encodeHandleOps([userOp]),
+        data: await SimulatedBundler.encodeHandleOps(
+          contracts.addressRegistry,
+          [userOp],
+        ),
       });
     } else {
       txResponse = await contracts.entryPoint
@@ -204,8 +210,14 @@ export default class SimulatedBundler implements IBundler {
     let data: string;
 
     if (this.#waxInPage.getConfig('useTopLevelCompression')) {
-      baselineData = SimulatedBundler.encodeHandleOps([]);
-      data = SimulatedBundler.encodeHandleOps([userOp]);
+      baselineData = await SimulatedBundler.encodeHandleOps(
+        contracts.addressRegistry,
+        [],
+      );
+
+      data = await SimulatedBundler.encodeHandleOps(contracts.addressRegistry, [
+        userOp,
+      ]);
     } else {
       // We need a beneficiary address to measure the encoded calldata, but
       // there's no need for it to be correct.
@@ -225,7 +237,10 @@ export default class SimulatedBundler implements IBundler {
     return measureCalldataGas(data) - measureCalldataGas(baselineData);
   }
 
-  static encodeHandleOps(ops: EthereumRpc.UserOperation[]): string {
+  static async encodeHandleOps(
+    registry: AddressRegistry,
+    ops: EthereumRpc.UserOperation[],
+  ): Promise<string> {
     const encodedLen = encodeVLQ(BigInt(ops.length));
 
     const bits: boolean[] = [];
@@ -234,9 +249,15 @@ export default class SimulatedBundler implements IBundler {
     for (const op of ops) {
       const parts: string[] = [];
 
-      // TODO: Use event logs to figure out whether we can use the registry
-      bits.push(false); // Don't use registry for sender
-      parts.push(op.sender);
+      const senderIndex = await lookupAddress(registry, op.sender);
+
+      if (senderIndex === undefined) {
+        bits.push(false);
+        parts.push(op.sender);
+      } else {
+        bits.push(true);
+        parts.push(encodeRegIndex(senderIndex));
+      }
 
       parts.push(encodeVLQ(BigInt(op.nonce)));
 
