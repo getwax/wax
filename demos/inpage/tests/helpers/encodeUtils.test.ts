@@ -10,6 +10,7 @@ import {
   encodeBitStack,
   encodeBytes,
   roundUpPseudoFloat,
+  normalizeHex,
 } from '../../src/helpers/encodeUtils';
 
 describe('hexJoin', () => {
@@ -24,6 +25,40 @@ describe('hexJoin', () => {
 
   it('Empty Array', () => {
     expect(hexJoin([])).to.eq('0x');
+  });
+});
+
+describe('normalizeHex', () => {
+  describe('Valid Hex Strings', () => {
+    it('should return the same hex string in lowercase for valid even-length hex strings', () => {
+      expect(normalizeHex('0x1A2B3C')).to.eq('0x1a2b3c');
+      expect(normalizeHex('0xABCDEF')).to.eq('0xabcdef');
+    });
+
+    it('should return the normalized hex string for valid odd-length hex strings', () => {
+      expect(normalizeHex('0x12345')).to.eq('0x012345');
+      expect(normalizeHex('0xFEDCBA9')).to.eq('0x0fedcba9');
+    });
+  });
+
+  describe('Invalid Hex Strings', () => {
+    it('should throw an error for non-hex strings', () => {
+      expect(() => normalizeHex('not a hex')).to.throw(Error);
+    });
+
+    it('should throw an error for strings without 0x prefix', () => {
+      expect(() => normalizeHex('123ABC')).to.throw(Error);
+    });
+  });
+
+  describe('Hex Strings with Odd and Even Lengths', () => {
+    it('should handle odd-length hex strings correctly', () => {
+      expect(normalizeHex('0xABC')).to.eq('0x0abc');
+    });
+
+    it('should handle even-length hex strings correctly', () => {
+      expect(normalizeHex('0xABCD')).to.eq('0xabcd');
+    });
   });
 });
 
@@ -87,9 +122,9 @@ describe('encodeRegIndex', () => {
 });
 
 describe('encodeBitStack', () => {
-  it('TFT -> 0x37', () => {
+  it('TTTFT -> 0x37', () => {
     // 0x37 = 0b(1)10111
-    // Read the 'last' bit first (because we use &1 or %2)
+    // Read the 'last' bit first (because we use &1 (or %2))
     // The 1 in the most significant bit indicates the end of the stack
     expect(encodeBitStack([true, true, true, false, true])).to.eq('0x37');
   });
