@@ -1,4 +1,4 @@
-#!/usr/bin/env ts-node-esm
+#!/usr/bin/env tsx
 
 import concurrently from 'concurrently';
 import config from '../demo/config/config.ts';

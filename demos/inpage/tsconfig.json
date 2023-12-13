@@ -18,9 +18,5 @@
     "noFallthroughCasesInSwitch": true
   },
   "include": ["*.*", "./**/*"],
-  "exclude": ["./hardhat/lib"],
-  "ts-node": {
-    "transpileOnly": true,
-    "swc": true
-  }
+  "exclude": ["./hardhat/lib"]
 }
