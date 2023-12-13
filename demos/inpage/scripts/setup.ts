@@ -1,4 +1,4 @@
-#!/usr/bin/env ts-node-esm
+#!/usr/bin/env tsx
 
 /* eslint-disable no-console */
 
