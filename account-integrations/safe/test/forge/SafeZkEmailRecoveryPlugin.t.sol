@@ -29,6 +29,8 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
     address public owner;
 
     bytes32 RECOVERY_HASH_DOMAIN;
+    bytes32 email;
+    string salt;
 
     function setUp() public {
         MockGroth16Verifier mockGroth16Verifier = new MockGroth16Verifier();
@@ -70,13 +72,12 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
                 address(safeZkEmailRecoveryPlugin)
             )
         );
+        email = 0x6f1450935d03f8edb673952efc01207c5de7c9bffb123f23b79dbeb80a73376e; // ethers.keccak256(ethers.toUtf8Bytes("test@mail.com"));
+        salt = "test salt";
     }
 
     function test_addRecoveryAccount_ModuleNotEnabled() public {
         // Arrange
-        bytes32 email = 0x6f1450935d03f8edb673952efc01207c5de7c9bffb123f23b79dbeb80a73376e; // ethers.keccak256(ethers.toUtf8Bytes("test@mail.com"));
-        string memory salt = "test salt";
-
         bytes32 recoveryHash = keccak256(
             abi.encodePacked(RECOVERY_HASH_DOMAIN, email, salt)
         );
@@ -100,9 +101,6 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
     function test_addRecoveryAccount_invalidOwner() public {
         // Arrange
         address invalidOwner = Dave.addr;
-        bytes32 email = 0x6f1450935d03f8edb673952efc01207c5de7c9bffb123f23b79dbeb80a73376e; // ethers.keccak256(ethers.toUtf8Bytes("test@mail.com"));
-        string memory salt = "test salt";
-
         bytes32 recoveryHash = keccak256(
             abi.encodePacked(RECOVERY_HASH_DOMAIN, email, salt)
         );
@@ -125,9 +123,6 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
 
     function test_addRecoveryAccount_recoveryAccountAdded() public {
         // Arrange
-        bytes32 email = 0x6f1450935d03f8edb673952efc01207c5de7c9bffb123f23b79dbeb80a73376e; // ethers.keccak256(ethers.toUtf8Bytes("test@mail.com"));
-        string memory salt = "test salt";
-
         bytes32 recoveryHash = keccak256(
             abi.encodePacked(RECOVERY_HASH_DOMAIN, email, salt)
         );
@@ -176,29 +171,26 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
         safe2.enableModule(address(safeZkEmailRecoveryPlugin));
         vm.stopPrank();
 
-        bytes32 email1 = 0x6f1450935d03f8edb673952efc01207c5de7c9bffb123f23b79dbeb80a73376e; // ethers.keccak256(ethers.toUtf8Bytes("test@mail.com"));
-        bytes32 email2 = 0xdea89a4f4488c5f2e94b9fe37b1c17104c8b11442520b364fde514989c08c478; // ethers.keccak256(ethers.toUtf8Bytes("test2@mail.com"));
-        string memory salt = "test salt";
-
-        bytes32 guardianHash1 = keccak256(
-            abi.encodePacked(RECOVERY_HASH_DOMAIN, email1, salt)
+        bytes32 recoveryHash1 = keccak256(
+            abi.encodePacked(RECOVERY_HASH_DOMAIN, email, salt)
         );
 
-        bytes32 guardianHash2 = keccak256(
+        bytes32 email2 = 0xdea89a4f4488c5f2e94b9fe37b1c17104c8b11442520b364fde514989c08c478; // ethers.keccak256(ethers.toUtf8Bytes("test2@mail.com"));
+        bytes32 recoveryHash2 = keccak256(
             abi.encodePacked(RECOVERY_HASH_DOMAIN, email2, salt)
         );
 
         // Act
         vm.startPrank(safeAddress);
         safeZkEmailRecoveryPlugin.addRecoveryAccount(
-            guardianHash1,
+            recoveryHash1,
             owner,
             address(safeECDSAPlugin)
         );
 
         vm.startPrank(safe2Address);
         safeZkEmailRecoveryPlugin.addRecoveryAccount(
-            guardianHash2,
+            recoveryHash2,
             owner,
             address(safeECDSAPlugin)
         );
@@ -211,15 +203,13 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
             memory ecdsaRecoveryStorage2 = safeZkEmailRecoveryPlugin
                 .getZkEmailRecoveryStorage(safe2Address);
 
-        assertEq(zkEmailRecoveryStorage.recoveryHash, guardianHash1);
-        assertEq(ecdsaRecoveryStorage2.recoveryHash, guardianHash2);
+        assertEq(zkEmailRecoveryStorage.recoveryHash, recoveryHash1);
+        assertEq(ecdsaRecoveryStorage2.recoveryHash, recoveryHash2);
     }
 
-    function test_resetEcdsaAddress_invalidRecoveryHash() public {
+    function test_recoverAccount_invalidRecoveryHash() public {
         // Arrange
         address recoveryAccount = Bob.addr;
-        bytes32 email = 0x6f1450935d03f8edb673952efc01207c5de7c9bffb123f23b79dbeb80a73376e; // ethers.keccak256(ethers.toUtf8Bytes("test@mail.com"));
-        string memory salt = "test salt";
         uint256[2] memory a = [uint256(0), uint256(0)];
         uint256[2][2] memory b = [
             [uint256(0), uint256(0)],
@@ -232,7 +222,7 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
             abi.encodePacked("INVALID_RECOVERY_HASH_DOMAIN", email, salt)
         );
 
-        bytes32 expectedGuardianHash = keccak256(
+        bytes32 expectedRecoveryHash = keccak256(
             abi.encodePacked(RECOVERY_HASH_DOMAIN, email, salt)
         );
 
@@ -250,9 +240,9 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
         vm.startPrank(recoveryAccount);
         vm.expectRevert(
             abi.encodeWithSelector(
-                SafeZkEmailRecoveryPlugin.INVALID_GUARDIAN_HASH.selector,
+                SafeZkEmailRecoveryPlugin.INVALID_RECOVERY_HASH.selector,
                 recoveryHash,
-                expectedGuardianHash
+                expectedRecoveryHash
             )
         );
         safeZkEmailRecoveryPlugin.recoverAccount(
@@ -268,11 +258,9 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
         );
     }
 
-    function test_resetEcdsaAddress_invalidProof() public {
+    function test_recoverAccount_invalidProof() public {
         // Arrange
         address recoveryAccount = Bob.addr;
-        bytes32 email = 0x6f1450935d03f8edb673952efc01207c5de7c9bffb123f23b79dbeb80a73376e; // ethers.keccak256(ethers.toUtf8Bytes("test@mail.com"));
-        string memory salt = "test salt";
         uint256[2] memory a = [uint256(0), uint256(0)];
         uint256[2][2] memory b = [
             [uint256(0), uint256(0)],
@@ -311,11 +299,9 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
         );
     }
 
-    function test_resetEcdsaAddress_resetsEcdsaAddress() public {
+    function test_recoverAccount_recoversAccountToNewOwner() public {
         // Arrange
         address recoveryAccount = Bob.addr;
-        bytes32 email = 0x6f1450935d03f8edb673952efc01207c5de7c9bffb123f23b79dbeb80a73376e; // ethers.keccak256(ethers.toUtf8Bytes("test@mail.com"));
-        string memory salt = "test salt";
         uint256[2] memory a = [uint256(0), uint256(0)];
         uint256[2][2] memory b = [
             [uint256(0), uint256(0)],

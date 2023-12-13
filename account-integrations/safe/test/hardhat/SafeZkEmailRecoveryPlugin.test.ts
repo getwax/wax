@@ -1,11 +1,5 @@
 import { expect } from "chai";
-import {
-  HDNodeWallet,
-  JsonRpcProvider,
-  NonceManager,
-  ethers,
-  getBytes,
-} from "ethers";
+import { JsonRpcProvider, NonceManager, Signer, ethers } from "ethers";
 
 import { executeContractCallWithSigners } from "./utils/execution";
 import SafeSingletonFactory from "./utils/SafeSingletonFactory";
@@ -24,18 +18,18 @@ import receiptOf from "./utils/receiptOf";
 import { setupTests } from "./utils/setupTests";
 import { createAndSendUserOpWithEcdsaSig } from "./utils/createUserOp";
 
-describe("SafeECDSARecoveryPlugin", () => {
+describe("SafeZkEmailRecoveryPlugin", () => {
   let bundlerProvider: JsonRpcProvider;
   let provider: JsonRpcProvider;
   let admin: NonceManager;
-  let owner: HDNodeWallet;
+  let owner: Signer;
+  let otherAccount: Signer;
   let entryPointAddress: string;
   let safeSingleton: Safe;
   let ssf: SafeSingletonFactory;
 
   let safeProxyAddress: string;
   let recoveryPlugin: SafeZkEmailRecoveryPlugin;
-  let guardianSigner: HDNodeWallet;
 
   beforeEach(async () => {
     const setup = await setupTests();
@@ -44,6 +38,7 @@ describe("SafeECDSARecoveryPlugin", () => {
       bundlerProvider,
       admin,
       owner,
+      otherAccount,
       entryPointAddress,
       ssf,
       safeSingleton,
@@ -58,7 +53,7 @@ describe("SafeECDSARecoveryPlugin", () => {
     const createArgs = [
       safeSingleton,
       entryPointAddress,
-      owner.address,
+      await owner.getAddress(),
       0,
     ] satisfies Parameters<typeof safeECDSAFactory.create.staticCall>;
 
@@ -84,18 +79,11 @@ describe("SafeECDSARecoveryPlugin", () => {
       [await mockGroth16Verifier.getAddress()],
     );
     await recoveryPlugin.waitForDeployment();
-
-    guardianSigner = ethers.Wallet.createRandom(provider);
-    await receiptOf(
-      admin.sendTransaction({
-        to: guardianSigner.address,
-        value: ethers.parseEther("1"),
-      }),
-    );
   });
 
   it("Should use recovery plugin via EOA and then send tx with new key.", async () => {
     const recoveryPluginAddress = await recoveryPlugin.getAddress();
+    const ownerAddress = await owner.getAddress();
     const safe = Safe__factory.connect(safeProxyAddress, owner);
 
     // Enable recovery plugin
@@ -136,7 +124,7 @@ describe("SafeECDSARecoveryPlugin", () => {
     const addRecoveryAccountCalldata =
       recoveryPlugin.interface.encodeFunctionData("addRecoveryAccount", [
         recoveryHash,
-        owner.address,
+        ownerAddress,
         safeECDSAPluginAddress,
       ]);
 
@@ -171,9 +159,11 @@ describe("SafeECDSARecoveryPlugin", () => {
 
     // Construct tx to reset ecdsa address
     const newEcdsaPluginSigner = ethers.Wallet.createRandom().connect(provider);
-    const currentOwnerHash = ethers.solidityPackedKeccak256(
-      ["address"],
-      [owner.address],
+    await receiptOf(
+      await admin.sendTransaction({
+        to: await newEcdsaPluginSigner.getAddress(),
+        value: ethers.parseEther("1"),
+      }),
     );
 
     const a: [bigint, bigint] = [BigInt(0), BigInt(0)];
@@ -197,13 +187,13 @@ describe("SafeECDSARecoveryPlugin", () => {
     ] satisfies Parameters<typeof recoveryPlugin.recoverAccount.staticCall>;
 
     await recoveryPlugin
-      .connect(guardianSigner)
+      .connect(newEcdsaPluginSigner)
       .recoverAccount.staticCall(...recoverAccountArgs);
 
     // Send tx to reset ecdsa address
     await receiptOf(
       recoveryPlugin
-        .connect(guardianSigner)
+        .connect(newEcdsaPluginSigner)
         .recoverAccount(...recoverAccountArgs),
     );
 
@@ -237,7 +227,8 @@ describe("SafeECDSARecoveryPlugin", () => {
 
   it("Should use recovery plugin via smart account and then send tx with new key.", async () => {
     const recoveryPluginAddress = await recoveryPlugin.getAddress();
-    const guardianAddress = guardianSigner.address;
+    const otherAccountAddress = await otherAccount.getAddress();
+    const ownerAddress = await owner.getAddress();
     const safe = Safe__factory.connect(safeProxyAddress, owner);
 
     // Enable recovery plugin
@@ -257,10 +248,13 @@ describe("SafeECDSARecoveryPlugin", () => {
       SimpleAccountFactory__factory,
       [entryPointAddress],
     );
-    const guardianSimpleAccountAddress =
-      await simpleAccountFactory.createAccount.staticCall(guardianAddress, 0);
+    const otherSimpleAccountAddress =
+      await simpleAccountFactory.createAccount.staticCall(
+        otherAccountAddress,
+        0,
+      );
 
-    await receiptOf(simpleAccountFactory.createAccount(guardianAddress, 0));
+    await receiptOf(simpleAccountFactory.createAccount(otherAccountAddress, 0));
 
     // Construct userOp to add recovery account
     const chainId = (await provider.getNetwork()).chainId;
@@ -287,7 +281,7 @@ describe("SafeECDSARecoveryPlugin", () => {
     const addRecoveryAccountCalldata =
       recoveryPlugin.interface.encodeFunctionData("addRecoveryAccount", [
         recoveryHash,
-        owner.address,
+        ownerAddress,
         safeECDSAPluginAddress,
       ]);
 
@@ -322,13 +316,6 @@ describe("SafeECDSARecoveryPlugin", () => {
 
     // Construct userOp to reset ecdsa address
     const newEcdsaPluginSigner = ethers.Wallet.createRandom().connect(provider);
-    const currentOwnerHash = ethers.solidityPackedKeccak256(
-      ["address"],
-      [owner.address],
-    );
-    const addressSignature = await newEcdsaPluginSigner.signMessage(
-      getBytes(currentOwnerHash),
-    );
 
     const a: [bigint, bigint] = [BigInt(0), BigInt(0)];
     const b: [[bigint, bigint], [bigint, bigint]] = [
@@ -363,7 +350,7 @@ describe("SafeECDSARecoveryPlugin", () => {
     // Native tokens for the pre-fund
     await receiptOf(
       admin.sendTransaction({
-        to: guardianSimpleAccountAddress,
+        to: otherSimpleAccountAddress,
         value: ethers.parseEther("10"),
       }),
     );
@@ -375,8 +362,8 @@ describe("SafeECDSARecoveryPlugin", () => {
     await createAndSendUserOpWithEcdsaSig(
       provider,
       bundlerProvider,
-      guardianSigner,
-      guardianSimpleAccountAddress,
+      otherAccount,
+      otherSimpleAccountAddress,
       initCode,
       userOpCallData,
       entryPointAddress,

@@ -1,4 +1,4 @@
-import { ethers, getBytes, HDNodeWallet, NonceManager } from "ethers";
+import { ethers, getBytes, HDNodeWallet, NonceManager, Signer } from "ethers";
 import { AddressZero } from "@ethersproject/constants";
 import { UserOperationStruct } from "@account-abstraction/contracts";
 import { getUserOpHash } from "@account-abstraction/utils";
@@ -131,7 +131,7 @@ export const createUserOperation = async (
 export const createAndSendUserOpWithEcdsaSig = async (
   provider: ethers.JsonRpcProvider,
   bundlerProvider: ethers.JsonRpcProvider,
-  owner: HDNodeWallet,
+  owner: Signer,
   accountAddress: string,
   initCode: string,
   userOpCallData: string,

@@ -41,9 +41,9 @@ contract SafeZkEmailRecoveryPlugin {
 
     mapping(address => ZkEmailRecoveryStorage) public zkEmailRecoveryStorage;
 
-    error INVALID_GUARDIAN_HASH(
+    error INVALID_RECOVERY_HASH(
         bytes32 recoveryHash,
-        bytes32 expectedGuardianHash
+        bytes32 expectedRecoveryHash
     );
     error MODULE_NOT_ENABLED();
     error INVALID_OWNER(address expectedOwner, address owner);
@@ -100,13 +100,13 @@ contract SafeZkEmailRecoveryPlugin {
             safe
         ];
 
-        // Identity of guardian is protected and it is only revealed on recovery
+        // Email is protected and it is only revealed on recovery
         bytes32 expectedRecoveryHash = keccak256(
             abi.encodePacked(RECOVERY_HASH_DOMAIN, email, salt)
         );
 
         if (expectedRecoveryHash != recoveryStorage.recoveryHash) {
-            revert INVALID_GUARDIAN_HASH(
+            revert INVALID_RECOVERY_HASH(
                 recoveryStorage.recoveryHash,
                 expectedRecoveryHash
             );
