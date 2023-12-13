@@ -76,7 +76,7 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
         salt = "test salt";
     }
 
-    function test_addRecoveryAccount_ModuleNotEnabled() public {
+    function test_addRecoveryHash_ModuleNotEnabled() public {
         // Arrange
         bytes32 recoveryHash = keccak256(
             abi.encodePacked(RECOVERY_HASH_DOMAIN, email, salt)
@@ -91,14 +91,14 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
 
         // Assert
         vm.expectRevert(SafeZkEmailRecoveryPlugin.MODULE_NOT_ENABLED.selector);
-        safeZkEmailRecoveryPlugin.addRecoveryAccount(
+        safeZkEmailRecoveryPlugin.addRecoveryHash(
             recoveryHash,
             safeAddress,
             address(safeECDSAPlugin)
         );
     }
 
-    function test_addRecoveryAccount_invalidOwner() public {
+    function test_addRecoveryHash_invalidOwner() public {
         // Arrange
         address invalidOwner = Dave.addr;
         bytes32 recoveryHash = keccak256(
@@ -114,14 +114,14 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
                 invalidOwner
             )
         );
-        safeZkEmailRecoveryPlugin.addRecoveryAccount(
+        safeZkEmailRecoveryPlugin.addRecoveryHash(
             recoveryHash,
             invalidOwner,
             address(safeECDSAPlugin)
         );
     }
 
-    function test_addRecoveryAccount_recoveryAccountAdded() public {
+    function test_addRecoveryHash_recoveryAccountAdded() public {
         // Arrange
         bytes32 recoveryHash = keccak256(
             abi.encodePacked(RECOVERY_HASH_DOMAIN, email, salt)
@@ -129,7 +129,7 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
 
         // Act
         vm.startPrank(safeAddress);
-        safeZkEmailRecoveryPlugin.addRecoveryAccount(
+        safeZkEmailRecoveryPlugin.addRecoveryHash(
             recoveryHash,
             owner,
             address(safeECDSAPlugin)
@@ -143,7 +143,7 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
         assertEq(zkEmailRecoveryStorage.recoveryHash, recoveryHash);
     }
 
-    function test_addRecoveryAccount_addMultipleRecoveryAccountsToSamePlugin()
+    function test_addRecoveryHash_addMultipleRecoveryAccountsToSamePlugin()
         public
     {
         // Arrange
@@ -182,14 +182,14 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
 
         // Act
         vm.startPrank(safeAddress);
-        safeZkEmailRecoveryPlugin.addRecoveryAccount(
+        safeZkEmailRecoveryPlugin.addRecoveryHash(
             recoveryHash1,
             owner,
             address(safeECDSAPlugin)
         );
 
         vm.startPrank(safe2Address);
-        safeZkEmailRecoveryPlugin.addRecoveryAccount(
+        safeZkEmailRecoveryPlugin.addRecoveryHash(
             recoveryHash2,
             owner,
             address(safeECDSAPlugin)
@@ -227,7 +227,7 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
         );
 
         vm.startPrank(safeAddress);
-        safeZkEmailRecoveryPlugin.addRecoveryAccount(
+        safeZkEmailRecoveryPlugin.addRecoveryHash(
             recoveryHash,
             owner,
             address(safeECDSAPlugin)
@@ -274,7 +274,7 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
         );
 
         vm.startPrank(safeAddress);
-        safeZkEmailRecoveryPlugin.addRecoveryAccount(
+        safeZkEmailRecoveryPlugin.addRecoveryHash(
             recoveryHash,
             owner,
             address(safeECDSAPlugin)
@@ -315,7 +315,7 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
         );
 
         vm.startPrank(safeAddress);
-        safeZkEmailRecoveryPlugin.addRecoveryAccount(
+        safeZkEmailRecoveryPlugin.addRecoveryHash(
             recoveryHash,
             owner,
             address(safeECDSAPlugin)

@@ -121,12 +121,10 @@ describe("SafeZkEmailRecoveryPlugin", () => {
     const safeECDSAPluginAddress =
       await safeProxyWithEcdsaPluginInterface.myAddress();
 
-    const addRecoveryAccountCalldata =
-      recoveryPlugin.interface.encodeFunctionData("addRecoveryAccount", [
-        recoveryHash,
-        ownerAddress,
-        safeECDSAPluginAddress,
-      ]);
+    const addRecoveryHashCalldata = recoveryPlugin.interface.encodeFunctionData(
+      "addRecoveryHash",
+      [recoveryHash, ownerAddress, safeECDSAPluginAddress],
+    );
 
     let safeEcdsaPlugin = SafeECDSAPlugin__factory.connect(
       safeProxyAddress,
@@ -135,7 +133,7 @@ describe("SafeZkEmailRecoveryPlugin", () => {
 
     let userOpCallData = safeEcdsaPlugin.interface.encodeFunctionData(
       "execTransaction",
-      [await recoveryPlugin.getAddress(), "0x00", addRecoveryAccountCalldata],
+      [await recoveryPlugin.getAddress(), "0x00", addRecoveryHashCalldata],
     );
 
     const initCode = "0x";
@@ -278,12 +276,10 @@ describe("SafeZkEmailRecoveryPlugin", () => {
     const safeECDSAPluginAddress =
       await safeProxyWithEcdsaPluginInterface.myAddress();
 
-    const addRecoveryAccountCalldata =
-      recoveryPlugin.interface.encodeFunctionData("addRecoveryAccount", [
-        recoveryHash,
-        ownerAddress,
-        safeECDSAPluginAddress,
-      ]);
+    const addRecoveryHashCalldata = recoveryPlugin.interface.encodeFunctionData(
+      "addRecoveryHash",
+      [recoveryHash, ownerAddress, safeECDSAPluginAddress],
+    );
 
     let safeEcdsaPlugin = SafeECDSAPlugin__factory.connect(
       safeProxyAddress,
@@ -292,7 +288,7 @@ describe("SafeZkEmailRecoveryPlugin", () => {
 
     let userOpCallData = safeEcdsaPlugin.interface.encodeFunctionData(
       "execTransaction",
-      [await recoveryPlugin.getAddress(), "0x00", addRecoveryAccountCalldata],
+      [await recoveryPlugin.getAddress(), "0x00", addRecoveryHashCalldata],
     );
 
     const initCode = "0x";

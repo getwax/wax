@@ -2,29 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {MockGroth16Verifier} from "./utils/MockGroth16Verifier.sol";
-
-contract Enum {
-    enum Operation {
-        Call,
-        DelegateCall
-    }
-}
-
-interface ISafe {
-    /// @dev Allows a Module to execute a Safe transaction without any further confirmations.
-    /// @param to Destination address of module transaction.
-    /// @param value Ether value of module transaction.
-    /// @param data Data payload of module transaction.
-    /// @param operation Operation type of module transaction.
-    function execTransactionFromModule(
-        address to,
-        uint256 value,
-        bytes calldata data,
-        Enum.Operation operation
-    ) external returns (bool success);
-
-    function isModuleEnabled(address module) external view returns (bool);
-}
+import {ISafe} from "./utils/Safe4337Base.sol";
 
 interface ISafeECDSAPlugin {
     function getOwner(address safe) external view returns (address);
@@ -34,6 +12,10 @@ struct ZkEmailRecoveryStorage {
     bytes32 recoveryHash;
 }
 
+/**
+ * A safe plugin that recovers a safe ecdsa plugin owner via a zkp of an email.
+ * NOT FOR PRODUCTION USE
+ */
 contract SafeZkEmailRecoveryPlugin {
     bytes32 immutable RECOVERY_HASH_DOMAIN;
     string public constant DOMAIN_NAME = "RECOVERY_PLUGIN";
@@ -63,13 +45,24 @@ contract SafeZkEmailRecoveryPlugin {
         );
     }
 
+    /**
+     * @notice returns storage accociated with a safe address
+     * @param safe address to query storage with
+     */
     function getZkEmailRecoveryStorage(
         address safe
     ) external view returns (ZkEmailRecoveryStorage memory) {
         return zkEmailRecoveryStorage[safe];
     }
 
-    function addRecoveryAccount(
+    /**
+     * @notice stores a recovery hash that can be used to recover a ecdsa plugin at a later stage.
+     * @dev this function assumes it is being called from a safe - see how msg.sender is interpreted.
+     * @param recoveryHash hash of domain, email and salt - keccak256(abi.encodePacked(RECOVERY_HASH_DOMAIN, email, salt))
+     * @param owner owner of the ecdsa plugin
+     * @param ecsdaPlugin safe ecsda plugin address that this function will be adding a recovery option for
+     */
+    function addRecoveryHash(
         bytes32 recoveryHash,
         address owner,
         address ecsdaPlugin
@@ -85,6 +78,20 @@ contract SafeZkEmailRecoveryPlugin {
         zkEmailRecoveryStorage[safe] = ZkEmailRecoveryStorage(recoveryHash);
     }
 
+    /**
+     * @notice recovers a safe ecdsa plugin using a zk email proof.
+     * @dev rotates the safe ecdsa plugin owner address to a new address. The email address hash is kept hidden until this function is called.
+     * This function is designed so it can be called from any account and account type.
+     * @param safe the safe that manages the safe ecdsa plugin being recovered
+     * @param ecdsaPlugin safe ecsda plugin address that this function will be rotating the owner address for
+     * @param newOwner the new owner address of the safe ecdsa plugin
+     * @param salt the salt used in the recovery hash
+     * @param email the email address hash used in the recovery hash
+     * @param a part of the proof
+     * @param b part of the proof
+     * @param c part of the proof
+     * @param publicSignals public inputs for the zkp
+     */
     function recoverAccount(
         address safe,
         address ecdsaPlugin,
@@ -121,11 +128,6 @@ contract SafeZkEmailRecoveryPlugin {
             abi.encodePacked(newOwner)
         );
 
-        ISafe(safe).execTransactionFromModule(
-            ecdsaPlugin,
-            0,
-            data,
-            Enum.Operation.Call
-        );
+        ISafe(safe).execTransactionFromModule(ecdsaPlugin, 0, data, 0);
     }
 }

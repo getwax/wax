@@ -7,14 +7,32 @@ import {HandlerContext} from "safe-contracts/contracts/handler/HandlerContext.so
 import {BaseAccount} from "account-abstraction/contracts/core/BaseAccount.sol";
 
 interface ISafe {
+    /**
+     * @notice Enables the module `module` for the Safe.
+     * @dev This can only be done via a Safe transaction.
+     * @param module Module to be enabled.
+     */
     function enableModule(address module) external;
 
+    /**
+     * @dev Allows a Module to execute a Safe transaction without any further confirmations.
+     * @param to Destination address of module transaction.
+     * @param value Ether value of module transaction.
+     * @param data Data payload of module transaction.
+     * @param operation Operation type of module transaction.
+     */
     function execTransactionFromModule(
         address to,
         uint256 value,
         bytes memory data,
         uint8 operation
     ) external returns (bool success);
+
+    /**
+     * @notice Returns if an module is enabled
+     * @return True if the module is enabled
+     */
+    function isModuleEnabled(address module) external view returns (bool);
 }
 
 /**
@@ -27,17 +45,17 @@ interface ISafe {
 abstract contract Safe4337Base is BaseAccount, HandlerContext {
     error NONCE_NOT_SEQUENTIAL();
 
-    function _requireFromEntryPoint() internal virtual view override {
+    function _requireFromEntryPoint() internal view virtual override {
         require(
             _msgSender() == address(entryPoint()),
             "account: not from EntryPoint"
         );
     }
 
-    function _requireFromCurrentSafeOrEntryPoint() internal virtual view {
+    function _requireFromCurrentSafeOrEntryPoint() internal view virtual {
         require(
             _msgSender() == address(entryPoint()) ||
-            _msgSender() == address(_currentSafe()),
+                _msgSender() == address(_currentSafe()),
             "account: not from EntryPoint nor current safe"
         );
     }
@@ -82,7 +100,7 @@ abstract contract Safe4337Base is BaseAccount, HandlerContext {
      * `this` will be the plugin for those calls, so it won't work when trying
      * to do safe operations like `execTransactionFromModule`.
      */
-    function _currentSafe() internal virtual view returns (ISafe) {
+    function _currentSafe() internal view virtual returns (ISafe) {
         return ISafe(msg.sender);
     }
 }
