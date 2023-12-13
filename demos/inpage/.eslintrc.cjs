@@ -59,6 +59,7 @@ module.exports = {
           'scripts/**/*.ts',
           'vite.config.ts',
           'hardhat/**/*.ts',
+          'tests/**/*.*',
         ],
       },
     ],
