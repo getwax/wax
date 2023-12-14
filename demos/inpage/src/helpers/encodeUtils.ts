@@ -1,3 +1,6 @@
+import { ethers } from 'ethers';
+import { AddressRegistry } from '../../hardhat/typechain-types';
+
 export function hexJoin(hexStrings: string[]) {
   return `0x${hexStrings.map(remove0x).join('')}`;
 }
@@ -70,7 +73,7 @@ export function encodePseudoFloat(xParam: bigint) {
 
 export function encodeRegIndex(regIndex: bigint) {
   const vlqValue = regIndex / 0x010000n;
-  const fixedValue = Number(regIndex / 0x010000n);
+  const fixedValue = Number(regIndex % 0x010000n);
 
   return hexJoin([
     encodeVLQ(vlqValue),
@@ -138,4 +141,22 @@ export function roundUpPseudoFloat(x: bigint) {
   }
 
   return roundedDown + pow10;
+}
+
+export async function lookupAddress(
+  registry: AddressRegistry,
+  address: string,
+) {
+  if (!ethers.isAddress(address)) {
+    throw new Error('Address is not valid');
+  }
+
+  const filter = registry.filters['AddressRegistered(uint256,address)'](
+    undefined,
+    address,
+  );
+
+  const event = (await registry.queryFilter(filter)).at(0);
+
+  return event?.args[0];
 }
