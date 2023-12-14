@@ -176,6 +176,19 @@ export default class EthereumApi {
     return userOpHash;
   }
 
+  #maybeRoundUpPseudoFloats(userOp: StrictUserOperation): StrictUserOperation {
+    if (!this.#waxInPage.getConfig('useTopLevelCompression')) {
+      return userOp;
+    }
+
+    return {
+      ...userOp,
+      maxFeePerGas: roundUpPseudoFloat(userOp.maxFeePerGas),
+      maxPriorityFeePerGas: roundUpPseudoFloat(userOp.maxPriorityFeePerGas),
+      callGasLimit: roundUpPseudoFloat(userOp.callGasLimit),
+    };
+  }
+
   #customHandlers: Partial<EthereumRpc.Handlers> = {
     eth_chainId: () => this.#chainIdPromise,
 
@@ -316,18 +329,13 @@ export default class EthereumApi {
         initCode = '0x';
       }
 
-      let { maxFeePerGas, maxPriorityFeePerGas } =
+      const { maxFeePerGas, maxPriorityFeePerGas } =
         await this.#waxInPage.ethersProvider.getFeeData();
 
       assert(maxFeePerGas !== null);
       assert(maxPriorityFeePerGas !== null);
 
-      if (this.#waxInPage.getConfig('useTopLevelCompression')) {
-        maxFeePerGas = roundUpPseudoFloat(maxFeePerGas);
-        maxPriorityFeePerGas = roundUpPseudoFloat(maxPriorityFeePerGas);
-      }
-
-      const userOp: StrictUserOperation = {
+      let userOp: StrictUserOperation = {
         sender,
         nonce: `0x${nonce.toString(16)}`,
         initCode,
@@ -341,9 +349,7 @@ export default class EthereumApi {
         signature: temporarySignature,
       } satisfies UserOperationStruct;
 
-      if (this.#waxInPage.getConfig('useTopLevelCompression')) {
-        userOp.callGasLimit = roundUpPseudoFloat(userOp.callGasLimit);
-      }
+      userOp = this.#maybeRoundUpPseudoFloats(userOp);
 
       let userOpHash = await this.#calculateUserOpHash(userOp);
 

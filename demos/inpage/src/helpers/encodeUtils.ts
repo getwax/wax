@@ -2,7 +2,21 @@ import { ethers } from 'ethers';
 import { AddressRegistry } from '../../hardhat/typechain-types';
 
 export function hexJoin(hexStrings: string[]) {
-  return `0x${hexStrings.map(remove0x).join('')}`;
+  return `0x${hexStrings.map((hex) => remove0x(normalizeHex(hex))).join('')}`;
+}
+
+export function normalizeHex(hexString: string) {
+  if (!/^0x[0-9a-f]*$/i.test(hexString)) {
+    throw new Error('Expected hex string');
+  }
+
+  const lower = hexString.toLowerCase();
+
+  if (lower.length % 2 === 0) {
+    return lower;
+  }
+
+  return `0x0${lower.slice(2)}`;
 }
 
 export function hexLen(hexString: string) {
