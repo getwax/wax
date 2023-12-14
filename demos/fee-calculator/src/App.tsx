@@ -10,6 +10,13 @@ const defaults = {
   l2CompressionRatio: 0.7,
 };
 
+const constants = {
+  transferGas: 21_000,
+  transferEffectiveBytes: 120,
+  gasPerByte: 16,
+  l2FixedOverhead: 188, // Fixed overhead of L1 gas (before compression)
+};
+
 const App = () => {
   const [ethPrice, setEthPrice] = useState(defaults.ethPrice);
   const [l1GasPrice, setL1GasPrice] = useState(defaults.l1GasPrice);
@@ -64,9 +71,20 @@ const App = () => {
           <div>
             <h2>Fees</h2>
           </div>
-
           <Output label="L1 Transfer">
-            ${(ethPrice * l1GasPrice * 1e-9 * 21000).toFixed(4)}
+            ${(ethPrice * l1GasPrice * 1e-9 * constants.transferGas).toFixed(4)}
+          </Output>
+          <Output label="L2 Transfer">
+            $
+            {(
+              ethPrice *
+              1e-9 *
+              (l1GasPrice *
+                l2CompressionRatio *
+                (constants.transferEffectiveBytes * constants.gasPerByte +
+                  constants.l2FixedOverhead) +
+                l2GasPrice * constants.transferGas)
+            ).toFixed(4)}
           </Output>
         </div>
       </div>
