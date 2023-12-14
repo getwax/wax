@@ -10,3 +10,15 @@
   flex-direction: column;
   gap: 1.5em;
 }
+
+.outputs {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5em;
+}
+
+.io {
+  display: flex;
+  flex-direction: row;
+  gap: 3em;
+}

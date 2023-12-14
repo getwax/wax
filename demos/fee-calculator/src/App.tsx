@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import './App.css';
 import Parameter from './Parameter';
+import Output from './Output';
 
 const defaults = {
   ethPrice: 2200,
@@ -20,40 +21,54 @@ const App = () => {
 
   return (
     <div className="calculator">
-      <h1>WAX Fee Calculator</h1>
+      <div>
+        <h1>WAX Fee Calculator</h1>
+      </div>
 
-      <div className="parameters">
-        <div>
-          <h2>Parameters</h2>
+      <div className="io">
+        <div className="parameters">
+          <div>
+            <h2>Parameters</h2>
+          </div>
+          <Parameter
+            label="ETH Price"
+            format={(value) => `$${Math.round(value).toLocaleString()}`}
+            init={defaults.ethPrice}
+            scale={100}
+            onChange={setEthPrice}
+          />
+          <Parameter
+            label="L1 Gas Price"
+            format={(value) => `${value.toFixed(2).toLocaleString()} gwei`}
+            init={defaults.l1GasPrice}
+            scale={100}
+            onChange={setL1GasPrice}
+          />
+          <Parameter
+            label="L2 Gas Price"
+            format={(value) => `${value.toFixed(4).toLocaleString()} gwei`}
+            init={defaults.l2GasPrice}
+            scale={100}
+            onChange={setL2GasPrice}
+          />
+          <Parameter
+            label="L2 Compression Ratio"
+            format={(value) => `${value.toFixed(2).toLocaleString()}x`}
+            init={defaults.l2CompressionRatio}
+            scale={5}
+            onChange={setL2CompressionRatio}
+          />
         </div>
-        <Parameter
-          label="ETH Price"
-          format={(value) => `$${Math.round(value).toLocaleString()}`}
-          init={defaults.ethPrice}
-          scale={100}
-          onChange={setEthPrice}
-        />
-        <Parameter
-          label="L1 Gas Price"
-          format={(value) => `${value.toFixed(2).toLocaleString()} gwei`}
-          init={defaults.l1GasPrice}
-          scale={100}
-          onChange={setL1GasPrice}
-        />
-        <Parameter
-          label="L2 Gas Price"
-          format={(value) => `${value.toFixed(4).toLocaleString()} gwei`}
-          init={defaults.l2GasPrice}
-          scale={100}
-          onChange={setL2GasPrice}
-        />
-        <Parameter
-          label="L2 Compression Ratio"
-          format={(value) => `${value.toFixed(2).toLocaleString()}x`}
-          init={defaults.l2CompressionRatio}
-          scale={5}
-          onChange={setL2CompressionRatio}
-        />
+
+        <div className="outputs">
+          <div>
+            <h2>Fees</h2>
+          </div>
+
+          <Output label="L1 Transfer">
+            ${(ethPrice * l1GasPrice * 1e-9 * 21000).toFixed(4)}
+          </Output>
+        </div>
       </div>
     </div>
   );
