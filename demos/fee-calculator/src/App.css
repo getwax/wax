@@ -4,3 +4,9 @@
   padding: 2rem;
   text-align: center;
 }
+
+.parameters {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5em;
+}
