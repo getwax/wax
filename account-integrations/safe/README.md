@@ -11,12 +11,18 @@ Please note, these plugins are in a pre-alpha state and are not ready for produc
 ## (optional) ZKP Plugins
 
 Link `zkp` directory for ZKP based plugins. Make sure you have [circom installed](../zkp/README.md).
-```sh
+```bash
 cd ../zkp
 yarn
 yarn link
 cd ../safe
 yarn link '@getwax/circuits'
+```
+
+## Build & generate Typechain definitions
+
+```bash
+yarn build
 ```
 
 ## Forge tests
