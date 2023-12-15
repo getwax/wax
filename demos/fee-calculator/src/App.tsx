@@ -92,49 +92,56 @@ const App = () => {
             label="ETH Price"
             format={(value) => `$${Math.round(value).toLocaleString()}`}
             init={defaults.ethPrice}
-            scale={100}
+            min={defaults.ethPrice / 100}
+            max={defaults.ethPrice * 100}
             onChange={setEthPrice}
           />
           <Parameter
             label="L1 Gas Price"
             format={(value) => `${value.toFixed(2).toLocaleString()} gwei`}
             init={defaults.l1GasPrice}
-            scale={100}
+            min={defaults.l1GasPrice / 100}
+            max={defaults.l1GasPrice * 100}
             onChange={setL1GasPrice}
           />
           <Parameter
             label="L2 Gas Price"
             format={(value) => `${value.toFixed(4).toLocaleString()} gwei`}
             init={defaults.l2GasPrice}
-            scale={100}
+            min={defaults.l2GasPrice / 100}
+            max={defaults.l2GasPrice * 100}
             onChange={setL2GasPrice}
           />
           <Parameter
             label="L2 Compression Ratio"
             format={(value) => `${value.toFixed(2).toLocaleString()}x`}
             init={defaults.l2CompressionRatio}
-            scale={5}
+            min={0.01}
+            max={1}
             onChange={setL2CompressionRatio}
           />
           <Parameter
             label="4844 Calldata Cost Reduction"
             format={(value) => `${value.toFixed(1).toLocaleString()}x`}
             init={defaults.calldataCostReduction4844}
-            scale={400}
+            min={1}
+            max={1000}
             onChange={setCalldataCostReduction4844}
           />
           <Parameter
             label="Bundle Size"
             format={(value) => `${value.toFixed(0).toLocaleString()} user ops`}
             init={defaults.bundleSize}
-            scale={100}
+            min={1}
+            max={100}
             onChange={setBundleSize}
           />
           <Parameter
             label="Bundler Profit Margin"
             format={(value) => `${(value * 100).toFixed(1).toLocaleString()}%`}
             init={defaults.bundlerProfitMargin}
-            scale={10}
+            min={0.001}
+            max={1}
             onChange={setBundlerProfitMargin}
           />
         </div>

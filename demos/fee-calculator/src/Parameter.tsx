@@ -6,13 +6,15 @@ const Parameter = ({
   label,
   format,
   init,
-  scale,
+  min,
+  max,
   onChange,
 }: {
   label: string;
   format: (value: number) => string;
   init: number;
-  scale: number;
+  min: number;
+  max: number;
   onChange: (value: number) => void;
 }) => {
   const [value, setValue] = useState(init);
@@ -28,7 +30,8 @@ const Parameter = ({
         <div>
           <ExponentialSlider
             init={init}
-            scale={scale}
+            min={min}
+            max={max}
             onChange={(newValue) => {
               setValue(newValue);
               onChange(newValue);
