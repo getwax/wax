@@ -24,7 +24,7 @@ const ExponentialSlider = ({
           setSliderValue(newSliderValue);
           onChange(
             scale **
-              (Math.sign(newSliderValue) * Math.abs(newSliderValue) ** 2) *
+              (Math.sign(newSliderValue) * Math.abs(newSliderValue) ** 1.5) *
               init,
           );
         }}

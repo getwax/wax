@@ -8,6 +8,8 @@ const defaults = {
   l1GasPrice: 40,
   l2GasPrice: 0.01,
   l2CompressionRatio: 0.7,
+  calldataCostReduction4844: 1,
+  bundleSize: 5,
 };
 
 const constants = {
@@ -25,6 +27,25 @@ const App = () => {
   const [l2CompressionRatio, setL2CompressionRatio] = useState(
     defaults.l2CompressionRatio,
   );
+
+  const [calldataCostReduction4844, setCalldataCostReduction4844] = useState(
+    defaults.calldataCostReduction4844,
+  );
+
+  const [bundleSize, setBundleSize] = useState(defaults.bundleSize);
+
+  const l1TransferFee = ethPrice * l1GasPrice * 1e-9 * constants.transferGas;
+
+  const l2TransferFee = (() => {
+    const l1Gas =
+      (l2CompressionRatio / calldataCostReduction4844) *
+      (constants.transferEffectiveBytes * constants.gasPerByte +
+        constants.l2FixedOverhead);
+
+    const l2Gas = constants.transferGas;
+
+    return ethPrice * 1e-9 * (l1GasPrice * l1Gas + l2GasPrice * l2Gas);
+  })();
 
   return (
     <div className="calculator">
@@ -65,27 +86,28 @@ const App = () => {
             scale={5}
             onChange={setL2CompressionRatio}
           />
+          <Parameter
+            label="4844 Calldata Cost Reduction"
+            format={(value) => `${value.toFixed(1).toLocaleString()}x`}
+            init={defaults.calldataCostReduction4844}
+            scale={400}
+            onChange={setCalldataCostReduction4844}
+          />
+          <Parameter
+            label="Bundle Size"
+            format={(value) => `${value.toFixed(0).toLocaleString()} user ops`}
+            init={defaults.bundleSize}
+            scale={100}
+            onChange={setBundleSize}
+          />
         </div>
 
         <div className="outputs">
           <div>
             <h2>Fees</h2>
           </div>
-          <Output label="L1 Transfer">
-            ${(ethPrice * l1GasPrice * 1e-9 * constants.transferGas).toFixed(4)}
-          </Output>
-          <Output label="L2 Transfer">
-            $
-            {(
-              ethPrice *
-              1e-9 *
-              (l1GasPrice *
-                l2CompressionRatio *
-                (constants.transferEffectiveBytes * constants.gasPerByte +
-                  constants.l2FixedOverhead) +
-                l2GasPrice * constants.transferGas)
-            ).toFixed(4)}
-          </Output>
+          <Output label="L1 Transfer">${l1TransferFee.toFixed(4)}</Output>
+          <Output label="L2 Transfer">${l2TransferFee.toFixed(4)}</Output>
         </div>
       </div>
     </div>
