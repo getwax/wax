@@ -9,7 +9,7 @@ const defaults = {
   l2GasPrice: 0.01,
   l2CompressionRatio: 0.7,
   calldataCostReduction4844: 1,
-  bundleSize: 5,
+  bundleSize: 10,
   bundlerProfitMargin: 0.05,
 };
 
@@ -66,6 +66,31 @@ const App = () => {
 
     const bundleOverheadGas = 25937;
     const addedGas = 115195 - bundleOverheadGas;
+
+    const l2GasCharged = bundleOverheadGas / bundleSize + addedGas;
+
+    return (
+      (1 + bundlerProfitMargin) *
+      ethPrice *
+      1e-9 *
+      (l1GasPrice * l1Gas + l2GasPrice * l2GasCharged)
+    );
+  })();
+
+  const l2CompressedTransferFee4337 = (() => {
+    const bundleOverheadEffectiveBytes = 111;
+    const addedEffectiveBytes = 194 - bundleOverheadEffectiveBytes;
+
+    const effectiveBytesCharged =
+      bundleOverheadEffectiveBytes / bundleSize + addedEffectiveBytes;
+
+    const l1Gas =
+      (l2CompressionRatio / calldataCostReduction4844) *
+      (effectiveBytesCharged * constants.gasPerByte +
+        constants.l2FixedOverhead);
+
+    const bundleOverheadGas = 33753;
+    const addedGas = 160056 - bundleOverheadGas;
 
     const l2GasCharged = bundleOverheadGas / bundleSize + addedGas;
 
@@ -155,7 +180,32 @@ const App = () => {
           <Output label="L2 4337 Transfer">
             ${l2TransferFee4337.toFixed(4)}
           </Output>
-          <Output label="L2 Compressed 4337 Transfer">TODO</Output>
+          <Output label="L2 Compressed 4337 Transfer">
+            ${l2CompressedTransferFee4337.toFixed(4)}
+          </Output>
+        </div>
+      </div>
+
+      <div
+        style={{
+          marginTop: '3em',
+          display: 'flex',
+          justifyContent: 'center',
+        }}
+      >
+        <div style={{ width: '500px', textAlign: 'left' }}>
+          Notes / TODO:
+          <ul>
+            <li>Last updated Dec 15, 2023</li>
+            <li>Compression does not yet include BLS signatures</li>
+            <li>
+              All WAX implemented compression methods have been included, but
+              depending on parameters above, better results will be achieved by
+              omitting some methods
+            </li>
+            <li>Highlight cheapest option as parameters change</li>
+            <li>Add ERC20 transfers</li>
+          </ul>
         </div>
       </div>
     </div>
