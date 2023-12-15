@@ -10,6 +10,7 @@ const defaults = {
   l2CompressionRatio: 0.7,
   calldataCostReduction4844: 1,
   bundleSize: 5,
+  bundlerProfitMargin: 0.05,
 };
 
 const constants = {
@@ -33,7 +34,10 @@ const App = () => {
   );
 
   const [bundleSize, setBundleSize] = useState(defaults.bundleSize);
-  const bundlerProfitMargin = 0.05;
+
+  const [bundlerProfitMargin, setBundlerProfitMargin] = useState(
+    defaults.bundlerProfitMargin,
+  );
 
   const l1TransferFee = ethPrice * l1GasPrice * 1e-9 * constants.transferGas;
 
@@ -125,6 +129,13 @@ const App = () => {
             init={defaults.bundleSize}
             scale={100}
             onChange={setBundleSize}
+          />
+          <Parameter
+            label="Bundler Profit Margin"
+            format={(value) => `${(value * 100).toFixed(1).toLocaleString()}%`}
+            init={defaults.bundlerProfitMargin}
+            scale={10}
+            onChange={setBundlerProfitMargin}
           />
         </div>
 
