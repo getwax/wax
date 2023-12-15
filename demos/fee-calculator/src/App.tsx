@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import './App.css';
 import Parameter from './Parameter';
 import Output from './Output';
@@ -33,6 +33,7 @@ const App = () => {
   );
 
   const [bundleSize, setBundleSize] = useState(defaults.bundleSize);
+  const bundlerProfitMargin = 0.05;
 
   const l1TransferFee = ethPrice * l1GasPrice * 1e-9 * constants.transferGas;
 
@@ -45,6 +46,31 @@ const App = () => {
     const l2Gas = constants.transferGas;
 
     return ethPrice * 1e-9 * (l1GasPrice * l1Gas + l2GasPrice * l2Gas);
+  })();
+
+  const l2TransferFee4337 = (() => {
+    const bundleOverheadEffectiveBytes = 155;
+    const addedEffectiveBytes = 455 - bundleOverheadEffectiveBytes;
+
+    const effectiveBytesCharged =
+      bundleOverheadEffectiveBytes / bundleSize + addedEffectiveBytes;
+
+    const l1Gas =
+      (l2CompressionRatio / calldataCostReduction4844) *
+      (effectiveBytesCharged * constants.gasPerByte +
+        constants.l2FixedOverhead);
+
+    const bundleOverheadGas = 25937;
+    const addedGas = 115195 - bundleOverheadGas;
+
+    const l2GasCharged = bundleOverheadGas / bundleSize + addedGas;
+
+    return (
+      (1 + bundlerProfitMargin) *
+      ethPrice *
+      1e-9 *
+      (l1GasPrice * l1Gas + l2GasPrice * l2GasCharged)
+    );
   })();
 
   return (
@@ -108,6 +134,9 @@ const App = () => {
           </div>
           <Output label="L1 Transfer">${l1TransferFee.toFixed(4)}</Output>
           <Output label="L2 Transfer">${l2TransferFee.toFixed(4)}</Output>
+          <Output label="L2 4337 Transfer">
+            ${l2TransferFee4337.toFixed(4)}
+          </Output>
         </div>
       </div>
     </div>
