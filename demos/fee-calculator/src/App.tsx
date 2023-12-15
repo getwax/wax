@@ -148,6 +148,7 @@ const App = () => {
           <Output label="L2 4337 Transfer">
             ${l2TransferFee4337.toFixed(4)}
           </Output>
+          <Output label="L2 Compressed 4337 Transfer">TODO</Output>
         </div>
       </div>
     </div>
