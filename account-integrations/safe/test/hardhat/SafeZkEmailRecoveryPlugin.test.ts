@@ -4,6 +4,8 @@ import { JsonRpcProvider, NonceManager, Signer, ethers } from "ethers";
 import { executeContractCallWithSigners } from "./utils/execution";
 import SafeSingletonFactory from "./utils/SafeSingletonFactory";
 import {
+  MockDKIMRegsitry,
+  MockDKIMRegsitry__factory,
   MockGroth16Verifier__factory,
   Safe,
   SafeECDSAFactory__factory,
@@ -26,6 +28,7 @@ describe("SafeZkEmailRecoveryPlugin", () => {
   let otherAccount: Signer;
   let entryPointAddress: string;
   let safeSingleton: Safe;
+  let mockDkimRegistry: MockDKIMRegsitry;
   let ssf: SafeSingletonFactory;
 
   let safeProxyAddress: string;
@@ -74,9 +77,19 @@ describe("SafeZkEmailRecoveryPlugin", () => {
       [],
     );
 
+    const defaultDkimRegistry = await ssf.connectOrDeploy(
+      MockDKIMRegsitry__factory,
+      [],
+    );
+
+    mockDkimRegistry = await ssf.connectOrDeploy(MockDKIMRegsitry__factory, []);
+
     recoveryPlugin = await ssf.connectOrDeploy(
       SafeZkEmailRecoveryPlugin__factory,
-      [await mockGroth16Verifier.getAddress()],
+      [
+        await mockGroth16Verifier.getAddress(),
+        await defaultDkimRegistry.getAddress(),
+      ],
     );
     await recoveryPlugin.waitForDeployment();
   });
@@ -121,9 +134,30 @@ describe("SafeZkEmailRecoveryPlugin", () => {
     const safeECDSAPluginAddress =
       await safeProxyWithEcdsaPluginInterface.myAddress();
 
+    // Generated via openssl
+    // Note: The actual DKIM registry hash may be dervied from splitting the DKIM public
+    // key into 17 chunks of 121 bits.
+    const dkimPublicKey =
+      "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxES3RTDdoDUcyrIFzApJx9Vkd89Sma86iSHn8Uz" +
+      "QRevFI69jNRSuqkOZfQQ0h+fK+Fh7DNz8QznLpSh6QBjOHEAfZVj/+eK1L4sbkULOSEvy1njCb7U+gkQ3D6" +
+      "0j35pKBefd1gkDoH5V/2E2qnld89ECwTaklWLrTYLAgHfSAj/A01JDQpvxCRneFNHHaZG+8LbPi2wZKgwmb" +
+      "97HWyPu9KokiKrnYg6tfQzLFVj5PqDRoqv4QCv9B/mXcnIRALSV0BPuLKBF4rsCEo0+FoYrcjbF+LIZzOw/" +
+      "cPbOCPGTXJPh0rDZjgpLO7l+A+hRxaqh4OLd+DrinY7VjPhcKo57dwIDAQAB";
+    const dkimPublicKeyHash = ethers.solidityPackedKeccak256(
+      ["string"],
+      [dkimPublicKey],
+    );
+    const dkimRegistryAddress = await mockDkimRegistry.getAddress();
+
     const addRecoveryHashCalldata = recoveryPlugin.interface.encodeFunctionData(
       "addRecoveryHash",
-      [recoveryHash, ownerAddress, safeECDSAPluginAddress],
+      [
+        safeECDSAPluginAddress,
+        ownerAddress,
+        recoveryHash,
+        dkimPublicKeyHash,
+        dkimRegistryAddress,
+      ],
     );
 
     let safeEcdsaPlugin = SafeECDSAPlugin__factory.connect(
@@ -151,9 +185,10 @@ describe("SafeZkEmailRecoveryPlugin", () => {
       dummySignature,
     );
 
-    const storedRecoveryHash =
+    const recoveryStorage =
       await recoveryPlugin.zkEmailRecoveryStorage(safeProxyAddress);
-    expect(recoveryHash).to.equal(storedRecoveryHash);
+    expect(recoveryHash).to.equal(recoveryStorage[0]);
+    expect(dkimPublicKeyHash).to.equal(recoveryStorage[1]);
 
     // Construct tx to reset ecdsa address
     const newEcdsaPluginSigner = ethers.Wallet.createRandom().connect(provider);
@@ -170,18 +205,17 @@ describe("SafeZkEmailRecoveryPlugin", () => {
       [BigInt(0), BigInt(0)],
     ];
     const c: [bigint, bigint] = [BigInt(0), BigInt(0)];
-    const publicSignals: [bigint] = [BigInt(0)];
+
+    const emailDomain = "google.com";
 
     const recoverAccountArgs = [
       safeProxyAddress,
       safeECDSAPluginAddress,
       newEcdsaPluginSigner.address,
-      salt,
-      email,
+      emailDomain,
       a,
       b,
       c,
-      publicSignals,
     ] satisfies Parameters<typeof recoveryPlugin.recoverAccount.staticCall>;
 
     await recoveryPlugin
@@ -276,9 +310,30 @@ describe("SafeZkEmailRecoveryPlugin", () => {
     const safeECDSAPluginAddress =
       await safeProxyWithEcdsaPluginInterface.myAddress();
 
+    // Generated via openssl
+    // Note: The actual DKIM registry hash may be dervied from splitting the DKIM public
+    // key into 17 chunks of 121 bits.
+    const dkimPublicKey =
+      "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxES3RTDdoDUcyrIFzApJx9Vkd89Sma86iSHn8Uz" +
+      "QRevFI69jNRSuqkOZfQQ0h+fK+Fh7DNz8QznLpSh6QBjOHEAfZVj/+eK1L4sbkULOSEvy1njCb7U+gkQ3D6" +
+      "0j35pKBefd1gkDoH5V/2E2qnld89ECwTaklWLrTYLAgHfSAj/A01JDQpvxCRneFNHHaZG+8LbPi2wZKgwmb" +
+      "97HWyPu9KokiKrnYg6tfQzLFVj5PqDRoqv4QCv9B/mXcnIRALSV0BPuLKBF4rsCEo0+FoYrcjbF+LIZzOw/" +
+      "cPbOCPGTXJPh0rDZjgpLO7l+A+hRxaqh4OLd+DrinY7VjPhcKo57dwIDAQAB";
+    const dkimPublicKeyHash = ethers.solidityPackedKeccak256(
+      ["string"],
+      [dkimPublicKey],
+    );
+    const dkimRegistryAddress = await mockDkimRegistry.getAddress();
+
     const addRecoveryHashCalldata = recoveryPlugin.interface.encodeFunctionData(
       "addRecoveryHash",
-      [recoveryHash, ownerAddress, safeECDSAPluginAddress],
+      [
+        safeECDSAPluginAddress,
+        ownerAddress,
+        recoveryHash,
+        dkimPublicKeyHash,
+        dkimRegistryAddress,
+      ],
     );
 
     let safeEcdsaPlugin = SafeECDSAPlugin__factory.connect(
@@ -306,9 +361,10 @@ describe("SafeZkEmailRecoveryPlugin", () => {
       dummySignature,
     );
 
-    const storedRecoveryHash =
+    const recoveryStorage =
       await recoveryPlugin.zkEmailRecoveryStorage(safeProxyAddress);
-    expect(recoveryHash).to.equal(storedRecoveryHash);
+    expect(recoveryHash).to.equal(recoveryStorage[0]);
+    expect(dkimPublicKeyHash).to.equal(recoveryStorage[1]);
 
     // Construct userOp to reset ecdsa address
     const newEcdsaPluginSigner = ethers.Wallet.createRandom().connect(provider);
@@ -319,7 +375,7 @@ describe("SafeZkEmailRecoveryPlugin", () => {
       [BigInt(0), BigInt(0)],
     ];
     const c: [bigint, bigint] = [BigInt(0), BigInt(0)];
-    const publicSignals: [bigint] = [BigInt(0)];
+    const emailDomain = "google.com";
 
     const recoverAccountCalldata = recoveryPlugin.interface.encodeFunctionData(
       "recoverAccount",
@@ -327,12 +383,10 @@ describe("SafeZkEmailRecoveryPlugin", () => {
         safeProxyAddress,
         safeECDSAPluginAddress,
         newEcdsaPluginSigner.address,
-        salt,
-        email,
+        emailDomain,
         a,
         b,
         c,
-        publicSignals,
       ],
     );
 

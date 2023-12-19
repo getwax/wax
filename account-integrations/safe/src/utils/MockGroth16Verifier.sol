@@ -4,9 +4,9 @@ pragma abicoder v2;
 
 import {IGroth16Verifier} from "../interface/IGroth16Verifier.sol";
 
-// Mock/stub of snarkjs Groth16 Solidity verifier that always returns true.
-// We can't allow the result to change as that would break
-// ERC-4337 validation storage rules.
+// Mock/stub of snarkjs Groth16 Solidity verifier.
+// We can't allow the result to change via a flag in storage as
+// that would break ERC-4337 validation storage rules.
 //
 // This will eventually be removed in favor of real ZKP verfication contract.
 // https://github.com/getwax/wax/issues/143
@@ -16,6 +16,20 @@ contract MockGroth16Verifier is IGroth16Verifier {
         uint256[2][2] memory b,
         uint256[2] memory c,
         uint256[1] memory publicSignals
+    ) external pure returns (bool r) {
+        a;
+        b;
+        c;
+        publicSignals;
+
+        r = true;
+    }
+
+    function verifyProof(
+        uint256[2] memory a,
+        uint256[2][2] memory b,
+        uint256[2] memory c,
+        uint256[4] memory publicSignals
     ) external pure returns (bool r) {
         a;
         b;
