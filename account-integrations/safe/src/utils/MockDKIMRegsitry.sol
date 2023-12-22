@@ -15,6 +15,11 @@ contract MockDKIMRegsitry is IDKIMRegsitry {
         domainName;
         publicKeyHash;
 
+        // arbitary condition to mock invalid verification
+        if (publicKeyHash == keccak256(abi.encodePacked("return false"))) {
+            return false;
+        }
+
         return true;
     }
 }

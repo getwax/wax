@@ -37,7 +37,7 @@ contract MockGroth16Verifier is IGroth16Verifier {
         publicSignals;
 
         // arbitary condition to mock invalid verification
-        if (publicSignals[0] == 1) {
+        if (a[0] == 1) {
             return r = false;
         }
 

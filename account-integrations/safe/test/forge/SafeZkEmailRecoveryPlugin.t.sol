@@ -7,6 +7,7 @@ import {TestHelper} from "./utils/TestHelper.sol";
 import {SafeZkEmailRecoveryPlugin, ZkEmailRecoveryStorage} from "../../src/SafeZkEmailRecoveryPlugin.sol";
 import {SafeECDSAPlugin} from "../../src/SafeECDSAPlugin.sol";
 import {MockGroth16Verifier} from "../../src/utils/MockGroth16Verifier.sol";
+import {MockDKIMRegsitry} from "../../src/utils/MockDKIMRegsitry.sol";
 import {Safe} from "safe-contracts/contracts/Safe.sol";
 import {SafeProxy} from "safe-contracts/contracts/proxies/SafeProxy.sol";
 import {ECDSA} from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
@@ -26,21 +27,30 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
     Safe public safe;
     address public safeAddress;
 
+    MockDKIMRegsitry public mockDKIMRegsitry;
+
     address public owner;
 
     bytes32 RECOVERY_HASH_DOMAIN;
     bytes32 email;
     string salt;
+    string emailDomain;
+    string dkimPublicKey;
 
     function setUp() public {
         MockGroth16Verifier mockGroth16Verifier = new MockGroth16Verifier();
+        MockDKIMRegsitry defaultDkimRegsitry = new MockDKIMRegsitry();
+
         safeZkEmailRecoveryPlugin = new SafeZkEmailRecoveryPlugin(
-            address(mockGroth16Verifier)
+            address(mockGroth16Verifier),
+            address(defaultDkimRegsitry)
         );
         safeECDSAPlugin = new SafeECDSAPlugin(entryPointAddress);
 
         safeSingleton = new Safe();
         SafeProxy safeProxy = new SafeProxy(address(safeSingleton));
+
+        mockDKIMRegsitry = new MockDKIMRegsitry();
 
         address[] memory owners = new address[](1);
         owner = Alice.addr;
@@ -74,6 +84,8 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
         );
         email = 0x6f1450935d03f8edb673952efc01207c5de7c9bffb123f23b79dbeb80a73376e; // ethers.keccak256(ethers.toUtf8Bytes("test@mail.com"));
         salt = "test salt";
+        emailDomain = "google.com";
+        dkimPublicKey = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxES3RTDdoDUcyrIFzApJx9Vkd89Sma86iSHn8UzQRevFI69jNRSuqkOZfQQ0h+fK+Fh7DNz8QznLpSh6QBjOHEAfZVj/+eK1L4sbkULOSEvy1njCb7U+gkQ3D60j35pKBefd1gkDoH5V/2E2qnld89ECwTaklWLrTYLAgHfSAj/A01JDQpvxCRneFNHHaZG+8LbPi2wZKgwmb97HWyPu9KokiKrnYg6tfQzLFVj5PqDRoqv4QCv9B/mXcnIRALSV0BPuLKBF4rsCEo0+FoYrcjbF+LIZzOw/cPbOCPGTXJPh0rDZjgpLO7l+A+hRxaqh4OLd+DrinY7VjPhcKo57dwIDAQAB";
     }
 
     function test_addRecoveryHash_ModuleNotEnabled() public {
@@ -81,6 +93,7 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
         bytes32 recoveryHash = keccak256(
             abi.encodePacked(RECOVERY_HASH_DOMAIN, email, salt)
         );
+        bytes32 dkimPublicKeyHash = keccak256(abi.encodePacked(dkimPublicKey));
 
         address prevModuleInLinkedList = address(0x1);
         address moduleToDisable = address(safeZkEmailRecoveryPlugin);
@@ -92,9 +105,11 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
         // Assert
         vm.expectRevert(SafeZkEmailRecoveryPlugin.MODULE_NOT_ENABLED.selector);
         safeZkEmailRecoveryPlugin.addRecoveryHash(
+            address(safeECDSAPlugin),
+            owner,
             recoveryHash,
-            safeAddress,
-            address(safeECDSAPlugin)
+            dkimPublicKeyHash,
+            address(mockDKIMRegsitry)
         );
     }
 
@@ -104,6 +119,7 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
         bytes32 recoveryHash = keccak256(
             abi.encodePacked(RECOVERY_HASH_DOMAIN, email, salt)
         );
+        bytes32 dkimPublicKeyHash = keccak256(abi.encodePacked(dkimPublicKey));
 
         // Act & Assert
         vm.startPrank(safeAddress);
@@ -115,9 +131,11 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
             )
         );
         safeZkEmailRecoveryPlugin.addRecoveryHash(
-            recoveryHash,
+            address(safeECDSAPlugin),
             invalidOwner,
-            address(safeECDSAPlugin)
+            recoveryHash,
+            dkimPublicKeyHash,
+            address(mockDKIMRegsitry)
         );
     }
 
@@ -126,13 +144,16 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
         bytes32 recoveryHash = keccak256(
             abi.encodePacked(RECOVERY_HASH_DOMAIN, email, salt)
         );
+        bytes32 dkimPublicKeyHash = keccak256(abi.encodePacked(dkimPublicKey));
 
         // Act
         vm.startPrank(safeAddress);
         safeZkEmailRecoveryPlugin.addRecoveryHash(
-            recoveryHash,
+            address(safeECDSAPlugin),
             owner,
-            address(safeECDSAPlugin)
+            recoveryHash,
+            dkimPublicKeyHash,
+            address(mockDKIMRegsitry)
         );
 
         ZkEmailRecoveryStorage
@@ -174,6 +195,7 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
         bytes32 recoveryHash1 = keccak256(
             abi.encodePacked(RECOVERY_HASH_DOMAIN, email, salt)
         );
+        bytes32 dkimPublicKeyHash = keccak256(abi.encodePacked(dkimPublicKey));
 
         bytes32 email2 = 0xdea89a4f4488c5f2e94b9fe37b1c17104c8b11442520b364fde514989c08c478; // ethers.keccak256(ethers.toUtf8Bytes("test2@mail.com"));
         bytes32 recoveryHash2 = keccak256(
@@ -183,16 +205,20 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
         // Act
         vm.startPrank(safeAddress);
         safeZkEmailRecoveryPlugin.addRecoveryHash(
-            recoveryHash1,
+            address(safeECDSAPlugin),
             owner,
-            address(safeECDSAPlugin)
+            recoveryHash1,
+            dkimPublicKeyHash,
+            address(mockDKIMRegsitry)
         );
 
         vm.startPrank(safe2Address);
         safeZkEmailRecoveryPlugin.addRecoveryHash(
-            recoveryHash2,
+            address(safeECDSAPlugin),
             owner,
-            address(safeECDSAPlugin)
+            recoveryHash2,
+            dkimPublicKeyHash,
+            address(mockDKIMRegsitry)
         );
 
         // Assert
@@ -207,7 +233,7 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
         assertEq(ecdsaRecoveryStorage2.recoveryHash, recoveryHash2);
     }
 
-    function test_recoverAccount_invalidRecoveryHash() public {
+    function test_recoverAccount_invalidDkimPublicKeyHash() public {
         // Arrange
         address recoveryAccount = Bob.addr;
         uint256[2] memory a = [uint256(0), uint256(0)];
@@ -216,21 +242,21 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
             [uint256(0), uint256(0)]
         ];
         uint256[2] memory c = [uint256(0), uint256(0)];
-        uint256[1] memory publicSignals = [uint256(0)];
 
         bytes32 recoveryHash = keccak256(
-            abi.encodePacked("INVALID_RECOVERY_HASH_DOMAIN", email, salt)
-        );
-
-        bytes32 expectedRecoveryHash = keccak256(
             abi.encodePacked(RECOVERY_HASH_DOMAIN, email, salt)
+        );
+        bytes32 invalidDkimPublicKeyHash = keccak256(
+            abi.encodePacked("return false")
         );
 
         vm.startPrank(safeAddress);
         safeZkEmailRecoveryPlugin.addRecoveryHash(
-            recoveryHash,
+            address(safeECDSAPlugin),
             owner,
-            address(safeECDSAPlugin)
+            recoveryHash,
+            invalidDkimPublicKeyHash,
+            address(mockDKIMRegsitry)
         );
         vm.stopPrank();
 
@@ -240,44 +266,45 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
         vm.startPrank(recoveryAccount);
         vm.expectRevert(
             abi.encodeWithSelector(
-                SafeZkEmailRecoveryPlugin.INVALID_RECOVERY_HASH.selector,
-                recoveryHash,
-                expectedRecoveryHash
+                SafeZkEmailRecoveryPlugin.INVALID_DKIM_KEY_HASH.selector,
+                safeAddress,
+                emailDomain,
+                invalidDkimPublicKeyHash
             )
         );
         safeZkEmailRecoveryPlugin.recoverAccount(
             safeAddress,
             address(safeECDSAPlugin),
             newOwner.addr,
-            salt,
-            email,
+            emailDomain,
             a,
             b,
-            c,
-            publicSignals
+            c
         );
     }
 
     function test_recoverAccount_invalidProof() public {
         // Arrange
         address recoveryAccount = Bob.addr;
-        uint256[2] memory a = [uint256(0), uint256(0)];
+        uint256[2] memory a = [uint256(1), uint256(0)];
         uint256[2][2] memory b = [
             [uint256(0), uint256(0)],
             [uint256(0), uint256(0)]
         ];
         uint256[2] memory c = [uint256(0), uint256(0)];
-        uint256[1] memory publicSignals = [uint256(1)]; // arbitary value that returns false from mock verifier
 
         bytes32 recoveryHash = keccak256(
             abi.encodePacked(RECOVERY_HASH_DOMAIN, email, salt)
         );
+        bytes32 dkimPublicKeyHash = keccak256(abi.encodePacked(dkimPublicKey));
 
         vm.startPrank(safeAddress);
         safeZkEmailRecoveryPlugin.addRecoveryHash(
-            recoveryHash,
+            address(safeECDSAPlugin),
             owner,
-            address(safeECDSAPlugin)
+            recoveryHash,
+            dkimPublicKeyHash,
+            address(mockDKIMRegsitry)
         );
         vm.stopPrank();
 
@@ -290,12 +317,10 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
             safeAddress,
             address(safeECDSAPlugin),
             newOwner.addr,
-            salt,
-            email,
+            emailDomain,
             a,
             b,
-            c,
-            publicSignals
+            c
         );
     }
 
@@ -308,17 +333,19 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
             [uint256(0), uint256(0)]
         ];
         uint256[2] memory c = [uint256(0), uint256(0)];
-        uint256[1] memory publicSignals = [uint256(0)];
 
         bytes32 recoveryHash = keccak256(
             abi.encodePacked(RECOVERY_HASH_DOMAIN, email, salt)
         );
+        bytes32 dkimPublicKeyHash = keccak256(abi.encodePacked(dkimPublicKey));
 
         vm.startPrank(safeAddress);
         safeZkEmailRecoveryPlugin.addRecoveryHash(
-            recoveryHash,
+            address(safeECDSAPlugin),
             owner,
-            address(safeECDSAPlugin)
+            recoveryHash,
+            dkimPublicKeyHash,
+            address(mockDKIMRegsitry)
         );
         vm.stopPrank();
 
@@ -330,12 +357,10 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
             safeAddress,
             address(safeECDSAPlugin),
             newOwner.addr,
-            salt,
-            email,
+            emailDomain,
             a,
             b,
-            c,
-            publicSignals
+            c
         );
 
         // Assert
