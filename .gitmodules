@@ -28,9 +28,9 @@
 [submodule "account-integrations/zkp/lib/circom"]
 	path = account-integrations/zkp/lib/circom
 	url = https://github.com/iden3/circom.git
-[submodule "account-integrations/barebones/lib/forge-std"]
-	path = account-integrations/barebones/lib/forge-std
-	url = https://github.com/foundry-rs/forge-std
 [submodule "account-integrations/barebones/lib/openzeppelin-contracts"]
 	path = account-integrations/barebones/lib/openzeppelin-contracts
 	url = https://github.com/openzeppelin/openzeppelin-contracts
+[submodule "account-integrations/barebones/lib/forge-std"]
+	path = account-integrations/barebones/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std

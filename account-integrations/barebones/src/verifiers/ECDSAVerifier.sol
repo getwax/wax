@@ -5,20 +5,27 @@ import "./Verifier.sol";
 
 library ECDSALib {
 
-    struct ECDSAData {
+    struct ECDSAState {
         address owner;
         uint256 nonce;
     }
 
-    function setOwner(ECDSAData memory data, address owner)
-    public pure returns (ECDSAData memory nextData) {
-        nextData = data;
-        nextData.owner = owner;
-        return nextData;
+    function setOwner(ECDSAState memory state, address owner)
+    public pure returns (ECDSAState memory newState) {
+        newState = state;
+        newState.owner = owner;
+        return newState;
+    }
+
+    function incrementNonce(ECDSAState memory state)
+    public pure returns (ECDSAState memory newState) {
+        newState = state;
+        newState.nonce += 1;
+        return newState;
     }
 
     // function isValidSignature (
-    //     ECDSAData data,
+    //     ECDSAState state,
     //     bytes32 _hash, 
     //     bytes memory _signature
     // ) virtual  external view
@@ -31,19 +38,46 @@ library ECDSALib {
 /**
 Audited and deployed singleton used by many.
  */
-contract ECDSAVerifier is Verifier(32) {
+contract ECDSAVerifier is Verifier(20) {
 
     // ECDSALib ecdsaLib = address(0);
 
-    using ECDSALib for ECDSALib.ECDSAData;
+    using ECDSALib for ECDSALib.ECDSAState;
 
-    function initialState(bytes memory initData) override public view returns(bytes memory) {
-        super.initialState(initData);
-        ECDSALib.ECDSAData memory newState;
+    function initialData(
+        bytes memory initialInfo
+    ) override public view returns(
+        bytes memory newStateBytes
+    ) {
+        // super.initialState(initData);
+        ECDSALib.ECDSAState memory newState;
         newState.owner = abi.decode(initData, (address));
+        newState.nonce = 0;
         return abi.encode(newState);
     }
 
+    function recover(
+        bytes memory stateBytes,
+        bytes memory recoveryInfo
+    ) override public view returns(
+        bytes memory newStateBytes
+    ) {
+        ECDSALib.ECDSAState memory newState = state(stateBytes);
+        newState.owner = abi.decode(recoveryInfo, (address));
+        return abi.encode(newState);
+    }
+
+    function state(bytes memory stateBytes) public pure returns(ECDSALib.ECDSAState memory) {
+        return abi.decode(stateBytes, (ECDSALib.ECDSAState));
+    }
+
+    function hash(
+        bytes memory data,
+        bytes32 msgHash
+    ) override public pure returns(bytes32 hash) {
+        ECDSALib.ECDSAState ecdsaData = state(data);
+        hash = abi.encode(this, ecdsaData.nonce, msgHash);
+    }
 
     function isValidSignature(
         bytes32 hash,
@@ -52,5 +86,16 @@ contract ECDSAVerifier is Verifier(32) {
         // ecrecover
         return MAGICVALUE;
     }
+
+    function incrementNonce(
+        bytes memory stateBytes
+    ) public pure returns (
+        bytes memory newStateBytes
+    ) {
+        ECDSALib.ECDSAState state = state(stateBytes);
+        ECDSALib.ECDSAState nextECDSAState = state.incrementNonce();
+        return abi.encode(nextECDSAState);
+    }
+
 
 }

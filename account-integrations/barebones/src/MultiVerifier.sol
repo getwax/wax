@@ -8,37 +8,13 @@ contract MultiVerifier is ERC1271 {
     // type VerifierState is bytes;
 
     struct StatefulVerifier {
+        Status currentStatus;
         uint256 verifierIndex;
         uint8 level;
         bytes data;
     }
 
-    
-    /**
-    Verifiers can be added by admins and paused by admin+guardians, but not removed.
-    Protects against replay attacks.
-     */
-    IVerifier[] trustedVerifiers;
-    /** verifier to state(s) */
-    mapping(IVerifier => StatefulVerifier[]) verifierStates;
-
-    // constructor(
-    //     IVerifier adminVerifier,
-    //     bytes memory initData
-    // ) {
-    //     require(adminVerifier != address(0), "MV: Verifier must not be 0");
-    //     addVerifier(adminVerifier, initData);
-    //     defaultVerifier = adminVerifier;
-    // }
-
-    /**
-    Level / auth score?
-    State.
-     */
-    // mapping(IVerifier => (uint, bytes)) verifierBytes;
-    IVerifier immutable defaultVerifier;
-
-    /**
+        /**
     A verifier needs to be manually approved and activated.
     After that, it can only be paused via a more privileged verifier.
      */
@@ -47,7 +23,31 @@ contract MultiVerifier is ERC1271 {
         PAUSED,
         ACTIVE
     }
-    mapping (Verifier => Status) verifierStatus;
+
+    // list of verifier singleton contracts that are trusted and can be added to the wallet
+    IVerifier[] trustedVerifiers;
+
+    /**
+    Verifiers can be added by admins and paused by admin+guardians, but not removed.
+    Protects against replay attacks.
+     */
+    /** index to verifiers state(s) */
+    StatefulVerifier[] verifierStates;
+
+    // constructor(
+    //     IVerifier adminVerifier,
+    //     bytes memory initData
+    // ) {
+    //     require(adminVerifier != address(0), "MV: Verifier must not be 0");
+    //     addVerifier(adminVerifier, initData);
+    // }
+
+    /**
+    Level / auth score?
+    State.
+     */
+    // mapping(IVerifier => (uint, bytes)) verifierBytes;
+
 
     /** Variable should always be 0 between calls, can be increased only after particular
     checks, then returned to 0 just before call, to prevent re-entrancy.
@@ -70,7 +70,7 @@ contract MultiVerifier is ERC1271 {
     /**
     Add new verifier data using existing trusted verifier.
      */
-    function addVerifier(Verifier verifierToAdd, bytes memory initData) private {
+    function addVerifier(Verifier verifierToAdd, bytes memory initData) internal {
         require(
             verifierStatus[verifierToAdd] == Status.NOT_APPROVED,
             "Already approved"
@@ -84,6 +84,10 @@ contract MultiVerifier is ERC1271 {
     // function pauseVerifier(address verifierToStop) private {
     // }
 
+    function verifierFromSig(bytes memory signature)
+    public pure returns(Verifier verifier, bytes memory sig) {
+        return abi.decode(signature, (Verifier, bytes));
+    }
 
     /**
      @param hash hash of data to check validity
@@ -92,23 +96,23 @@ contract MultiVerifier is ERC1271 {
     function isValidSignature(
         bytes32 hash,
         bytes memory signature
-    ) override public view returns (bytes4 magicValue) {
-        hash;
+    ) override public view returns (bytes4 result) {
 
         Verifier verifier;
         bytes memory sig;
-        (verifier, sig) = abi.decode(signature, (Verifier, bytes));
+        (verifier, sig) = verifierFromSig(signature);
 
         require(
             verifierStatus[verifier] == Status.ACTIVE,
             ""
         );
-        verifier.isValidSignature(
-            bytes32(0),
+        result = verifier.isValidSignature(
+            hash,
             sig
-        );        
+        );
 
-        return MAGICVALUE;
+
+        return MAGICVALUE; //TODO: result;
     }
 
 }

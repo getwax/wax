@@ -3,7 +3,7 @@ pragma solidity ^0.8.13;
 
 import {Test, console2} from "forge-std/Test.sol";
 import {BareBones} from "../src/BareBones.sol";
-import {ECDSAVerifier} from "../src/verifiers/ECDSAVerifier.sol";
+import {ECDSAVerifier, ECDSALib} from "../src/verifiers/ECDSAVerifier.sol";
 
 contract BareBonesTest is Test {
     BareBones public bareBones;
@@ -11,24 +11,16 @@ contract BareBonesTest is Test {
 
     function setUp() public {
         ecdsaVerifier = new ECDSAVerifier();
+
+    }
+
+    function test_ECDSA() public {
         bareBones = new BareBones(
             ecdsaVerifier,
             abi.encode(msg.sender)
         );
-
+        ECDSALib.ECDSAState memory adminState = ecdsaVerifier.state(bareBones.adminState());
+        assertEq(adminState.owner, msg.sender);
     }
 
-    function test_EAO() public {
-
-    }
-
-    // function test_Increment() public {
-    //     bareBones.increment();
-    //     assertEq(bareBones.number(), 1);
-    // }
-
-    // function testFuzz_SetNumber(uint256 x) public {
-    //     bareBones.setNumber(x);
-    //     assertEq(bareBones.number(), x);
-    // }
 }
