@@ -11,20 +11,20 @@ interface IActionVerifier {
     function canAuth(IVerifier, bytes memory) view external returns (bool);
 }
 
-contract ActionVerifier {
+// contract ActionVerifier {
 
-    bool targetFilter;
-    bool methodFilter;
+//     bool targetFilter;
+//     bool methodFilter;
 
-    function canAuth(IVerifier verifier, bytes memory) view public returns (bool) {
-        return true;
-    }
+    // function canAuth(IVerifier verifier, bytes memory) view public returns (bool) {
+    //     return true;
+    // }
 
     // modifier target
-}
+// }
 
 contract NonceManager {
-    uint256 public nonce = 0; //TODO nonce as validater MSB and nonce LSB.
+    uint256 public nonce = 1; //TODO nonce as validater MSB and nonce LSB.
 
     function incrementNonce() internal {
         nonce++;
@@ -37,14 +37,14 @@ A minimal smart account that by default acts like an on chain EOA, but has the a
 additional verification mechanisms.
 TODO: add MetaTx capability (OZ Context)
  */
-contract BareBones is MultiVerifier, /*ActionManager,*/ NonceManager {
+contract BareBones is ERC1271, MultiVerifier, ActionManager, NonceManager {
 
     // A simple direct verifier (outside of MultiVerifier)
-    Verifier public adminVerifier; // TODO: make restricted "default" verifier
-    // Verifier recoveryVerifier; // TODO: exclusive verification(s) to modify verifier states
+    Verifier public adminVerifier;
+    Verifier public defaultVerifier; // TODO: make restricted "default" verifier
 
     bytes public adminState;
-    // bytes recoveryState;
+    // bytes public defaultState;
 
     // TODO: initialise trusted verifier list with decentralised list
     // TODO: deploy via a simple factory
@@ -56,74 +56,76 @@ contract BareBones is MultiVerifier, /*ActionManager,*/ NonceManager {
 
     event Called(address);
 
-    function checkValidityAndIncrementNonce(
+    /**
+     @param hash hash of data to check validity
+     @param signature address of extension that checks for validity
+     */
+    function isValidSignature(
+        bytes32 hash,
+        bytes memory signature
+    ) override(ERC1271, MultiVerifier) public view returns (bytes4 magicValue) {
+        if (
+            signature.length == adminVerifier.signatureLength() &&
+            adminVerifier.isValidSignature(adminState, hash, signature)
+        ) {
+            magicValue = MAGICVALUE;
+        } else {
+            magicValue = super.isValidSignature(hash, signature);
+        }
+    }
+
+    function checkValidityAndSetLevel(
         Action calldata a,
         bytes calldata signature
-    ) internal returns(bool success) {
-        success = false;
-
-        bytes4 result = bytes4(0);
-        // if (signature.length == adminVerifier.signatureLength) {
-            hash = abi.encode(a)
-            result = adminVerifier.isValidSignature(hash, signature);
-            adminState.incrementNonce();
-        // }
-        // if (result != MAGICVALUE) { // may be multi-action
-        //     result = super.checkValidityAndIncrementNonce(a, signature);
-        // }
-        if (result == MAGICVALUE) {
-            success = true;
+    ) internal returns(bool) {
+        bytes32 hash = keccak256(abi.encode(a, nonce));
+        if (
+            signature.length == adminVerifier.signatureLength() &&
+            (adminVerifier.isValidSignature(adminState, hash, signature))
+        ) {
+            adminState = adminVerifier.incrementNonce(adminState);
+            verifiedLevel = LEVEL_ADMIN;
+            return true;
+        } else {
+            return super.checkValidityAndSetLevel(hash, signature);
         }
     }
 
-    function hash(Verifier v, bytes32 msg) {
-        bytes memory verifierMessage;
-        uint192 key
+    // function hash(Verifier v, bytes32 msg) public pure returns(bytes32) {
+    //     bytes memory verifierMessage;
+    //     uint192 key; //TODO: key/sequence nonce split
 
-        bytes memory verifierState;
-        if (v == adminVerifier) {
-            verifierState = adminState;
-        }
-        // else if (verifierStatus[v].ACTIVE) {
-        //     StatefulVerifier sv[] = verifierStates[v];
-        //     //...
-        // }
-
-    }
+    //     bytes memory verifierState;
+    //     if (v == adminVerifier) {
+    //         verifierState = adminState;
+    //     }
+    //     // else if (verifierStatus[v].ACTIVE) {
+    //     //     StatefulVerifier sv[] = verifierStates[v];
+    //     //     //...
+    //     // }
+    //     return bytes32(0);
+    // }
 
     // consider passing regular EAO signed transaction data
     function performAction(
         Action calldata a,
         bytes calldata signature
-    ) public returns (bool result, bytes memory returnVal) {
-        bytes32 hash = a.hash();
-        hash = adminVerifier.hash(adminState, hash);
-
-        // TODO: split signature into verifier address
-        //(or check default verifier sig length?)
-
-        //static call verifiers to ensure non-edit? https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/utils/cryptography/SignatureChecker.sol#L24-L29
-        if (isValidSignature(hash, signature)) {
+    ) public returns (bool success, bytes memory returnVal) {
+        if (checkValidityAndSetLevel(a, signature)) {
             // consider reimbursing payer (msg.sender?) here (initial primary use self/dApp sponsored)
+
+            if (isAdminAction(a) && (verifiedLevel < LEVEL_ADMIN)) {
+                revert InsufficientVerification(verifiedLevel, LEVEL_ADMIN);
+            }
+            resetLevel();
 
             incrementNonce();
 
-            // require is not admin function (or has admin rights)
-            if (isAdminAction(a)) {
-                // check additional auth
+            if (a.value > 0) {
+                (success, returnVal) = payable(a.target).call{value: a.value}(a.encodedFunction());
             }
-            // TODO: require is below value threshold (or has "enough" authority)
-            
-            // call given function
-            try this._performOperation(op) returns (
-                bytes[] memory _results
-            ) {
-                result = true;
-                returnVal = _results;
-            }
-            catch (bytes memory returnData) {
-                result = false;
-                returnVal = returnData;
+            else {
+                (success, returnVal) = address(a.target).call(a.encodedFunction());
             }
 
             emit Called(a.target);
