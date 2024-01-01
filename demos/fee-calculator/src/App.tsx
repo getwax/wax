@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import './App.css';
 import Parameter from './Parameter';
 import Output from './Output';
+import githubLogoUrl from './githubLogo.svg';
 
 const defaults = {
   ethPrice: 2200,
@@ -105,7 +106,16 @@ const App = () => {
   return (
     <div className="calculator">
       <div>
-        <h1>WAX Fee Calculator</h1>
+        <h1>
+          WAX Fee Calculator{' '}
+          <a href="https://github.com/getwax/wax">
+            <img
+              src={githubLogoUrl}
+              alt="GitHub Repository"
+              style={{ width: '0.8em' }}
+            />
+          </a>
+        </h1>
       </div>
 
       <div className="io">

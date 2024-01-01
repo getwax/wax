@@ -1,5 +1,5 @@
 import './Parameter.scss';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import ExponentialSlider from './ExponentialSlider';
 
 const Parameter = ({
