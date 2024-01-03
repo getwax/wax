@@ -24,8 +24,6 @@ contract SafeZkEmailRecoveryPlugin {
     IDKIMRegsitry public immutable defaultDkimRegistry;
 
     bytes32 immutable RECOVERY_HASH_DOMAIN;
-    string public constant DOMAIN_NAME = "RECOVERY_PLUGIN";
-    uint256 public constant DOMAIN_VERSION = 1;
 
     // Mapping of safe address to plugin storage
     mapping(address => ZkEmailRecoveryStorage) public zkEmailRecoveryStorage;
@@ -49,9 +47,12 @@ contract SafeZkEmailRecoveryPlugin {
         defaultDkimRegistry = IDKIMRegsitry(_defaultDkimRegistry);
 
         RECOVERY_HASH_DOMAIN = keccak256(
-            abi.encodePacked(
-                DOMAIN_NAME,
-                DOMAIN_VERSION,
+            abi.encode(
+                keccak256(
+                    "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
+                ),
+                keccak256("SafeZKEmailRecoveryPlugin"),
+                keccak256("1"),
                 block.chainid,
                 address(this)
             )
