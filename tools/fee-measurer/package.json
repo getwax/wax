@@ -1,5 +1,5 @@
 {
-  "name": "Fee Measurer",
+  "name": "fee-measurer",
   "version": "0.0.0",
   "main": "index.js",
   "private": true,

@@ -1,24 +1,24 @@
 /* eslint-disable no-console */
 
 import { ethers } from 'hardhat';
+import { FeeMeasurer__factory } from '../typechain-types';
 
 async function main() {
-  const currentTimestampInSeconds = Math.round(Date.now() / 1000);
-  const unlockTime = currentTimestampInSeconds + 60;
+  const [signer] = await ethers.getSigners();
 
-  const lockedAmount = ethers.parseEther('0.001');
+  const feeMeasurer = await new FeeMeasurer__factory().connect(signer).deploy();
+  await feeMeasurer.deploymentTransaction()?.wait();
 
-  const lock = await ethers.deployContract('Lock', [unlockTime], {
-    value: lockedAmount,
-  });
+  console.log('FeeMeasurer deployed to:', await feeMeasurer.getAddress());
 
-  await lock.waitForDeployment();
-
-  console.log(
-    `Lock with ${ethers.formatEther(
-      lockedAmount,
-    )}ETH and unlock timestamp ${unlockTime} deployed to ${lock.target.toString()}`,
-  );
+  for (let size = 101n; size <= 103n; size++) {
+    console.log(size);
+    for (let i = 0; i < 3; i++) {
+      console.log("Gas prediction: ", await feeMeasurer.ordinaryGasUsed(size));
+      const receipt = (await (await feeMeasurer.useGas(size)).wait())!;
+      console.log("Gas used: ", receipt.gasUsed);
+    }
+  }
 }
 
 // We recommend this pattern to be able to use async/await everywhere
