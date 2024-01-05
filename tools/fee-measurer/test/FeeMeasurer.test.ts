@@ -13,16 +13,14 @@ describe('FeeMeasurer', () => {
     return { feeMeasurer };
   }
 
-  describe('Deployment', () => {
-    it('useGasOrdinaryGasUsed should match gas used by useGas', async () => {
-      const { feeMeasurer } = await loadFixture(fixture);
+  it('useGasOrdinaryGasUsed should match gas used by useGas', async () => {
+    const { feeMeasurer } = await loadFixture(fixture);
 
-      for (const size of [1, 2, 3, 50, 100, 200]) {
-        const prediction = await feeMeasurer.useGasOrdinaryGasUsed(size);
-        const receipt = (await (await feeMeasurer.useGas(size)).wait())!;
-        
-        expect(prediction).to.equal(receipt.gasUsed);
-      }
-    });
+    for (const size of [1, 2, 3, 50, 100, 200]) {
+      const prediction = await feeMeasurer.useGasOrdinaryGasUsed(size);
+      const receipt = (await (await feeMeasurer.useGas(size)).wait())!;
+      
+      expect(prediction).to.equal(receipt.gasUsed);
+    }
   });
 });
