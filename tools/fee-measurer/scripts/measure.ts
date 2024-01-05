@@ -3,6 +3,7 @@
 import { ethers } from 'hardhat';
 import { FeeMeasurer__factory } from '../typechain-types';
 import SafeSingletonFactory from '../src/SafeSingletonFactory';
+import generateBytes from '../src/generateBytes';
 
 async function main() {
   const [signer] = await ethers.getSigners();
@@ -13,48 +14,122 @@ async function main() {
 
   console.log('FeeMeasurer deployed to:', await feeMeasurer.getAddress());
 
-  const results = [];
+  let ordinaryGasPrice: bigint;
 
-  for (const size of [10n, 20n, 30n, 40n]) {
-    console.log(size);
+  {
+    console.log("Measuring ordinary gas price...");
+    console.log("===============================");
+    console.log();
 
-    const balanceBefore = await ethers.provider.getBalance(await signer.getAddress());
-    const ordinaryGas = await feeMeasurer.useGasOrdinaryGasUsed(size);
-    const receipt = (await (await feeMeasurer.useGas(size, { type: 2 })).wait())!;
+    const results = [];
 
-    const tx = await receipt.getTransaction();
-    console.log(tx);
+    for (const size of [10n, 20n, 30n, 40n]) {
+      console.log({ size });
 
-    const balanceAfter = await ethers.provider.getBalance(await signer.getAddress());
+      const balanceBefore = await ethers.provider.getBalance(await signer.getAddress());
+      const ordinaryGas = await feeMeasurer.useGasOrdinaryGasUsed(size);
+      const receipt = (await (await feeMeasurer.useGas(size, { /* TODO */ })).wait())!;
 
-    const result = {
-      size,
-      ordinaryGas,
-      reportedGasUsed: receipt.gasUsed,
-      reportedGasPrice: receipt.gasPrice,
-      ethUsed: balanceBefore - balanceAfter,
-      ethUsedFmt: ethers.formatEther(balanceBefore - balanceAfter),
-    };
+      const balanceAfter = await ethers.provider.getBalance(await signer.getAddress());
 
-    console.log(result);
-    results.push(result);
+      const result = {
+        size,
+        ordinaryGas,
+        reportedGasUsed: receipt.gasUsed,
+        reportedGasPrice: receipt.gasPrice,
+        ethUsed: balanceBefore - balanceAfter,
+        ethUsedFmt: ethers.formatEther(balanceBefore - balanceAfter),
+      };
+
+      console.log(result);
+      results.push(result);
+    }
+
+    const firstResult = results[0];
+    const lastResult = results.at(-1)!;
+
+    ordinaryGasPrice =
+      (lastResult.ethUsed - firstResult.ethUsed) /
+      (lastResult.ordinaryGas - firstResult.ordinaryGas);
+
+    const ethUsedRelErrors = results.map((result) => {
+      const prediction = (firstResult.ethUsed
+        + ordinaryGasPrice * (result.ordinaryGas - firstResult.ordinaryGas));
+
+      return Number(result.ethUsed - prediction) / Number(result.ethUsed);
+    });
+
+    console.log({ ethUsedRelErrors });
   }
 
-  const firstResult = results[0];
-  const lastResult = results.at(-1)!;
+  {
+    console.log();
+    console.log();
+    console.log("Measuring calldata price...");
+    console.log("===========================");
+    console.log();
 
-  const ordinaryGasPrice =
-    (lastResult.ethUsed - firstResult.ethUsed) /
-    (lastResult.ordinaryGas - firstResult.ordinaryGas);
+    const results = [];
 
-  const ethUsedRelErrors = results.map((result) => {
-    const prediction = (firstResult.ethUsed
-      + ordinaryGasPrice * (result.ordinaryGas - firstResult.ordinaryGas));
+    for (const size of [0n, 50n, 100n, 150n]) {
+      console.log({ size });
 
-    return Number(result.ethUsed - prediction) / Number(result.ethUsed);
-  });
+      const balanceBefore = await ethers.provider.getBalance(await signer.getAddress());
+      const ordinaryGas = await feeMeasurer.fallbackOrdinaryGasUsed(size);
+      const receipt = (await (await (feeMeasurer.fallback!)({
+        data: generateBytes(Number(size)),
+        /* TODO */
+      })).wait())!;
 
-  console.log({ ethUsedRelErrors });
+      const balanceAfter = await ethers.provider.getBalance(await signer.getAddress());
+      const ethUsed = balanceBefore - balanceAfter;
+      const ethUsedForOrdinaryGas = ordinaryGasPrice * ordinaryGas;
+      const ethUsedExtra = ethUsed - ethUsedForOrdinaryGas;
+
+      const result = {
+        size,
+        ordinaryGas,
+        reportedGasUsed: receipt.gasUsed,
+        reportedGasPrice: receipt.gasPrice,
+        ethUsed,
+        ethUsedForOrdinaryGas,
+        ethUsedExtra,
+        ethUsedFmt: ethers.formatEther(ethUsed),
+        ethUsedForOrdinaryGasFmt: ethers.formatEther(ethUsedForOrdinaryGas),
+        ethUsedExtraFmt: ethers.formatEther(ethUsedExtra),
+      };
+
+      console.log(result);
+      results.push(result);
+    }
+
+    const firstResult = results[0];
+    const lastResult = results.at(-1)!;
+
+    const baselineExtraEth = firstResult.ethUsedExtra;
+    const extraEthPerByte = (lastResult.ethUsedExtra - firstResult.ethUsedExtra);
+
+    const ethUsedRelErrors = results.map((result) => {
+      const prediction = (
+        baselineExtraEth +
+        extraEthPerByte * result.size +
+        ordinaryGasPrice * result.ordinaryGas
+      );
+
+      return Number(result.ethUsed - prediction) / Number(result.ethUsed);
+    });
+
+    console.log();
+    console.log();
+
+    console.log('Results', {
+      ethUsedRelErrors,
+      baselineExtraEth,
+      extraEthPerByte,
+      baselineExtraEthFmt: ethers.formatEther(baselineExtraEth),
+      extraEthPerByteFmt: ethers.formatEther(extraEthPerByte),
+    });
+  }
 }
 
 // We recommend this pattern to be able to use async/await everywhere
