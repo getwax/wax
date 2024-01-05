@@ -5,6 +5,11 @@ import { FeeMeasurer__factory } from '../typechain-types';
 import SafeSingletonFactory from '../src/SafeSingletonFactory';
 import generateBytes from '../src/generateBytes';
 
+// TODO:
+// - Use process.env.MNEMONIC if available
+// - Retry balance retrieval if it looks like zero ETH was used
+// - Don't use ethers' default fee because it gives optimism 1 gwei
+
 async function main() {
   const [signer] = await ethers.getSigners();
 
