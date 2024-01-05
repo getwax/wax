@@ -12,10 +12,14 @@ contract FeeMeasurer {
     for (uint256 i = 0; i < iterations; i++) {}
   }
 
-  function ordinaryGasUsed(uint8 size) public pure returns (uint256) {
+  function useGasOrdinaryGasUsed(uint8 size) public pure returns (uint256) {
     require(size != 0, "Size zero works differently due to zero-byte");
 
-    return 21607 + 1110 * uint256(size);
+    return 21629 + 1110 * uint256(size);
+  }
+
+  function fallbackOrdinaryGasUsed(uint256 nonZeroDataLen) public pure returns (uint256) {
+    return 21064 + nonZeroDataLen;
   }
 
   fallback() external {}
