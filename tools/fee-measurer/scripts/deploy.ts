@@ -2,12 +2,14 @@
 
 import { ethers } from 'hardhat';
 import { FeeMeasurer__factory } from '../typechain-types';
+import SafeSingletonFactory from '../src/SafeSingletonFactory';
 
 async function main() {
   const [signer] = await ethers.getSigners();
 
-  const feeMeasurer = await new FeeMeasurer__factory().connect(signer).deploy();
-  await feeMeasurer.deploymentTransaction()?.wait();
+  const ssf = await SafeSingletonFactory.init(signer);
+
+  const feeMeasurer = await ssf.connectOrDeploy(FeeMeasurer__factory, []);
 
   console.log('FeeMeasurer deployed to:', await feeMeasurer.getAddress());
 
