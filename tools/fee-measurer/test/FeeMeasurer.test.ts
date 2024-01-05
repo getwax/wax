@@ -1,6 +1,7 @@
 import { loadFixture } from '@nomicfoundation/hardhat-toolbox/network-helpers';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
+import generateBytes from '../src/generateBytes';
 
 describe('FeeMeasurer', () => {
   // We define a fixture to reuse the same setup in every test.
@@ -27,7 +28,7 @@ describe('FeeMeasurer', () => {
   it('fallbackOrdinaryGasUsed should match gas used by fallback function', async () => {
     const { feeMeasurer } = await loadFixture(fixture);
 
-    for (const size of [4, 5, 6, 10, 50, 200, 1000, 100000]) {
+    for (const size of [0, 1, 2, 3, 4, 5, 6, 10, 50, 200, 1000, 100000]) {
       const prediction = await feeMeasurer.fallbackOrdinaryGasUsed(size);
 
       const receipt = (await (await (feeMeasurer.fallback!)({
@@ -38,13 +39,3 @@ describe('FeeMeasurer', () => {
     }
   });
 });
-
-function generateBytes(size: number): string {
-  let res = '0x';
-  
-  for (let i = 0; i < 2 * size; i++) {
-    res += Math.floor(Math.random() * 15 + 1).toString(16);
-  }
-
-  return res;
-}

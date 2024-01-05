@@ -21,9 +21,15 @@ contract FeeMeasurer {
     function fallbackOrdinaryGasUsed(
         uint256 nonZeroDataLen
     ) public pure returns (uint256) {
-        require(nonZeroDataLen >= 4, "Formula doesn't work before 4 bytes");
+        uint256 result = 21064 + 16 * nonZeroDataLen;
 
-        return 21142 + 16 * nonZeroDataLen;
+        if (nonZeroDataLen >= 4) {
+            // I think this is because a different branch is used if the data
+            // might match a method id. Less than 4 bytes and it can't match.
+            result += 78;
+        }
+
+        return result;
     }
 
     fallback() external {}
