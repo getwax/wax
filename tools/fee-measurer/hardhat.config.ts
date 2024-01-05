@@ -15,6 +15,24 @@ const config: HardhatUserConfig = {
       },
     ],
   },
+
+  networks: {
+    hardhat: {
+      gasPrice: 20_000_000_000,
+    },
+
+    mainnet: {
+      url: 'https://rpc.ankr.com/eth'
+    },
+
+    arbitrumOne: {
+      url: 'https://arb1.arbitrum.io/rpc',
+    },
+
+    optimism: {
+      url: 'https://mainnet.optimism.io',
+    },
+  },
 };
 
 task('sendEth', 'Sends ETH to an address')
