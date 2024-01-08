@@ -44,6 +44,7 @@ import SimpleAccountWrapper from './accounts/SimpleAccountWrapper';
 import SafeCompressionAccountWrapper from './accounts/SafeCompressionAccountWrapper';
 import { hexLen } from './helpers/encodeUtils';
 import JsonRpcError from './JsonRpcError';
+import measureCalldataGas from './measureCalldataGas';
 
 type Config = {
   logRequests?: boolean;
@@ -477,7 +478,9 @@ export default class WaxInPage {
         description,
         'is',
         hexLen(bytes),
-        'bytes:',
+        `bytes (${(Number(measureCalldataGas(bytes)) / 16).toFixed(
+          1,
+        )} effective):`,
         bytes,
       );
     }

@@ -35,6 +35,50 @@ export default class SimulatedBundler implements IBundler {
 
   constructor(waxInPage: WaxInPage) {
     this.#waxInPage = waxInPage;
+    (window as any).simulatedBundler = this;
+  }
+
+  async foo() {
+    const adminAccount = await this.#waxInPage.requestAdminAccount(
+      'simulate-bundler',
+    );
+
+    const contracts = await this.#waxInPage.getContracts();
+
+    // *not* the confirmation, just the response (don't add .wait(), that's
+    // wrong).
+    let txResponse;
+
+    if (this.#waxInPage.getConfig('useTopLevelCompression')) {
+      const handleOpsCaller = await this.#getHandleOpsCaller();
+
+      txResponse = await adminAccount.sendTransaction({
+        to: handleOpsCaller.getAddress(),
+        data: await SimulatedBundler.encodeHandleOps(
+          contracts.addressRegistry,
+          [],
+        ),
+      });
+    } else {
+      txResponse = await contracts.entryPoint
+        .connect(adminAccount)
+        .handleOps([], adminAccount.getAddress());
+    }
+
+    const tx = ethers.Transaction.from(txResponse);
+    this.#waxInPage.logBytes('Top-level calldata', tx.data);
+    this.#waxInPage.logBytes('Top-level tx', tx.serialized);
+
+    void txResponse.wait().then((receipt) => {
+      if (!receipt) {
+        console.error('Failed to get bundle receipt');
+        return;
+      }
+
+      if (receipt) {
+        console.log('Top-level gas used:', receipt.gasUsed.toString());
+      }
+    });
   }
 
   async eth_sendUserOperation(
