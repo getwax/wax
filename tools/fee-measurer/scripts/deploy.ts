@@ -3,9 +3,16 @@
 import { ethers } from 'hardhat';
 import { FeeMeasurer__factory } from '../typechain-types';
 import SafeSingletonFactory from '../src/SafeSingletonFactory';
+import { Signer } from 'ethers';
 
 async function main() {
-  const [signer] = await ethers.getSigners();
+  let signer: Signer;
+
+  if (process.env.MNEMONIC) {
+    signer = ethers.Wallet.fromPhrase(process.env.MNEMONIC, ethers.provider);
+  } else {
+    signer = (await ethers.getSigners())[0];
+  }
 
   const ssf = await SafeSingletonFactory.init(signer);
   const feeMeasurer = await ssf.connectOrDeploy(FeeMeasurer__factory, []);
