@@ -7,7 +7,6 @@ import generateBytes from '../src/generateBytes';
 
 // TODO:
 // - Use process.env.MNEMONIC if available
-// - Retry balance retrieval if it looks like zero ETH was used
 // - Don't use ethers' default fee because it gives optimism 1 gwei
 
 async function main() {
@@ -18,6 +17,8 @@ async function main() {
   const feeMeasurer = await ssf.connectOrDeploy(FeeMeasurer__factory, []);
 
   console.log('FeeMeasurer deployed to:', await feeMeasurer.getAddress());
+
+  let referenceBlock = await ethers.provider.getBlockNumber();
 
   let ordinaryGasPrice: bigint;
 
@@ -31,11 +32,11 @@ async function main() {
     for (const size of [10n, 20n, 30n, 40n]) {
       console.log({ size });
 
-      const balanceBefore = await ethers.provider.getBalance(await signer.getAddress());
+      const balanceBefore = await ethers.provider.getBalance(await signer.getAddress(), referenceBlock);
       const ordinaryGas = await feeMeasurer.useGasOrdinaryGasUsed(size);
       const receipt = (await (await feeMeasurer.useGas(size, { /* TODO */ })).wait())!;
-
-      const balanceAfter = await ethers.provider.getBalance(await signer.getAddress());
+      referenceBlock = receipt.blockNumber;
+      const balanceAfter = await ethers.provider.getBalance(await signer.getAddress(), referenceBlock);
 
       const result = {
         size,
@@ -64,7 +65,7 @@ async function main() {
       return Number(result.ethUsed - prediction) / Number(result.ethUsed);
     });
 
-    console.log({ ethUsedRelErrors });
+    console.log({ ordinaryGasPrice, ethUsedRelErrors });
   }
 
   {
@@ -79,14 +80,15 @@ async function main() {
     for (const size of [0n, 50n, 100n, 150n]) {
       console.log({ size });
 
-      const balanceBefore = await ethers.provider.getBalance(await signer.getAddress());
+      const balanceBefore = await ethers.provider.getBalance(await signer.getAddress(), referenceBlock);
       const ordinaryGas = await feeMeasurer.fallbackOrdinaryGasUsed(size);
       const receipt = (await (await (feeMeasurer.fallback!)({
         data: generateBytes(Number(size)),
         /* TODO */
       })).wait())!;
+      referenceBlock = receipt.blockNumber;
 
-      const balanceAfter = await ethers.provider.getBalance(await signer.getAddress());
+      const balanceAfter = await ethers.provider.getBalance(await signer.getAddress(), referenceBlock);
       const ethUsed = balanceBefore - balanceAfter;
       const ethUsedForOrdinaryGas = ordinaryGasPrice * ordinaryGas;
       const ethUsedExtra = ethUsed - ethUsedForOrdinaryGas;
@@ -112,7 +114,7 @@ async function main() {
     const lastResult = results.at(-1)!;
 
     const baselineExtraEth = firstResult.ethUsedExtra;
-    const extraEthPerByte = (lastResult.ethUsedExtra - firstResult.ethUsedExtra);
+    const extraEthPerByte = (lastResult.ethUsedExtra - firstResult.ethUsedExtra) / (lastResult.size - firstResult.size);
 
     const ethUsedRelErrors = results.map((result) => {
       const prediction = (
