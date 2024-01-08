@@ -137,8 +137,10 @@ async function main() {
 
     console.log('Results', {
       ethUsedRelErrors,
+      ordinaryGasPrice,
       baselineExtraEth,
       extraEthPerByte,
+      ordinaryGasPriceFmt: (Number(ordinaryGasPrice) / 1e9).toFixed(9) + ' gwei',
       baselineExtraEthFmt: ethers.formatEther(baselineExtraEth),
       extraEthPerByteFmt: ethers.formatEther(extraEthPerByte),
     });
