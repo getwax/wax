@@ -7,7 +7,7 @@ contract FeeMeasurer {
     function useGas(uint8 size) external {
         require(size != 0, "Size zero works differently due to zero-byte");
 
-        uint256 iterations = 10 * uint256(size);
+        uint256 iterations = 100 * uint256(size);
 
         for (uint256 i = 0; i < iterations; i++) {}
     }
@@ -15,7 +15,7 @@ contract FeeMeasurer {
     function useGasOrdinaryGasUsed(uint8 size) public pure returns (uint256) {
         require(size != 0, "Size zero works differently due to zero-byte");
 
-        return 21629 + 1110 * uint256(size);
+        return 21629 + 11100 * uint256(size);
     }
 
     function fallbackOrdinaryGasUsed(
