@@ -4,13 +4,19 @@ import { ethers } from 'hardhat';
 import { FeeMeasurer__factory } from '../typechain-types';
 import SafeSingletonFactory from '../src/SafeSingletonFactory';
 import generateBytes from '../src/generateBytes';
+import { Signer } from 'ethers';
 
 // TODO:
-// - Use process.env.MNEMONIC if available
 // - Don't use ethers' default fee because it gives optimism 1 gwei
 
 async function main() {
-  const [signer] = await ethers.getSigners();
+  let signer: Signer;
+
+  if (process.env.MNEMONIC) {
+    signer = ethers.Wallet.fromPhrase(process.env.MNEMONIC, ethers.provider);
+  } else {
+    signer = (await ethers.getSigners())[0];
+  }
 
   const ssf = await SafeSingletonFactory.init(signer);
 
