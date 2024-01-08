@@ -19,11 +19,11 @@ async function main() {
 
   const feeMeasurer = await ssf.connectOrDeploy(FeeMeasurer__factory, []);
 
-  console.log('FeeMeasurer deployed to:', await feeMeasurer.getAddress());
+  console.log('FeeMeasurer connectOrDeployed to:', await feeMeasurer.getAddress());
 
   const startBlock = (await ethers.provider.getBlock('latest'))!;
   const maxFeePerGas = startBlock.baseFeePerGas! * 3n / 2n;
-  const maxPriorityFeePerGas = 0n;
+  const maxPriorityFeePerGas = 100_000n; // 0.0001 gwei
 
   const overrides: Overrides = {
     type: 2,
@@ -42,7 +42,7 @@ async function main() {
 
     const results = [];
 
-    for (const size of [10n, 20n, 30n, 40n]) {
+    for (const size of [50n, 100n, 150n, 200n]) {
       console.log({ size });
 
       const balanceBefore = await ethers.provider.getBalance(await signer.getAddress(), referenceBlock);
