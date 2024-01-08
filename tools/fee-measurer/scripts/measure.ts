@@ -4,10 +4,7 @@ import { ethers } from 'hardhat';
 import { FeeMeasurer__factory } from '../typechain-types';
 import SafeSingletonFactory from '../src/SafeSingletonFactory';
 import generateBytes from '../src/generateBytes';
-import { Signer } from 'ethers';
-
-// TODO:
-// - Don't use ethers' default fee because it gives optimism 1 gwei
+import { Overrides, Signer } from 'ethers';
 
 async function main() {
   let signer: Signer;
@@ -24,7 +21,17 @@ async function main() {
 
   console.log('FeeMeasurer deployed to:', await feeMeasurer.getAddress());
 
-  let referenceBlock = await ethers.provider.getBlockNumber();
+  const startBlock = (await ethers.provider.getBlock('latest'))!;
+  const maxFeePerGas = startBlock.baseFeePerGas! * 3n / 2n;
+  const maxPriorityFeePerGas = 0n;
+
+  const overrides: Overrides = {
+    type: 2,
+    maxFeePerGas,
+    maxPriorityFeePerGas,
+  };
+
+  let referenceBlock = startBlock.number;
 
   let ordinaryGasPrice: bigint;
 
@@ -40,7 +47,7 @@ async function main() {
 
       const balanceBefore = await ethers.provider.getBalance(await signer.getAddress(), referenceBlock);
       const ordinaryGas = await feeMeasurer.useGasOrdinaryGasUsed(size);
-      const receipt = (await (await feeMeasurer.useGas(size, { /* TODO */ })).wait())!;
+      const receipt = (await (await feeMeasurer.useGas(size, overrides)).wait())!;
       referenceBlock = receipt.blockNumber;
       const balanceAfter = await ethers.provider.getBalance(await signer.getAddress(), referenceBlock);
 
@@ -89,8 +96,8 @@ async function main() {
       const balanceBefore = await ethers.provider.getBalance(await signer.getAddress(), referenceBlock);
       const ordinaryGas = await feeMeasurer.fallbackOrdinaryGasUsed(size);
       const receipt = (await (await (feeMeasurer.fallback!)({
+        ...overrides,
         data: generateBytes(Number(size)),
-        /* TODO */
       })).wait())!;
       referenceBlock = receipt.blockNumber;
 
