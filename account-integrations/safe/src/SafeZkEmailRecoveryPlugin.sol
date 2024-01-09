@@ -10,9 +10,11 @@ interface ISafeECDSAPlugin {
     function getOwner(address safe) external view returns (address);
 }
 
-struct ZkEmailRecoveryStorage {
+struct RecoveryRequest {
     bytes32 recoveryHash;
     bytes32 dkimPublicKeyHash;
+    uint256 executeAfter;
+    address pendingNewOwner;
 }
 
 /**
@@ -20,25 +22,34 @@ struct ZkEmailRecoveryStorage {
  * NOT FOR PRODUCTION USE
  */
 contract SafeZkEmailRecoveryPlugin {
-    // Default DKIM public key hashes registry
+    /** Default DKIM public key hashes registry */
     IDKIMRegsitry public immutable defaultDkimRegistry;
+
+    /** Default delay has been set to a large timeframe on purpose. Please use a default delay suited to your specific context */
+    uint256 public constant defaultDelay = 2 weeks;
 
     bytes32 immutable RECOVERY_HASH_DOMAIN;
 
-    // Mapping of safe address to plugin storage
-    mapping(address => ZkEmailRecoveryStorage) public zkEmailRecoveryStorage;
+    /** Mapping of safe address to recovery request */
+    mapping(address => RecoveryRequest) public recoveryRequests;
 
-    // Mapping of safe address to dkim registry address
+    /** Mapping of safe address to a custom recovery delay */
+    mapping(address => uint256) public customDelay;
+
+    /** Mapping of safe address to dkim registry address */
     mapping(address => address) public dkimRegistryOfSafe;
 
+    error MODULE_NOT_ENABLED();
+    error INVALID_OWNER(address expectedOwner, address owner);
+    error RECOVERY_ALREADY_INITIATED();
     error INVALID_DKIM_KEY_HASH(
         address safe,
         string emailDomain,
         bytes32 dkimPublicKeyHash
     );
-    error MODULE_NOT_ENABLED();
-    error INVALID_OWNER(address expectedOwner, address owner);
     error INVALID_PROOF();
+    error RECOVERY_NOT_INITIATED();
+    error DELAY_NOT_PASSED();
 
     MockGroth16Verifier public immutable verifier;
 
@@ -60,13 +71,13 @@ contract SafeZkEmailRecoveryPlugin {
     }
 
     /**
-     * @notice returns storage accociated with a safe address
+     * @notice returns recovery request accociated with a safe address
      * @param safe address to query storage with
      */
-    function getZkEmailRecoveryStorage(
+    function getRecoveryRequest(
         address safe
-    ) external view returns (ZkEmailRecoveryStorage memory) {
-        return zkEmailRecoveryStorage[safe];
+    ) external view returns (RecoveryRequest memory) {
+        return recoveryRequests[safe];
     }
 
     /**
@@ -79,7 +90,7 @@ contract SafeZkEmailRecoveryPlugin {
      * @param dkimPublicKeyHash hash of DKIM public key - keccak256(abi.encodePacked(dkimPublicKey))
      * @param dkimRegistry address of a user-defined DKIM registry
      */
-    function addRecoveryHash(
+    function configureRecovery(
         address ecsdaPlugin,
         address owner,
         bytes32 recoveryHash,
@@ -94,37 +105,45 @@ contract SafeZkEmailRecoveryPlugin {
         address expectedOwner = ISafeECDSAPlugin(ecsdaPlugin).getOwner(safe);
         if (owner != expectedOwner) revert INVALID_OWNER(expectedOwner, owner);
 
-        zkEmailRecoveryStorage[safe] = ZkEmailRecoveryStorage(
-            recoveryHash,
-            dkimPublicKeyHash
-        );
+        if (recoveryRequests[safe].executeAfter > 0) {
+            revert RECOVERY_ALREADY_INITIATED();
+        }
+
+        recoveryRequests[safe] = RecoveryRequest({
+            recoveryHash: recoveryHash,
+            dkimPublicKeyHash: dkimPublicKeyHash,
+            executeAfter: 0,
+            pendingNewOwner: address(0)
+        });
         dkimRegistryOfSafe[safe] = dkimRegistry;
+
+        // TODO: emit event
     }
 
     /**
-     * @notice recovers a safe ecdsa plugin using a zk email proof.
-     * @dev rotates the safe ecdsa plugin owner address to a new address. The email address hash is kept hidden until this function is called.
-     * This function is designed so it can be called from any account and account type.
+     * @notice initiates a recovery of a safe ecdsa plugin using a zk email proof.
+     * @dev rotates the safe ecdsa plugin owner address to a new address.
+     * Uses the default delay period if no custom delay has been set.
      * @param safe the safe that manages the safe ecdsa plugin being recovered
-     * @param ecdsaPlugin safe ecsda plugin address that this function will be rotating the owner address for
      * @param newOwner the new owner address of the safe ecdsa plugin
      * @param emailDomain domain name of the sender's email
      * @param a part of the proof
      * @param b part of the proof
      * @param c part of the proof
      */
-    function recoverAccount(
+    function initiateRecovery(
         address safe,
-        address ecdsaPlugin,
         address newOwner,
         string memory emailDomain,
         uint256[2] memory a,
         uint256[2][2] memory b,
         uint256[2] memory c
     ) external {
-        ZkEmailRecoveryStorage memory recoveryStorage = zkEmailRecoveryStorage[
-            safe
-        ];
+        RecoveryRequest memory recoveryStorage = recoveryRequests[safe];
+
+        if (recoveryStorage.executeAfter > 0) {
+            revert RECOVERY_ALREADY_INITIATED();
+        }
 
         if (
             !this.isDKIMPublicKeyHashValid(
@@ -151,12 +170,66 @@ contract SafeZkEmailRecoveryPlugin {
         bool verified = verifier.verifyProof(a, b, c, publicSignals);
         if (!verified) revert INVALID_PROOF();
 
-        bytes memory data = abi.encodeWithSignature(
-            "enable(bytes)",
-            abi.encodePacked(newOwner)
-        );
+        uint256 delay;
+        if (customDelay[safe] > 0) {
+            delay = customDelay[safe];
+        } else {
+            delay = defaultDelay;
+        }
 
-        ISafe(safe).execTransactionFromModule(ecdsaPlugin, 0, data, 0);
+        recoveryRequests[safe].executeAfter = block.timestamp + delay;
+        recoveryRequests[safe].pendingNewOwner = newOwner;
+
+        // TODO: emit event
+    }
+
+    /**
+     * @notice recovers a safe ecdsa plugin using a zk email proof.
+     * @dev rotates the safe ecdsa plugin owner address to a new address.
+     * This function is designed so it can be called from any account and account type.
+     * @param safe the safe that manages the safe ecdsa plugin being recovered
+     * @param ecdsaPlugin safe ecsda plugin address that this function will be rotating the owner address for
+     */
+    function recoverPlugin(address safe, address ecdsaPlugin) external {
+        RecoveryRequest memory recoveryStorage = recoveryRequests[safe];
+
+        if (recoveryStorage.executeAfter == 0) {
+            revert RECOVERY_NOT_INITIATED();
+        }
+
+        if (block.timestamp > recoveryStorage.executeAfter) {
+            delete recoveryRequests[safe]; // TODO: should we do this?
+
+            bytes memory data = abi.encodeWithSignature(
+                "enable(bytes)",
+                abi.encodePacked(recoveryStorage.pendingNewOwner)
+            );
+
+            ISafe(safe).execTransactionFromModule(ecdsaPlugin, 0, data, 0);
+
+            // TODO: emit event
+        } else {
+            revert DELAY_NOT_PASSED();
+        }
+    }
+
+    // FIXME: Think more about access control
+    function cancelRecovery() external {
+        address safe = msg.sender;
+        delete recoveryRequests[safe];
+    }
+
+    /**
+     * @notice sets a custom delay for recovering a plugin for a specific safe
+     * Custom delay is used instead of the default delay when recovering a plugin
+     * Custom delays should be configured with care as they can be used to bypass the default delay.
+     * @param delay the custom delay to be used when recovering a plugin for the safe
+     */
+    function setCustomDelay(uint256 delay) external {
+        address safe = msg.sender;
+        customDelay[safe] = delay;
+
+        // TODO: emit event
     }
 
     /// @notice Return the DKIM public key hash for a given email domain and safe address

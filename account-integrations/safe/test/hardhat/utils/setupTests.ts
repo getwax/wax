@@ -28,7 +28,7 @@ export async function setupTests() {
 
   const [, signer, otherSigner] = getSigners();
   const admin = new NonceManager(signer.connect(provider));
-  const owner = ethers.Wallet.createRandom(provider);
+  const owner = new NonceManager(ethers.Wallet.createRandom(provider));
   const otherAccount = new NonceManager(otherSigner.connect(provider));
 
   await receiptOf(
