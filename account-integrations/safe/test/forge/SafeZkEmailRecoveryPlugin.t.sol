@@ -238,12 +238,11 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
             address(mockDKIMRegsitry)
         );
 
-        RecoveryRequest
-            memory zkEmailRecoveryStorage = safeZkEmailRecoveryPlugin
-                .getRecoveryRequest(safeAddress);
+        RecoveryRequest memory recoveryRequest = safeZkEmailRecoveryPlugin
+            .getRecoveryRequest(safeAddress);
 
         // Assert
-        assertEq(zkEmailRecoveryStorage.recoveryHash, recoveryHash);
+        assertEq(recoveryRequest.recoveryHash, recoveryHash);
         // FIXME: update assertions
     }
 
@@ -305,14 +304,13 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
         );
 
         // Assert
-        RecoveryRequest
-            memory zkEmailRecoveryStorage = safeZkEmailRecoveryPlugin
-                .getRecoveryRequest(safeAddress);
-        RecoveryRequest memory ecdsaRecoveryStorage2 = safeZkEmailRecoveryPlugin
+        RecoveryRequest memory recoveryRequest1 = safeZkEmailRecoveryPlugin
+            .getRecoveryRequest(safeAddress);
+        RecoveryRequest memory recoveryRequest2 = safeZkEmailRecoveryPlugin
             .getRecoveryRequest(safe2Address);
 
-        assertEq(zkEmailRecoveryStorage.recoveryHash, recoveryHash1);
-        assertEq(ecdsaRecoveryStorage2.recoveryHash, recoveryHash2);
+        assertEq(recoveryRequest1.recoveryHash, recoveryHash1);
+        assertEq(recoveryRequest2.recoveryHash, recoveryHash2);
         // FIXME: update assertions
     }
 
@@ -568,7 +566,7 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
         );
     }
 
-    function test_recoverPlugin_recoversPluginSuccessfully() public {
+    function test_recoverPlugin_swapsPluginOwnerSuccessfully() public {
         // Arrange
         address recoveryAccount = Bob.addr;
         uint256[2] memory a = [uint256(0), uint256(0)];
@@ -636,7 +634,7 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
         assertEq(recoveryRequest.pendingNewOwner, address(0));
     }
 
-    function testFuzz_recoverPlugin_recoversPluginSuccessfullyWithCustomDelay(
+    function testFuzz_recoverPlugin_swapsPluginOwnerSuccessfullyWithCustomDelay(
         uint256 delay
     ) public {
         // Arrange
@@ -704,5 +702,69 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
         assertEq(recoveryRequest.dkimPublicKeyHash, bytes32(0));
         assertEq(recoveryRequest.executeAfter, 0);
         assertEq(recoveryRequest.pendingNewOwner, address(0));
+    }
+
+    function test_cancelRecovery_deletesRecoveryRequest() public {
+        // Arrange
+        address recoveryAccount = Bob.addr;
+        uint256[2] memory a = [uint256(0), uint256(0)];
+        uint256[2][2] memory b = [
+            [uint256(0), uint256(0)],
+            [uint256(0), uint256(0)]
+        ];
+        uint256[2] memory c = [uint256(0), uint256(0)];
+
+        bytes32 recoveryHash = keccak256(
+            abi.encodePacked(RECOVERY_HASH_DOMAIN, email, salt)
+        );
+        bytes32 dkimPublicKeyHash = keccak256(abi.encodePacked(dkimPublicKey));
+
+        vm.startPrank(safeAddress);
+        safeZkEmailRecoveryPlugin.configureRecovery(
+            address(safeECDSAPlugin),
+            owner,
+            recoveryHash,
+            dkimPublicKeyHash,
+            address(mockDKIMRegsitry)
+        );
+        vm.stopPrank();
+
+        Vm.Wallet memory newOwner = Carol;
+
+        vm.startPrank(recoveryAccount);
+        safeZkEmailRecoveryPlugin.initiateRecovery(
+            safeAddress,
+            newOwner.addr,
+            emailDomain,
+            a,
+            b,
+            c
+        );
+
+        RecoveryRequest memory recoveryRequestBefore = safeZkEmailRecoveryPlugin
+            .getRecoveryRequest(safeAddress);
+
+        // Act
+        vm.startPrank(safeAddress);
+        vm.expectEmit(true, false, false, false);
+        emit RecoveryCancelled(safeAddress);
+        safeZkEmailRecoveryPlugin.cancelRecovery();
+
+        RecoveryRequest memory recoveryRequestAfter = safeZkEmailRecoveryPlugin
+            .getRecoveryRequest(safeAddress);
+
+        // Assert
+        assertEq(recoveryRequestBefore.recoveryHash, recoveryHash);
+        assertEq(recoveryRequestBefore.dkimPublicKeyHash, dkimPublicKeyHash);
+        assertEq(
+            recoveryRequestBefore.executeAfter,
+            block.timestamp + safeZkEmailRecoveryPlugin.defaultDelay()
+        );
+        assertEq(recoveryRequestBefore.pendingNewOwner, newOwner.addr);
+
+        assertEq(recoveryRequestAfter.recoveryHash, bytes32(0));
+        assertEq(recoveryRequestAfter.dkimPublicKeyHash, bytes32(0));
+        assertEq(recoveryRequestAfter.executeAfter, uint256(0));
+        assertEq(recoveryRequestAfter.pendingNewOwner, address(0));
     }
 }

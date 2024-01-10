@@ -167,9 +167,9 @@ contract SafeZkEmailRecoveryPlugin {
         uint256[2][2] memory b,
         uint256[2] memory c
     ) external {
-        RecoveryRequest memory recoveryStorage = recoveryRequests[safe];
+        RecoveryRequest memory recoveryRequest = recoveryRequests[safe];
 
-        if (recoveryStorage.executeAfter > 0) {
+        if (recoveryRequest.executeAfter > 0) {
             revert RECOVERY_ALREADY_INITIATED();
         }
 
@@ -177,21 +177,21 @@ contract SafeZkEmailRecoveryPlugin {
             !this.isDKIMPublicKeyHashValid(
                 safe,
                 emailDomain,
-                recoveryStorage.dkimPublicKeyHash
+                recoveryRequest.dkimPublicKeyHash
             )
         ) {
             revert INVALID_DKIM_KEY_HASH(
                 safe,
                 emailDomain,
-                recoveryStorage.dkimPublicKeyHash
+                recoveryRequest.dkimPublicKeyHash
             );
         }
 
         uint256[4] memory publicSignals = [
             uint256(uint160(safe)),
-            uint256(recoveryStorage.recoveryHash),
+            uint256(recoveryRequest.recoveryHash),
             uint256(uint160(newOwner)),
-            uint256(recoveryStorage.dkimPublicKeyHash)
+            uint256(recoveryRequest.dkimPublicKeyHash)
         ];
 
         // verify proof
@@ -219,18 +219,18 @@ contract SafeZkEmailRecoveryPlugin {
      * @param ecdsaPlugin safe ecsda plugin address that this function will be rotating the owner address for
      */
     function recoverPlugin(address safe, address ecdsaPlugin) external {
-        RecoveryRequest memory recoveryStorage = recoveryRequests[safe];
+        RecoveryRequest memory recoveryRequest = recoveryRequests[safe];
 
-        if (recoveryStorage.executeAfter == 0) {
+        if (recoveryRequest.executeAfter == 0) {
             revert RECOVERY_NOT_INITIATED();
         }
 
-        if (block.timestamp > recoveryStorage.executeAfter) {
-            delete recoveryRequests[safe]; // TODO: should we do this?
+        if (block.timestamp > recoveryRequest.executeAfter) {
+            delete recoveryRequests[safe];
 
             bytes memory data = abi.encodeWithSignature(
                 "enable(bytes)",
-                abi.encodePacked(recoveryStorage.pendingNewOwner)
+                abi.encodePacked(recoveryRequest.pendingNewOwner)
             );
 
             ISafe(safe).execTransactionFromModule(ecdsaPlugin, 0, data, 0);
@@ -238,14 +238,18 @@ contract SafeZkEmailRecoveryPlugin {
             emit PluginRecovered(
                 safe,
                 ecdsaPlugin,
-                recoveryStorage.pendingNewOwner
+                recoveryRequest.pendingNewOwner
             );
         } else {
             revert DELAY_NOT_PASSED();
         }
     }
 
-    // FIXME: Think more about access control
+    /**
+     * @notice cancels the recovery process of the sender if it exits.
+     * @dev deletes the recovery request accociated with a safe. Assumes
+     * the msg.sender is the safe that the recovery request is being deleted for
+     */
     function cancelRecovery() external {
         address safe = msg.sender;
         delete recoveryRequests[safe];
