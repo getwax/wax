@@ -19,6 +19,27 @@ import {ECDSA} from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.s
 contract SafeZkEmailRecoveryPluginTest is TestHelper {
     using ECDSA for bytes32;
 
+    event RecoveryConfigured(
+        address indexed safe,
+        address ecsdaPlugin,
+        address indexed owner,
+        bytes32 recoveryHash,
+        bytes32 dkimPublicKeyHash,
+        address dkimRegistry
+    );
+    event RecoveryInitiated(
+        address indexed safe,
+        address newOwner,
+        uint256 executeAfter
+    );
+    event PluginRecovered(
+        address indexed safe,
+        address ecdsaPlugin,
+        address newOwner
+    );
+    event RecoveryCancelled(address indexed safe);
+    event CustomDelaySet(address indexed safe, uint256 delay);
+
     constructor() TestHelper() {}
 
     SafeZkEmailRecoveryPlugin public safeZkEmailRecoveryPlugin;
@@ -200,6 +221,15 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
 
         // Act
         vm.startPrank(safeAddress);
+        vm.expectEmit(true, true, false, false);
+        emit RecoveryConfigured(
+            safeAddress,
+            address(safeECDSAPlugin),
+            owner,
+            recoveryHash,
+            dkimPublicKeyHash,
+            address(mockDKIMRegsitry)
+        );
         safeZkEmailRecoveryPlugin.configureRecovery(
             address(safeECDSAPlugin),
             owner,
@@ -441,6 +471,9 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
         );
         bytes32 dkimPublicKeyHash = keccak256(abi.encodePacked(dkimPublicKey));
 
+        uint256 expectedExecuteAfter = block.timestamp +
+            safeZkEmailRecoveryPlugin.defaultDelay();
+
         vm.startPrank(safeAddress);
         safeZkEmailRecoveryPlugin.configureRecovery(
             address(safeECDSAPlugin),
@@ -455,6 +488,12 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
 
         // Act
         vm.startPrank(recoveryAccount);
+        vm.expectEmit(true, false, false, false);
+        emit RecoveryInitiated(
+            safeAddress,
+            newOwner.addr,
+            expectedExecuteAfter
+        );
         safeZkEmailRecoveryPlugin.initiateRecovery(
             safeAddress,
             newOwner.addr,
@@ -468,10 +507,7 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
             .getRecoveryRequest(safeAddress);
 
         // Assert
-        assertEq(
-            recoveryRequest.executeAfter,
-            block.timestamp + safeZkEmailRecoveryPlugin.defaultDelay()
-        );
+        assertEq(recoveryRequest.executeAfter, expectedExecuteAfter);
         assertEq(recoveryRequest.pendingNewOwner, newOwner.addr);
     }
 
@@ -577,6 +613,12 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
 
         // Act
         vm.startPrank(recoveryAccount);
+        vm.expectEmit(true, false, false, false);
+        emit PluginRecovered(
+            safeAddress,
+            address(safeECDSAPlugin),
+            newOwner.addr
+        );
         safeZkEmailRecoveryPlugin.recoverPlugin(
             safeAddress,
             address(safeECDSAPlugin)
@@ -622,6 +664,8 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
             address(mockDKIMRegsitry)
         );
 
+        vm.expectEmit(true, false, false, false);
+        emit CustomDelaySet(safeAddress, delay);
         safeZkEmailRecoveryPlugin.setCustomDelay(delay);
         vm.stopPrank();
 

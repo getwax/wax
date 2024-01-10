@@ -51,6 +51,27 @@ contract SafeZkEmailRecoveryPlugin {
     error RECOVERY_NOT_INITIATED();
     error DELAY_NOT_PASSED();
 
+    event RecoveryConfigured(
+        address indexed safe,
+        address ecsdaPlugin,
+        address indexed owner,
+        bytes32 recoveryHash,
+        bytes32 dkimPublicKeyHash,
+        address dkimRegistry
+    );
+    event RecoveryInitiated(
+        address indexed safe,
+        address newOwner,
+        uint256 executeAfter
+    );
+    event PluginRecovered(
+        address indexed safe,
+        address ecdsaPlugin,
+        address newOwner
+    );
+    event RecoveryCancelled(address indexed safe);
+    event CustomDelaySet(address indexed safe, uint256 delay);
+
     MockGroth16Verifier public immutable verifier;
 
     constructor(address _verifier, address _defaultDkimRegistry) {
@@ -117,7 +138,14 @@ contract SafeZkEmailRecoveryPlugin {
         });
         dkimRegistryOfSafe[safe] = dkimRegistry;
 
-        // TODO: emit event
+        emit RecoveryConfigured(
+            safe,
+            ecsdaPlugin,
+            owner,
+            recoveryHash,
+            dkimPublicKeyHash,
+            dkimRegistry
+        );
     }
 
     /**
@@ -180,7 +208,7 @@ contract SafeZkEmailRecoveryPlugin {
         recoveryRequests[safe].executeAfter = block.timestamp + delay;
         recoveryRequests[safe].pendingNewOwner = newOwner;
 
-        // TODO: emit event
+        emit RecoveryInitiated(safe, newOwner, block.timestamp + delay);
     }
 
     /**
@@ -207,7 +235,11 @@ contract SafeZkEmailRecoveryPlugin {
 
             ISafe(safe).execTransactionFromModule(ecdsaPlugin, 0, data, 0);
 
-            // TODO: emit event
+            emit PluginRecovered(
+                safe,
+                ecdsaPlugin,
+                recoveryStorage.pendingNewOwner
+            );
         } else {
             revert DELAY_NOT_PASSED();
         }
@@ -217,6 +249,7 @@ contract SafeZkEmailRecoveryPlugin {
     function cancelRecovery() external {
         address safe = msg.sender;
         delete recoveryRequests[safe];
+        emit RecoveryCancelled(safe);
     }
 
     /**
@@ -228,8 +261,7 @@ contract SafeZkEmailRecoveryPlugin {
     function setCustomDelay(uint256 delay) external {
         address safe = msg.sender;
         customDelay[safe] = delay;
-
-        // TODO: emit event
+        emit CustomDelaySet(safe, delay);
     }
 
     /// @notice Return the DKIM public key hash for a given email domain and safe address
