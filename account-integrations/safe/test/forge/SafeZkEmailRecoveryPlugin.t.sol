@@ -243,7 +243,9 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
 
         // Assert
         assertEq(recoveryRequest.recoveryHash, recoveryHash);
-        // FIXME: update assertions
+        assertEq(recoveryRequest.dkimPublicKeyHash, dkimPublicKeyHash);
+        assertEq(recoveryRequest.executeAfter, 0);
+        assertEq(recoveryRequest.pendingNewOwner, address(0));
     }
 
     function test_configureRecovery_addMultipleRecoveryAccountsToSamePlugin()
@@ -310,8 +312,14 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
             .getRecoveryRequest(safe2Address);
 
         assertEq(recoveryRequest1.recoveryHash, recoveryHash1);
+        assertEq(recoveryRequest1.dkimPublicKeyHash, dkimPublicKeyHash);
+        assertEq(recoveryRequest1.executeAfter, 0);
+        assertEq(recoveryRequest1.pendingNewOwner, address(0));
+
         assertEq(recoveryRequest2.recoveryHash, recoveryHash2);
-        // FIXME: update assertions
+        assertEq(recoveryRequest2.dkimPublicKeyHash, dkimPublicKeyHash);
+        assertEq(recoveryRequest2.executeAfter, 0);
+        assertEq(recoveryRequest2.pendingNewOwner, address(0));
     }
 
     function test_initiateRecovery_recoveryAlreadyInitiated() public {
@@ -764,7 +772,7 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
 
         assertEq(recoveryRequestAfter.recoveryHash, bytes32(0));
         assertEq(recoveryRequestAfter.dkimPublicKeyHash, bytes32(0));
-        assertEq(recoveryRequestAfter.executeAfter, uint256(0));
+        assertEq(recoveryRequestAfter.executeAfter, 0);
         assertEq(recoveryRequestAfter.pendingNewOwner, address(0));
     }
 }
