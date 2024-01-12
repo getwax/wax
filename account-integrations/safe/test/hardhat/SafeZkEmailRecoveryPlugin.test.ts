@@ -148,6 +148,7 @@ describe("SafeZkEmailRecoveryPlugin", () => {
       [dkimPublicKey],
     );
     const dkimRegistryAddress = await mockDkimRegistry.getAddress();
+    const zeroSeconds = 0;
 
     const configureRecoveryCalldata =
       recoveryPlugin.interface.encodeFunctionData("configureRecovery", [
@@ -156,6 +157,7 @@ describe("SafeZkEmailRecoveryPlugin", () => {
         recoveryHash,
         dkimPublicKeyHash,
         dkimRegistryAddress,
+        zeroSeconds,
       ]);
 
     let safeEcdsaPlugin = SafeECDSAPlugin__factory.connect(
@@ -214,7 +216,7 @@ describe("SafeZkEmailRecoveryPlugin", () => {
       executeContractCallWithSigners(
         safe,
         recoveryPlugin,
-        "setCustomDelay",
+        "setRecoveryDelay",
         [oneSecond],
         // @ts-expect-error owner doesn't have all properties for some reason
         [owner],
@@ -364,6 +366,7 @@ describe("SafeZkEmailRecoveryPlugin", () => {
       [dkimPublicKey],
     );
     const dkimRegistryAddress = await mockDkimRegistry.getAddress();
+    const zeroSeconds = 0;
 
     const addRecoveryHashCalldata = recoveryPlugin.interface.encodeFunctionData(
       "configureRecovery",
@@ -373,6 +376,7 @@ describe("SafeZkEmailRecoveryPlugin", () => {
         recoveryHash,
         dkimPublicKeyHash,
         dkimRegistryAddress,
+        zeroSeconds,
       ],
     );
 
@@ -423,7 +427,7 @@ describe("SafeZkEmailRecoveryPlugin", () => {
       executeContractCallWithSigners(
         safe,
         recoveryPlugin,
-        "setCustomDelay",
+        "setRecoveryDelay",
         [oneSecond],
         // @ts-expect-error owner doesn't have all properties for some reason
         [owner],
