@@ -42,6 +42,7 @@ contract SafeZkEmailRecoveryPlugin {
     error MODULE_NOT_ENABLED();
     error INVALID_OWNER(address expectedOwner, address owner);
     error RECOVERY_ALREADY_INITIATED();
+    error RECOVERY_NOT_CONFIGURED();
     error INVALID_DKIM_KEY_HASH(
         address safe,
         string emailDomain,
@@ -182,6 +183,10 @@ contract SafeZkEmailRecoveryPlugin {
         uint256[2] memory c
     ) external {
         RecoveryRequest memory recoveryRequest = recoveryRequests[safe];
+
+        if (recoveryRequest.recoveryHash == bytes32(0)) {
+            revert RECOVERY_NOT_CONFIGURED();
+        }
 
         if (recoveryRequest.executeAfter > 0) {
             revert RECOVERY_ALREADY_INITIATED();

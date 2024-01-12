@@ -387,6 +387,33 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
         assertEq(recoveryRequest2.pendingNewOwner, address(0));
     }
 
+    function test_initiateRecovery_recoveryNotConfigured() public {
+        // Arrange
+        address recoveryAccount = Bob.addr;
+        uint256[2] memory a = [uint256(0), uint256(0)];
+        uint256[2][2] memory b = [
+            [uint256(0), uint256(0)],
+            [uint256(0), uint256(0)]
+        ];
+        uint256[2] memory c = [uint256(0), uint256(0)];
+
+        Vm.Wallet memory newOwner = Carol;
+
+        // Act & Assert
+        vm.startPrank(recoveryAccount);
+        vm.expectRevert(
+            SafeZkEmailRecoveryPlugin.RECOVERY_NOT_CONFIGURED.selector
+        );
+        safeZkEmailRecoveryPlugin.initiateRecovery(
+            safeAddress,
+            newOwner.addr,
+            emailDomain,
+            a,
+            b,
+            c
+        );
+    }
+
     function test_initiateRecovery_recoveryAlreadyInitiated() public {
         // Arrange
         address recoveryAccount = Bob.addr;
