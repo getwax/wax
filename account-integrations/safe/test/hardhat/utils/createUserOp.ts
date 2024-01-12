@@ -19,7 +19,7 @@ type Plugin = SafeBlsPlugin | SafeWebAuthnPlugin;
 
 export const generateInitCodeAndAddress = async (
   admin: NonceManager,
-  owner: ethers.HDNodeWallet,
+  owner: NonceManager,
   plugin: Plugin,
   safeSingleton: Safe,
   safeProxyFactory: SafeProxyFactory,
@@ -32,7 +32,7 @@ export const generateInitCodeAndAddress = async (
   const encodedInitializer = safeSingleton.interface.encodeFunctionData(
     "setup",
     [
-      [owner.address],
+      [await owner.getAddress()],
       1,
       pluginAddress,
       moduleInitializer,

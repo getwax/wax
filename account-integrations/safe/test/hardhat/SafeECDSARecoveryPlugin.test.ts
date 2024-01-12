@@ -27,7 +27,7 @@ describe("SafeECDSARecoveryPlugin", () => {
   let bundlerProvider: JsonRpcProvider;
   let provider: JsonRpcProvider;
   let admin: NonceManager;
-  let owner: HDNodeWallet;
+  let owner: NonceManager;
   let entryPointAddress: string;
   let safeSingleton: Safe;
   let ssf: SafeSingletonFactory;
@@ -57,7 +57,7 @@ describe("SafeECDSARecoveryPlugin", () => {
     const createArgs = [
       safeSingleton,
       entryPointAddress,
-      owner.address,
+      await owner.getAddress(),
       0,
     ] satisfies Parameters<typeof safeECDSAFactory.create.staticCall>;
 
@@ -143,7 +143,7 @@ describe("SafeECDSARecoveryPlugin", () => {
 
     const recoveryHash = ethers.solidityPackedKeccak256(
       ["bytes32", "address", "address", "string"],
-      [recoveryhashDomain, guardianAddress, owner.address, salt],
+      [recoveryhashDomain, guardianAddress, await owner.getAddress(), salt],
     );
 
     const safeProxyWithEcdsaPluginInterface = SafeECDSAPlugin__factory.connect(
@@ -156,7 +156,7 @@ describe("SafeECDSARecoveryPlugin", () => {
     const addRecoveryAccountCalldata =
       recoveryPlugin.interface.encodeFunctionData("addRecoveryAccount", [
         recoveryHash,
-        owner.address,
+        await owner.getAddress(),
         safeECDSAPluginAddress,
       ]);
 
@@ -193,7 +193,7 @@ describe("SafeECDSARecoveryPlugin", () => {
     const newEcdsaPluginSigner = ethers.Wallet.createRandom().connect(provider);
     const currentOwnerHash = ethers.solidityPackedKeccak256(
       ["address"],
-      [owner.address],
+      [await owner.getAddress()],
     );
     const addressSignature = await newEcdsaPluginSigner.signMessage(
       getBytes(currentOwnerHash),
@@ -204,7 +204,7 @@ describe("SafeECDSARecoveryPlugin", () => {
       safeProxyAddress,
       salt,
       safeECDSAPluginAddress,
-      owner.address,
+      await owner.getAddress(),
       newEcdsaPluginSigner.address,
     ] satisfies Parameters<typeof recoveryPlugin.resetEcdsaAddress.staticCall>;
 
@@ -285,7 +285,12 @@ describe("SafeECDSARecoveryPlugin", () => {
 
     const recoveryHash = ethers.solidityPackedKeccak256(
       ["bytes32", "address", "address", "string"],
-      [recoveryhashDomain, guardianSimpleAccountAddress, owner.address, salt],
+      [
+        recoveryhashDomain,
+        guardianSimpleAccountAddress,
+        await owner.getAddress(),
+        salt,
+      ],
     );
 
     const safeProxyWithEcdsaPluginInterface = SafeECDSAPlugin__factory.connect(
@@ -298,7 +303,7 @@ describe("SafeECDSARecoveryPlugin", () => {
     const addRecoveryAccountCalldata =
       recoveryPlugin.interface.encodeFunctionData("addRecoveryAccount", [
         recoveryHash,
-        owner.address,
+        await owner.getAddress(),
         safeECDSAPluginAddress,
       ]);
 
@@ -335,7 +340,7 @@ describe("SafeECDSARecoveryPlugin", () => {
     const newEcdsaPluginSigner = ethers.Wallet.createRandom().connect(provider);
     const currentOwnerHash = ethers.solidityPackedKeccak256(
       ["address"],
-      [owner.address],
+      [await owner.getAddress()],
     );
     const addressSignature = await newEcdsaPluginSigner.signMessage(
       getBytes(currentOwnerHash),
@@ -347,7 +352,7 @@ describe("SafeECDSARecoveryPlugin", () => {
         safeProxyAddress,
         salt,
         safeECDSAPluginAddress,
-        owner.address,
+        await owner.getAddress(),
         newEcdsaPluginSigner.address,
       ]);
 

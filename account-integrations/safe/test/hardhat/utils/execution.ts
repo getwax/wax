@@ -1,14 +1,14 @@
 // Note: most of this code is copied from https://github.com/safe-global/safe-contracts with
 // small modifications to work with Hardhat ethers.
 
-import { Contract, Wallet, BigNumberish, Signer } from "ethers";
+import { Contract, Wallet, BigNumberish, Signer, BaseContract } from "ethers";
 import { TypedDataSigner } from "@ethersproject/abstract-signer";
 import { AddressZero } from "@ethersproject/constants";
 import { Safe } from "../../../typechain-types";
 
 export const executeContractCallWithSigners = async (
   safe: Safe,
-  contract: Safe,
+  contract: BaseContract,
   method: string,
   params: any[],
   signers: Wallet[],
@@ -27,14 +27,13 @@ export const executeContractCallWithSigners = async (
 };
 
 export const buildContractCall = async (
-  contract: Safe,
+  contract: BaseContract,
   method: string,
   params: any[],
   nonce: number,
   delegateCall?: boolean,
   overrides?: Partial<SafeTransaction>,
 ): Promise<SafeTransaction> => {
-  // @ts-expect-error Copying this function for testing purposes. TS error is irrelevant.
   const data = contract.interface.encodeFunctionData(method, params);
   return buildSafeTransaction(
     Object.assign(

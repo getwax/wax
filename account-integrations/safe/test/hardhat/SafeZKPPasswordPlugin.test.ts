@@ -42,7 +42,7 @@ describe("SafeZKPPasswordPlugin", () => {
     const createArgs = [
       safeSingleton,
       entryPointAddress,
-      owner.address,
+      await owner.getAddress(),
       0,
       groth16Verifier,
     ] satisfies Parameters<typeof safeZKPPasswordFactory.create.staticCall>;

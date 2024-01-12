@@ -148,17 +148,17 @@ describe("SafeZkEmailRecoveryPlugin", () => {
       [dkimPublicKey],
     );
     const dkimRegistryAddress = await mockDkimRegistry.getAddress();
+    const zeroSeconds = 0;
 
-    const addRecoveryHashCalldata = recoveryPlugin.interface.encodeFunctionData(
-      "addRecoveryHash",
-      [
+    const configureRecoveryCalldata =
+      recoveryPlugin.interface.encodeFunctionData("configureRecovery", [
         safeECDSAPluginAddress,
         ownerAddress,
         recoveryHash,
         dkimPublicKeyHash,
         dkimRegistryAddress,
-      ],
-    );
+        zeroSeconds,
+      ]);
 
     let safeEcdsaPlugin = SafeECDSAPlugin__factory.connect(
       safeProxyAddress,
@@ -167,7 +167,7 @@ describe("SafeZkEmailRecoveryPlugin", () => {
 
     let userOpCallData = safeEcdsaPlugin.interface.encodeFunctionData(
       "execTransaction",
-      [await recoveryPlugin.getAddress(), "0x00", addRecoveryHashCalldata],
+      [await recoveryPlugin.getAddress(), "0x00", configureRecoveryCalldata],
     );
 
     const initCode = "0x";
@@ -185,13 +185,15 @@ describe("SafeZkEmailRecoveryPlugin", () => {
       dummySignature,
     );
 
-    const recoveryStorage =
-      await recoveryPlugin.zkEmailRecoveryStorage(safeProxyAddress);
-    expect(recoveryHash).to.equal(recoveryStorage[0]);
-    expect(dkimPublicKeyHash).to.equal(recoveryStorage[1]);
+    const recoveryRequest =
+      await recoveryPlugin.recoveryRequests(safeProxyAddress);
+    expect(recoveryRequest[0]).to.equal(recoveryHash);
+    expect(recoveryRequest[1]).to.equal(dkimPublicKeyHash);
 
     // Construct tx to reset ecdsa address
-    const newEcdsaPluginSigner = ethers.Wallet.createRandom().connect(provider);
+    const newEcdsaPluginSigner = new NonceManager(
+      ethers.Wallet.createRandom().connect(provider),
+    );
     await receiptOf(
       await admin.sendTransaction({
         to: await newEcdsaPluginSigner.getAddress(),
@@ -208,29 +210,69 @@ describe("SafeZkEmailRecoveryPlugin", () => {
 
     const emailDomain = "google.com";
 
-    const recoverAccountArgs = [
+    // set custom delay
+    const oneSecond = 1;
+    await receiptOf(
+      executeContractCallWithSigners(
+        safe,
+        recoveryPlugin,
+        "setRecoveryDelay",
+        [oneSecond],
+        // @ts-expect-error owner doesn't have all properties for some reason
+        [owner],
+      ),
+    );
+
+    const initiateRecoveryArgs = [
       safeProxyAddress,
-      safeECDSAPluginAddress,
-      newEcdsaPluginSigner.address,
+      await newEcdsaPluginSigner.getAddress(),
       emailDomain,
       a,
       b,
       c,
-    ] satisfies Parameters<typeof recoveryPlugin.recoverAccount.staticCall>;
+    ] satisfies Parameters<typeof recoveryPlugin.initiateRecovery.staticCall>;
+
+    await recoveryPlugin
+      .connect(owner)
+      .initiateRecovery.staticCall(...initiateRecoveryArgs);
+
+    // initiate recovery process
+    await receiptOf(
+      recoveryPlugin.connect(owner).initiateRecovery(...initiateRecoveryArgs),
+    );
+
+    // send two transactions to progress time enough for delay
+    await receiptOf(
+      admin.sendTransaction({
+        to: ethers.Wallet.createRandom().address,
+        value: ethers.parseEther("1"),
+      }),
+    );
+    await receiptOf(
+      admin.sendTransaction({
+        to: ethers.Wallet.createRandom().address,
+        value: ethers.parseEther("1"),
+      }),
+    );
+
+    const recoverPluginArgs = [
+      safeProxyAddress,
+      await safeEcdsaPlugin.myAddress(),
+    ] satisfies Parameters<typeof recoveryPlugin.recoverPlugin.staticCall>;
 
     await recoveryPlugin
       .connect(newEcdsaPluginSigner)
-      .recoverAccount.staticCall(...recoverAccountArgs);
+      .recoverPlugin.staticCall(...recoverPluginArgs);
 
     // Send tx to reset ecdsa address
     await receiptOf(
       recoveryPlugin
         .connect(newEcdsaPluginSigner)
-        .recoverAccount(...recoverAccountArgs),
+        .recoverPlugin(...recoverPluginArgs),
     );
 
     const newOwner = await safeEcdsaPlugin.ecdsaOwnerStorage(safeProxyAddress);
-    expect(newOwner).to.equal(newEcdsaPluginSigner.address);
+    expect(newOwner).to.equal(await newEcdsaPluginSigner.getAddress());
 
     // Send userOp with new owner
     const recipientAddress = ethers.Wallet.createRandom().address;
@@ -324,15 +366,17 @@ describe("SafeZkEmailRecoveryPlugin", () => {
       [dkimPublicKey],
     );
     const dkimRegistryAddress = await mockDkimRegistry.getAddress();
+    const zeroSeconds = 0;
 
     const addRecoveryHashCalldata = recoveryPlugin.interface.encodeFunctionData(
-      "addRecoveryHash",
+      "configureRecovery",
       [
         safeECDSAPluginAddress,
         ownerAddress,
         recoveryHash,
         dkimPublicKeyHash,
         dkimRegistryAddress,
+        zeroSeconds,
       ],
     );
 
@@ -361,10 +405,10 @@ describe("SafeZkEmailRecoveryPlugin", () => {
       dummySignature,
     );
 
-    const recoveryStorage =
-      await recoveryPlugin.zkEmailRecoveryStorage(safeProxyAddress);
-    expect(recoveryHash).to.equal(recoveryStorage[0]);
-    expect(dkimPublicKeyHash).to.equal(recoveryStorage[1]);
+    const recoveryRequest =
+      await recoveryPlugin.recoveryRequests(safeProxyAddress);
+    expect(recoveryRequest[0]).to.equal(recoveryHash);
+    expect(recoveryRequest[1]).to.equal(dkimPublicKeyHash);
 
     // Construct userOp to reset ecdsa address
     const newEcdsaPluginSigner = ethers.Wallet.createRandom().connect(provider);
@@ -377,24 +421,34 @@ describe("SafeZkEmailRecoveryPlugin", () => {
     const c: [bigint, bigint] = [BigInt(0), BigInt(0)];
     const emailDomain = "google.com";
 
-    const recoverAccountCalldata = recoveryPlugin.interface.encodeFunctionData(
-      "recoverAccount",
-      [
+    // set custom delay
+    const oneSecond = 1;
+    await receiptOf(
+      executeContractCallWithSigners(
+        safe,
+        recoveryPlugin,
+        "setRecoveryDelay",
+        [oneSecond],
+        // @ts-expect-error owner doesn't have all properties for some reason
+        [owner],
+      ),
+    );
+
+    const initiateRecoveryCalldata =
+      recoveryPlugin.interface.encodeFunctionData("initiateRecovery", [
         safeProxyAddress,
-        safeECDSAPluginAddress,
-        newEcdsaPluginSigner.address,
+        await newEcdsaPluginSigner.getAddress(),
         emailDomain,
         a,
         b,
         c,
-      ],
-    );
+      ]);
 
     const simpleAccount = SimpleAccount__factory.createInterface();
     userOpCallData = simpleAccount.encodeFunctionData("execute", [
       await recoveryPlugin.getAddress(),
       "0x00",
-      recoverAccountCalldata,
+      initiateRecoveryCalldata,
     ]);
 
     // Native tokens for the pre-fund
@@ -405,10 +459,47 @@ describe("SafeZkEmailRecoveryPlugin", () => {
       }),
     );
 
-    // Send userOp to reset ecdsa address
+    // Send userOp to initiate the recovery process
     // Note: Failing with an unrecognised custom error when attempting to first construct
     // the init code and pass it into the recovery user op, so deploying account
     // first and using empty init code here
+    await createAndSendUserOpWithEcdsaSig(
+      provider,
+      bundlerProvider,
+      otherAccount,
+      otherSimpleAccountAddress,
+      initCode,
+      userOpCallData,
+      entryPointAddress,
+      dummySignature,
+    );
+
+    // send two transactions to progress time enough for delay
+    await receiptOf(
+      admin.sendTransaction({
+        to: ethers.Wallet.createRandom().address,
+        value: ethers.parseEther("1"),
+      }),
+    );
+    await receiptOf(
+      admin.sendTransaction({
+        to: ethers.Wallet.createRandom().address,
+        value: ethers.parseEther("1"),
+      }),
+    );
+
+    const recoverAccountCalldata = recoveryPlugin.interface.encodeFunctionData(
+      "recoverPlugin",
+      [safeProxyAddress, safeECDSAPluginAddress],
+    );
+
+    userOpCallData = simpleAccount.encodeFunctionData("execute", [
+      await recoveryPlugin.getAddress(),
+      "0x00",
+      recoverAccountCalldata,
+    ]);
+
+    // Send userOp to recover plugin
     await createAndSendUserOpWithEcdsaSig(
       provider,
       bundlerProvider,
