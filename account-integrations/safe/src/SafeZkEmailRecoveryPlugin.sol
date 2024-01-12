@@ -217,7 +217,6 @@ contract SafeZkEmailRecoveryPlugin {
         bool verified = verifier.verifyProof(a, b, c, publicSignals);
         if (!verified) revert INVALID_PROOF();
 
-        // FIXME: if recovery is not configured, should not get here
         uint256 executeAfter = block.timestamp + recoveryDelay[safe];
 
         recoveryRequests[safe].executeAfter = executeAfter;
