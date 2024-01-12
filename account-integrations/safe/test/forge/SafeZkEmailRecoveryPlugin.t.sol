@@ -25,7 +25,8 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
         address indexed owner,
         bytes32 recoveryHash,
         bytes32 dkimPublicKeyHash,
-        address dkimRegistry
+        address dkimRegistry,
+        uint256 customDelay
     );
     event RecoveryInitiated(
         address indexed safe,
@@ -38,7 +39,7 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
         address newOwner
     );
     event RecoveryCancelled(address indexed safe);
-    event CustomDelaySet(address indexed safe, uint256 delay);
+    event RecoveryDelaySet(address indexed safe, uint256 delay);
 
     constructor() TestHelper() {}
 
@@ -115,6 +116,7 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
             abi.encodePacked(RECOVERY_HASH_DOMAIN, email, salt)
         );
         bytes32 dkimPublicKeyHash = keccak256(abi.encodePacked(dkimPublicKey));
+        uint256 customDelay = 0;
 
         address prevModuleInLinkedList = address(0x1);
         address moduleToDisable = address(safeZkEmailRecoveryPlugin);
@@ -130,7 +132,8 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
             owner,
             recoveryHash,
             dkimPublicKeyHash,
-            address(mockDKIMRegsitry)
+            address(mockDKIMRegsitry),
+            customDelay
         );
     }
 
@@ -141,6 +144,7 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
             abi.encodePacked(RECOVERY_HASH_DOMAIN, email, salt)
         );
         bytes32 dkimPublicKeyHash = keccak256(abi.encodePacked(dkimPublicKey));
+        uint256 customDelay = 0;
 
         // Act & Assert
         vm.startPrank(safeAddress);
@@ -156,7 +160,8 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
             invalidOwner,
             recoveryHash,
             dkimPublicKeyHash,
-            address(mockDKIMRegsitry)
+            address(mockDKIMRegsitry),
+            customDelay
         );
     }
 
@@ -174,6 +179,7 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
             abi.encodePacked(RECOVERY_HASH_DOMAIN, email, salt)
         );
         bytes32 dkimPublicKeyHash = keccak256(abi.encodePacked(dkimPublicKey));
+        uint256 customDelay = 0;
 
         vm.startPrank(safeAddress);
         safeZkEmailRecoveryPlugin.configureRecovery(
@@ -181,7 +187,8 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
             owner,
             recoveryHash,
             dkimPublicKeyHash,
-            address(mockDKIMRegsitry)
+            address(mockDKIMRegsitry),
+            customDelay
         );
         vm.stopPrank();
 
@@ -208,16 +215,20 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
             owner,
             recoveryHash,
             dkimPublicKeyHash,
-            address(mockDKIMRegsitry)
+            address(mockDKIMRegsitry),
+            customDelay
         );
     }
 
-    function test_configureRecovery_recoveryConfiguredSuccessfully() public {
+    function test_configureRecovery_recoveryConfiguredSuccessfullyWithDefaultDelay()
+        public
+    {
         // Arrange
         bytes32 recoveryHash = keccak256(
             abi.encodePacked(RECOVERY_HASH_DOMAIN, email, salt)
         );
         bytes32 dkimPublicKeyHash = keccak256(abi.encodePacked(dkimPublicKey));
+        uint256 customDelay = 0;
 
         // Act
         vm.startPrank(safeAddress);
@@ -228,24 +239,75 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
             owner,
             recoveryHash,
             dkimPublicKeyHash,
-            address(mockDKIMRegsitry)
+            address(mockDKIMRegsitry),
+            customDelay
         );
         safeZkEmailRecoveryPlugin.configureRecovery(
             address(safeECDSAPlugin),
             owner,
             recoveryHash,
             dkimPublicKeyHash,
-            address(mockDKIMRegsitry)
+            address(mockDKIMRegsitry),
+            customDelay
         );
 
         RecoveryRequest memory recoveryRequest = safeZkEmailRecoveryPlugin
             .getRecoveryRequest(safeAddress);
+        uint256 recoveryDelay = safeZkEmailRecoveryPlugin.recoveryDelay(
+            safeAddress
+        );
 
         // Assert
         assertEq(recoveryRequest.recoveryHash, recoveryHash);
         assertEq(recoveryRequest.dkimPublicKeyHash, dkimPublicKeyHash);
         assertEq(recoveryRequest.executeAfter, 0);
         assertEq(recoveryRequest.pendingNewOwner, address(0));
+        assertEq(recoveryDelay, safeZkEmailRecoveryPlugin.defaultDelay());
+    }
+
+    function test_configureRecovery_recoveryConfiguredSuccessfullyWithCustomDelay()
+        public
+    {
+        // Arrange
+        bytes32 recoveryHash = keccak256(
+            abi.encodePacked(RECOVERY_HASH_DOMAIN, email, salt)
+        );
+        bytes32 dkimPublicKeyHash = keccak256(abi.encodePacked(dkimPublicKey));
+        uint256 customDelay = 48 hours;
+
+        // Act
+        vm.startPrank(safeAddress);
+        vm.expectEmit(true, true, false, false);
+        emit RecoveryConfigured(
+            safeAddress,
+            address(safeECDSAPlugin),
+            owner,
+            recoveryHash,
+            dkimPublicKeyHash,
+            address(mockDKIMRegsitry),
+            customDelay
+        );
+        safeZkEmailRecoveryPlugin.configureRecovery(
+            address(safeECDSAPlugin),
+            owner,
+            recoveryHash,
+            dkimPublicKeyHash,
+            address(mockDKIMRegsitry),
+            customDelay
+        );
+
+        RecoveryRequest memory recoveryRequest = safeZkEmailRecoveryPlugin
+            .getRecoveryRequest(safeAddress);
+        uint256 recoveryDelay = safeZkEmailRecoveryPlugin.recoveryDelay(
+            safeAddress
+        );
+
+        // Assert
+        assertEq(recoveryRequest.recoveryHash, recoveryHash);
+        assertEq(recoveryRequest.dkimPublicKeyHash, dkimPublicKeyHash);
+        assertEq(recoveryRequest.executeAfter, 0);
+        assertEq(recoveryRequest.pendingNewOwner, address(0));
+        assertEq(recoveryDelay, customDelay);
     }
 
     function test_configureRecovery_addMultipleRecoveryAccountsToSamePlugin()
@@ -280,6 +342,7 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
             abi.encodePacked(RECOVERY_HASH_DOMAIN, email, salt)
         );
         bytes32 dkimPublicKeyHash = keccak256(abi.encodePacked(dkimPublicKey));
+        uint256 customDelay = 0;
 
         bytes32 email2 = 0xdea89a4f4488c5f2e94b9fe37b1c17104c8b11442520b364fde514989c08c478; // ethers.keccak256(ethers.toUtf8Bytes("test2@mail.com"));
         bytes32 recoveryHash2 = keccak256(
@@ -293,7 +356,8 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
             owner,
             recoveryHash1,
             dkimPublicKeyHash,
-            address(mockDKIMRegsitry)
+            address(mockDKIMRegsitry),
+            customDelay
         );
 
         vm.startPrank(safe2Address);
@@ -302,7 +366,8 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
             owner,
             recoveryHash2,
             dkimPublicKeyHash,
-            address(mockDKIMRegsitry)
+            address(mockDKIMRegsitry),
+            customDelay
         );
 
         // Assert
@@ -336,6 +401,7 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
             abi.encodePacked(RECOVERY_HASH_DOMAIN, email, salt)
         );
         bytes32 dkimPublicKeyHash = keccak256(abi.encodePacked(dkimPublicKey));
+        uint256 customDelay = 0;
 
         vm.startPrank(safeAddress);
         safeZkEmailRecoveryPlugin.configureRecovery(
@@ -343,7 +409,8 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
             owner,
             recoveryHash,
             dkimPublicKeyHash,
-            address(mockDKIMRegsitry)
+            address(mockDKIMRegsitry),
+            customDelay
         );
         vm.stopPrank();
 
@@ -389,6 +456,7 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
         bytes32 invalidDkimPublicKeyHash = keccak256(
             abi.encodePacked("return false")
         );
+        uint256 customDelay = 0;
 
         vm.startPrank(safeAddress);
         safeZkEmailRecoveryPlugin.configureRecovery(
@@ -396,7 +464,8 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
             owner,
             recoveryHash,
             invalidDkimPublicKeyHash,
-            address(mockDKIMRegsitry)
+            address(mockDKIMRegsitry),
+            customDelay
         );
         vm.stopPrank();
 
@@ -436,6 +505,7 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
             abi.encodePacked(RECOVERY_HASH_DOMAIN, email, salt)
         );
         bytes32 dkimPublicKeyHash = keccak256(abi.encodePacked(dkimPublicKey));
+        uint256 customDelay = 0;
 
         vm.startPrank(safeAddress);
         safeZkEmailRecoveryPlugin.configureRecovery(
@@ -443,7 +513,8 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
             owner,
             recoveryHash,
             dkimPublicKeyHash,
-            address(mockDKIMRegsitry)
+            address(mockDKIMRegsitry),
+            customDelay
         );
         vm.stopPrank();
 
@@ -476,6 +547,7 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
             abi.encodePacked(RECOVERY_HASH_DOMAIN, email, salt)
         );
         bytes32 dkimPublicKeyHash = keccak256(abi.encodePacked(dkimPublicKey));
+        uint256 customDelay = 0;
 
         uint256 expectedExecuteAfter = block.timestamp +
             safeZkEmailRecoveryPlugin.defaultDelay();
@@ -486,7 +558,8 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
             owner,
             recoveryHash,
             dkimPublicKeyHash,
-            address(mockDKIMRegsitry)
+            address(mockDKIMRegsitry),
+            customDelay
         );
         vm.stopPrank();
 
@@ -542,6 +615,7 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
             abi.encodePacked(RECOVERY_HASH_DOMAIN, email, salt)
         );
         bytes32 dkimPublicKeyHash = keccak256(abi.encodePacked(dkimPublicKey));
+        uint256 customDelay = 0;
 
         vm.startPrank(safeAddress);
         safeZkEmailRecoveryPlugin.configureRecovery(
@@ -549,7 +623,8 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
             owner,
             recoveryHash,
             dkimPublicKeyHash,
-            address(mockDKIMRegsitry)
+            address(mockDKIMRegsitry),
+            customDelay
         );
         vm.stopPrank();
 
@@ -588,6 +663,7 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
             abi.encodePacked(RECOVERY_HASH_DOMAIN, email, salt)
         );
         bytes32 dkimPublicKeyHash = keccak256(abi.encodePacked(dkimPublicKey));
+        uint256 customDelay = 0;
 
         vm.startPrank(safeAddress);
         safeZkEmailRecoveryPlugin.configureRecovery(
@@ -595,7 +671,8 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
             owner,
             recoveryHash,
             dkimPublicKeyHash,
-            address(mockDKIMRegsitry)
+            address(mockDKIMRegsitry),
+            customDelay
         );
         vm.stopPrank();
 
@@ -660,6 +737,7 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
             abi.encodePacked(RECOVERY_HASH_DOMAIN, email, salt)
         );
         bytes32 dkimPublicKeyHash = keccak256(abi.encodePacked(dkimPublicKey));
+        uint256 initialDelay = 0;
 
         vm.startPrank(safeAddress);
         safeZkEmailRecoveryPlugin.configureRecovery(
@@ -667,12 +745,18 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
             owner,
             recoveryHash,
             dkimPublicKeyHash,
-            address(mockDKIMRegsitry)
+            address(mockDKIMRegsitry),
+            initialDelay
         );
 
+        uint256 recoveryDelay = safeZkEmailRecoveryPlugin.recoveryDelay(
+            safeAddress
+        );
+        assertEq(recoveryDelay, safeZkEmailRecoveryPlugin.defaultDelay());
+
         vm.expectEmit(true, false, false, false);
-        emit CustomDelaySet(safeAddress, delay);
-        safeZkEmailRecoveryPlugin.setCustomDelay(delay);
+        emit RecoveryDelaySet(safeAddress, delay);
+        safeZkEmailRecoveryPlugin.setRecoveryDelay(delay);
         vm.stopPrank();
 
         Vm.Wallet memory newOwner = Carol;
@@ -687,11 +771,7 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
             c
         );
 
-        uint256 customDelay = safeZkEmailRecoveryPlugin.customDelay(
-            safeAddress
-        );
-
-        vm.warp(block.timestamp + customDelay + 1 seconds);
+        vm.warp(block.timestamp + delay + 1 seconds);
 
         // Act
         vm.startPrank(recoveryAccount);
@@ -726,6 +806,7 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
             abi.encodePacked(RECOVERY_HASH_DOMAIN, email, salt)
         );
         bytes32 dkimPublicKeyHash = keccak256(abi.encodePacked(dkimPublicKey));
+        uint256 customDelay = 0;
 
         vm.startPrank(safeAddress);
         safeZkEmailRecoveryPlugin.configureRecovery(
@@ -733,7 +814,8 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
             owner,
             recoveryHash,
             dkimPublicKeyHash,
-            address(mockDKIMRegsitry)
+            address(mockDKIMRegsitry),
+            customDelay
         );
         vm.stopPrank();
 

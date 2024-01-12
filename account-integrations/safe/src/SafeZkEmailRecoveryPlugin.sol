@@ -34,7 +34,7 @@ contract SafeZkEmailRecoveryPlugin {
     mapping(address => RecoveryRequest) public recoveryRequests;
 
     /** Mapping of safe address to a custom recovery delay */
-    mapping(address => uint256) public customDelay;
+    mapping(address => uint256) public recoveryDelay;
 
     /** Mapping of safe address to dkim registry address */
     mapping(address => address) public dkimRegistryOfSafe;
@@ -57,7 +57,8 @@ contract SafeZkEmailRecoveryPlugin {
         address indexed owner,
         bytes32 recoveryHash,
         bytes32 dkimPublicKeyHash,
-        address dkimRegistry
+        address dkimRegistry,
+        uint256 customDelay
     );
     event RecoveryInitiated(
         address indexed safe,
@@ -70,7 +71,7 @@ contract SafeZkEmailRecoveryPlugin {
         address newOwner
     );
     event RecoveryCancelled(address indexed safe);
-    event CustomDelaySet(address indexed safe, uint256 delay);
+    event RecoveryDelaySet(address indexed safe, uint256 delay);
 
     MockGroth16Verifier public immutable verifier;
 
@@ -92,7 +93,7 @@ contract SafeZkEmailRecoveryPlugin {
     }
 
     /**
-     * @notice returns recovery request accociated with a safe address
+     * @notice Returns recovery request accociated with a safe address
      * @param safe address to query storage with
      */
     function getRecoveryRequest(
@@ -102,21 +103,26 @@ contract SafeZkEmailRecoveryPlugin {
     }
 
     /**
-     * @notice stores a recovery hash that can be used to recover a ecdsa plugin at a later stage.
-     * @dev dkimRegistry can be a zero address if the user wants to use the defaultDkimRegistry.
-     *      This function assumes it is being called from a safe - see how msg.sender is interpreted.
-     * @param ecsdaPlugin safe ecsda plugin address that this function will be adding a recovery option for
-     * @param owner owner of the ecdsa plugin
-     * @param recoveryHash hash of domain, email and salt - keccak256(abi.encodePacked(RECOVERY_HASH_DOMAIN, email, salt))
-     * @param dkimPublicKeyHash hash of DKIM public key - keccak256(abi.encodePacked(dkimPublicKey))
-     * @param dkimRegistry address of a user-defined DKIM registry
+     * @notice Stores a recovery hash that can be used to recover a ecdsa plugin
+     *         at a later stage.
+     * @dev dkimRegistry can be a zero address if the user wants to use the
+     *      defaultDkimRegistry. customDelay can be 0 if the user wants to use defaultDelay
+     *      This function assumes it is being called from a safe - see how msg.sender
+     *      is interpreted. This is the first function that must be called when setting up recovery.
+     * @param ecsdaPlugin Safe ecsda plugin address that this function will be adding a recovery option for
+     * @param owner Owner of the ecdsa plugin
+     * @param recoveryHash Hash of domain, email and salt - keccak256(abi.encodePacked(RECOVERY_HASH_DOMAIN, email, salt))
+     * @param dkimPublicKeyHash Hash of DKIM public key - keccak256(abi.encodePacked(dkimPublicKey))
+     * @param dkimRegistry Address of a user-defined DKIM registry
+     * @param customDelay A custom delay to set the recoveryDelay value that is associated with a safe.
      */
     function configureRecovery(
         address ecsdaPlugin,
         address owner,
         bytes32 recoveryHash,
         bytes32 dkimPublicKeyHash,
-        address dkimRegistry
+        address dkimRegistry,
+        uint256 customDelay
     ) external {
         address safe = msg.sender;
 
@@ -128,6 +134,12 @@ contract SafeZkEmailRecoveryPlugin {
 
         if (recoveryRequests[safe].executeAfter > 0) {
             revert RECOVERY_ALREADY_INITIATED();
+        }
+
+        if (customDelay > 0) {
+            recoveryDelay[safe] = customDelay;
+        } else {
+            recoveryDelay[safe] = defaultDelay;
         }
 
         recoveryRequests[safe] = RecoveryRequest({
@@ -144,20 +156,22 @@ contract SafeZkEmailRecoveryPlugin {
             owner,
             recoveryHash,
             dkimPublicKeyHash,
-            dkimRegistry
+            dkimRegistry,
+            customDelay
         );
     }
 
     /**
-     * @notice initiates a recovery of a safe ecdsa plugin using a zk email proof.
-     * @dev rotates the safe ecdsa plugin owner address to a new address.
-     * Uses the default delay period if no custom delay has been set.
-     * @param safe the safe that manages the safe ecdsa plugin being recovered
-     * @param newOwner the new owner address of the safe ecdsa plugin
-     * @param emailDomain domain name of the sender's email
-     * @param a part of the proof
-     * @param b part of the proof
-     * @param c part of the proof
+     * @notice Initiates a recovery of a safe ecdsa plugin using a zk email proof.
+     * @dev Rotates the safe ecdsa plugin owner address to a new address. Uses the
+     *      default delay period if no custom delay has been set. This is the second
+     *      function that should be called in the recovery process - after configureRecovery
+     * @param safe The safe that manages the safe ecdsa plugin being recovered
+     * @param newOwner The new owner address of the safe ecdsa plugin
+     * @param emailDomain Domain name of the sender's email
+     * @param a Part of the proof
+     * @param b Part of the proof
+     * @param c Part of the proof
      */
     function initiateRecovery(
         address safe,
@@ -198,25 +212,23 @@ contract SafeZkEmailRecoveryPlugin {
         bool verified = verifier.verifyProof(a, b, c, publicSignals);
         if (!verified) revert INVALID_PROOF();
 
-        uint256 delay;
-        if (customDelay[safe] > 0) {
-            delay = customDelay[safe];
-        } else {
-            delay = defaultDelay;
-        }
+        // FIXME: if recovery is not configured, should not get here
+        uint256 executeAfter = block.timestamp + recoveryDelay[safe];
 
-        recoveryRequests[safe].executeAfter = block.timestamp + delay;
+        recoveryRequests[safe].executeAfter = executeAfter;
         recoveryRequests[safe].pendingNewOwner = newOwner;
 
-        emit RecoveryInitiated(safe, newOwner, block.timestamp + delay);
+        emit RecoveryInitiated(safe, newOwner, executeAfter);
     }
 
     /**
-     * @notice recovers a safe ecdsa plugin using a zk email proof.
-     * @dev rotates the safe ecdsa plugin owner address to a new address.
-     * This function is designed so it can be called from any account and account type.
-     * @param safe the safe that manages the safe ecdsa plugin being recovered
-     * @param ecdsaPlugin safe ecsda plugin address that this function will be rotating the owner address for
+     * @notice Recovers a safe ecdsa plugin using a zk email proof.
+     * @dev Rotates the safe ecdsa plugin owner address to a new address.
+     *      This function is designed so it can be called from any account and account type.
+     *      This function is the third and final function that needs to be called in the
+     *      recovery process. After configureRecovery & initiateRecovery
+     * @param safe The safe that manages the safe ecdsa plugin being recovered
+     * @param ecdsaPlugin Safe ecsda plugin address that this function will be rotating the owner address for
      */
     function recoverPlugin(address safe, address ecdsaPlugin) external {
         RecoveryRequest memory recoveryRequest = recoveryRequests[safe];
@@ -246,9 +258,9 @@ contract SafeZkEmailRecoveryPlugin {
     }
 
     /**
-     * @notice cancels the recovery process of the sender if it exits.
-     * @dev deletes the recovery request accociated with a safe. Assumes
-     * the msg.sender is the safe that the recovery request is being deleted for
+     * @notice Cancels the recovery process of the sender if it exits.
+     * @dev Deletes the recovery request accociated with a safe. Assumes
+     *      the msg.sender is the safe that the recovery request is being deleted for
      */
     function cancelRecovery() external {
         address safe = msg.sender;
@@ -257,19 +269,20 @@ contract SafeZkEmailRecoveryPlugin {
     }
 
     /**
-     * @notice sets a custom delay for recovering a plugin for a specific safe
-     * Custom delay is used instead of the default delay when recovering a plugin
-     * Custom delays should be configured with care as they can be used to bypass the default delay.
-     * @param delay the custom delay to be used when recovering a plugin for the safe
+     * @notice Sets a custom delay for recovering a plugin for a specific safe.
+     * @dev Custom delay is used instead of the default delay when recovering a
+     *      plugin. Custom delays should be configured with care as they can be
+     *      used to bypass the default delay.
+     * @param delay The custom delay to be used when recovering a plugin for the safe
      */
-    function setCustomDelay(uint256 delay) external {
+    function setRecoveryDelay(uint256 delay) external {
         address safe = msg.sender;
-        customDelay[safe] = delay;
-        emit CustomDelaySet(safe, delay);
+        recoveryDelay[safe] = delay;
+        emit RecoveryDelaySet(safe, delay);
     }
 
     /// @notice Return the DKIM public key hash for a given email domain and safe address
-    /// @param safe the address of the safe that controls the plugin
+    /// @param safe The address of the safe that controls the plugin
     /// @param emailDomain Email domain for which the DKIM public key hash is to be returned
     function isDKIMPublicKeyHashValid(
         address safe,
