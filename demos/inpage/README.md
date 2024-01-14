@@ -9,7 +9,7 @@ This is an in-page wallet for demonstrating WAX modules.
 
 ## See the Demo
 
-(TBA: Public URL.)
+https://wax-demo.org
 
 ```sh
 yarn setup

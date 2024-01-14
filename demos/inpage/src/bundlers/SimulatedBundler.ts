@@ -45,6 +45,47 @@ export default class SimulatedBundler implements IBundler {
 
     const contracts = await this.#waxInPage.getContracts();
 
+    // const data = contracts.entryPoint.interface.encodeFunctionData(
+    //   'handleAggregatedOps',
+    //   [
+    //     [
+    //       {
+    //         userOps: [
+    //           {
+    //             sender: '0xb734eb54c90c363d017b27641cc534caf7004fc4',
+    //             nonce: 1,
+    //             initCode: '0x',
+    //             callData: [
+    //               '0x',
+    //               'b61d27f6',
+    //               '000000000000000000000000c845d6b81d6d1f3b45f2353fec8c960085a9a42e',
+    //               '0000000000000000000000000000000000000000000000000000000000000000',
+    //               '0000000000000000000000000000000000000000000000000000000000000060',
+    //               '0000000000000000000000000000000000000000000000000000000000000024',
+    //               'a9059cbb',
+    //               '000000000000000000000000e30a735c9b90549f8171f17dd698ab6048dde5ab',
+    //               '0000000000000000000000000000000000000000000000000de0b6b3a7640000',
+    //               '00000000000000000000000000000000000000000000000000000000',
+    //             ].join(''),
+    //             callGasLimit: 0x1228f,
+    //             verificationGasLimit: 0x186a0,
+    //             preVerificationGas: 0xd494,
+    //             maxFeePerGas: 0x3e08feb0,
+    //             maxPriorityFeePerGas: 0x3b9aca00,
+    //             paymasterAndData: '0x',
+    //             signature: '0x',
+    //           },
+    //         ],
+    //         aggregator: '0x61381c18845A464b5A9CFddA2466A12365889d5B',
+    //         signature: '0x',
+    //       },
+    //     ],
+    //     await adminAccount.getAddress(),
+    //   ],
+    // );
+
+    // console.log(data);
+
     // *not* the confirmation, just the response (don't add .wait(), that's
     // wrong).
     let txResponse;
@@ -393,3 +434,36 @@ const decompressAndPerformSelector = ethers.FunctionFragment.getSelector(
   'decompressAndPerform',
   ['bytes'],
 );
+
+async function calculateMedianBasefee(provider: ethers.Provider) {
+  const latestBlock = (await provider.getBlock('latest'))!;
+
+  // Get 100 blocks for the last month and then calculate median basefee
+
+  // Estimate block rate
+  const oldBlock = (await provider.getBlock(latestBlock.number - 1_000_000))!;
+  const secondsPerBlock =
+    (latestBlock.timestamp - oldBlock.timestamp) / 1_000_000;
+
+  const blockSpan = (86400 * 30) / secondsPerBlock;
+  const firstBlockNumber = latestBlock.number - blockSpan;
+
+  const blocks: ethers.Block[] = [];
+
+  for (let i = 0; i < 100; i++) {
+    blocks.push(
+      (await provider.getBlock(
+        firstBlockNumber + Math.round((i * blockSpan) / 99),
+      ))!,
+    );
+  }
+
+  const basefees = blocks.map((block) => block.baseFeePerGas!);
+
+  basefees.sort((a, b) => Number(a - b));
+
+  const lowerMedian = basefees[Math.floor(basefees.length / 2)];
+  const upperMedian = basefees[Math.ceil(basefees.length / 2)];
+
+  return (lowerMedian + upperMedian) / 2n;
+}
