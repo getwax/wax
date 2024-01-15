@@ -1,0 +1,122 @@
+FeeMeasurer connectOrDeployed to: 0xA0793BBcCEB9096696Cf3A01b4b22AAB8dA4deaB
+Measuring ordinary gas price...
+===============================
+
+{ size: 50n }
+{
+  size: 50n,
+  ordinaryGas: 576629n,
+  reportedGasUsed: 1133173n,
+  reportedGasPrice: 100000000n,
+  ethUsed: 113317300000000n,
+  ethUsedFmt: '0.0001133173'
+}
+{ size: 100n }
+{
+  size: 100n,
+  ordinaryGas: 1131629n,
+  reportedGasUsed: 1688173n,
+  reportedGasPrice: 100000000n,
+  ethUsed: 168817300000000n,
+  ethUsedFmt: '0.0001688173'
+}
+{ size: 150n }
+{
+  size: 150n,
+  ordinaryGas: 1686629n,
+  reportedGasUsed: 2243173n,
+  reportedGasPrice: 100000000n,
+  ethUsed: 224317300000000n,
+  ethUsedFmt: '0.0002243173'
+}
+{ size: 200n }
+{
+  size: 200n,
+  ordinaryGas: 2241629n,
+  reportedGasUsed: 2798173n,
+  reportedGasPrice: 100000000n,
+  ethUsed: 279817300000000n,
+  ethUsedFmt: '0.0002798173'
+}
+{ ordinaryGasPrice: 100000000n, ethUsedRelErrors: [ 0, 0, 0, 0 ] }
+
+
+Measuring calldata price...
+===========================
+
+{ size: 0n }
+{
+  size: 0n,
+  ordinaryGas: 21064n,
+  reportedGasUsed: 442232n,
+  reportedGasPrice: 100000000n,
+  ethUsed: 44223200000000n,
+  ethUsedForOrdinaryGas: 2106400000000n,
+  ethUsedExtra: 42116800000000n,
+  ethUsedFmt: '0.0000442232',
+  ethUsedForOrdinaryGasFmt: '0.0000021064',
+  ethUsedExtraFmt: '0.0000421168'
+}
+{ size: 50n }
+{
+  size: 50n,
+  ordinaryGas: 21942n,
+  reportedGasUsed: 631132n,
+  reportedGasPrice: 100000000n,
+  ethUsed: 63113200000000n,
+  ethUsedForOrdinaryGas: 2194200000000n,
+  ethUsedExtra: 60919000000000n,
+  ethUsedFmt: '0.0000631132',
+  ethUsedForOrdinaryGasFmt: '0.0000021942',
+  ethUsedExtraFmt: '0.000060919'
+}
+{ size: 100n }
+{
+  size: 100n,
+  ordinaryGas: 22742n,
+  reportedGasUsed: 823714n,
+  reportedGasPrice: 100000000n,
+  ethUsed: 82371400000000n,
+  ethUsedForOrdinaryGas: 2274200000000n,
+  ethUsedExtra: 80097200000000n,
+  ethUsedFmt: '0.0000823714',
+  ethUsedForOrdinaryGasFmt: '0.0000022742',
+  ethUsedExtraFmt: '0.0000800972'
+}
+{ size: 150n }
+{
+  size: 150n,
+  ordinaryGas: 23542n,
+  reportedGasUsed: 1016296n,
+  reportedGasPrice: 100000000n,
+  ethUsed: 101629600000000n,
+  ethUsedForOrdinaryGas: 2354200000000n,
+  ethUsedExtra: 99275400000000n,
+  ethUsedFmt: '0.0001016296',
+  ethUsedForOrdinaryGasFmt: '0.0000023542',
+  ethUsedExtraFmt: '0.0000992754'
+}
+
+
+Results {
+  ethUsedRelErrors: [
+    0,
+    -0.003971699527990975,
+    -0.0015215637138618501,
+    4.919826507238049e-13
+  ],
+  ordinaryGasPrice: 100000000n,
+  baselineExtraEth: 42116800000000n,
+  extraEthPerByte: 381057333333n,
+  ordinaryGasPriceFmt: '0.100000000 gwei',
+  baselineExtraEthFmt: '0.0000421168',
+  extraEthPerByteFmt: '0.000000381057333333'
+}
+
+fixedL1Gas
+1792
+
+l1GasPerEffectiveDataByte
+16.2
+
+// await ethereum.request({ method: 'eth_call', params: [{ to: '0x000000000000000000000000000000000000006c', data: '0x055f362f' }, '0x' + (168226281).toString(16)] })

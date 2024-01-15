@@ -1,0 +1,117 @@
+FeeMeasurer deployed to: 0x8989336ab1895586F351846cee32c69c3b629418
+Measuring ordinary gas price...
+===============================
+
+{ size: 10n }
+{
+  size: 10n,
+  ordinaryGas: 32729n,
+  reportedGasUsed: 32729n,
+  reportedGasPrice: 12777233n,
+  ethUsed: 43082190392254n,
+  ethUsedFmt: '0.000043082190392254'
+}
+{ size: 20n }
+{
+  size: 20n,
+  ordinaryGas: 43829n,
+  reportedGasUsed: 43829n,
+  reportedGasPrice: 12760308n,
+  ethUsed: 43466144967606n,
+  ethUsedFmt: '0.000043466144967606'
+}
+{ size: 30n }
+{
+  size: 30n,
+  ordinaryGas: 54929n,
+  reportedGasUsed: 54929n,
+  reportedGasPrice: 12971985n,
+  ethUsed: 40709717011822n,
+  ethUsedFmt: '0.000040709717011822'
+}
+{ size: 40n }
+{
+  size: 40n,
+  ordinaryGas: 66029n,
+  reportedGasUsed: 66029n,
+  reportedGasPrice: 13044645n,
+  ethUsed: 40933970087646n,
+  ethUsedFmt: '0.000040933970087646'
+}
+{
+  ordinaryGasPrice: -64511120n,
+  ethUsedRelErrors: [
+    0,
+    0.02530769655721292,
+    -0.02309833095029699,
+    -2.1028988836335523e-10
+  ]
+}
+
+
+Measuring calldata price...
+===========================
+
+{ size: 0n }
+{
+  size: 0n,
+  ordinaryGas: 21064n,
+  reportedGasUsed: 21064n,
+  reportedGasPrice: 13448340n,
+  ethUsed: 38209078233344n,
+  ethUsedForOrdinaryGas: -1358862231680n,
+  ethUsedExtra: 39567940465024n,
+  ethUsedFmt: '0.000038209078233344',
+  ethUsedForOrdinaryGasFmt: '-0.00000135886223168',
+  ethUsedExtraFmt: '0.000039567940465024'
+}
+{ size: 50n }
+{
+  size: 50n,
+  ordinaryGas: 21942n,
+  reportedGasUsed: 21942n,
+  reportedGasPrice: 12925242n,
+  ethUsed: 57588305800767n,
+  ethUsedForOrdinaryGas: -1415502995040n,
+  ethUsedExtra: 59003808795807n,
+  ethUsedFmt: '0.000057588305800767',
+  ethUsedForOrdinaryGasFmt: '-0.00000141550299504',
+  ethUsedExtraFmt: '0.000059003808795807'
+}
+{ size: 100n }
+{
+  size: 100n,
+  ordinaryGas: 22742n,
+  reportedGasUsed: 22742n,
+  reportedGasPrice: 12643793n,
+  ethUsed: 74808974042216n,
+  ethUsedForOrdinaryGas: -1467111891040n,
+  ethUsedExtra: 76276085933256n,
+  ethUsedFmt: '0.000074808974042216',
+  ethUsedForOrdinaryGasFmt: '-0.00000146711189104',
+  ethUsedExtraFmt: '0.000076276085933256'
+}
+{ size: 150n }
+{
+  size: 150n,
+  ordinaryGas: 23542n,
+  reportedGasUsed: 23542n,
+  reportedGasPrice: 12391103n,
+  ethUsed: 91523494634320n,
+  ethUsedForOrdinaryGas: -1518720787040n,
+  ethUsedExtra: 93042215421360n,
+  ethUsedFmt: '0.00009152349463432',
+  ethUsedForOrdinaryGasFmt: '-0.00000151872078704',
+  ethUsedExtraFmt: '0.00009304221542136'
+}
+
+
+Results {
+  ethUsedRelErrors: [ 0, 0.02797633980771739, 0.01415109409379946, 9.39649434755644e-13 ],
+  ordinaryGasPrice: -64511120n,
+  baselineExtraEth: 39567940465024n,
+  extraEthPerByte: 356495166375n,
+  ordinaryGasPriceFmt: '-0.064511120 gwei',
+  baselineExtraEthFmt: '0.000039567940465024',
+  extraEthPerByteFmt: '0.000000356495166375'
+}
