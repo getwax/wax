@@ -15,12 +15,6 @@ async function main() {
     signer = (await ethers.getSigners())[0];
   }
 
-  const ssf = await SafeSingletonFactory.init(signer);
-
-  const feeMeasurer = await ssf.connectOrDeploy(FeeMeasurer__factory, []);
-
-  console.log('FeeMeasurer connectOrDeployed to:', await feeMeasurer.getAddress());
-
   const startBlock = (await ethers.provider.getBlock('latest'))!;
   const maxFeePerGas = startBlock.baseFeePerGas! * 3n / 2n;
   const maxPriorityFeePerGas = 100_000n; // 0.0001 gwei
@@ -32,6 +26,14 @@ async function main() {
   };
 
   let referenceBlock = startBlock.number;
+
+  const ssf = await SafeSingletonFactory.init(signer, overrides);
+  const feeMeasurer = await ssf.connectOrDeploy(FeeMeasurer__factory, []);
+
+  console.log(
+    'FeeMeasurer connectOrDeployed to:',
+    await feeMeasurer.getAddress(),
+  );
 
   let ordinaryGasPrice: bigint;
 
@@ -56,7 +58,7 @@ async function main() {
         ordinaryGas,
         reportedGasUsed: receipt.gasUsed,
         reportedGasPrice: receipt.gasPrice,
-        ethUsed: balanceBefore - balanceAfter,
+        weiUsed: balanceBefore - balanceAfter,
         ethUsedFmt: ethers.formatEther(balanceBefore - balanceAfter),
       };
 
@@ -68,17 +70,17 @@ async function main() {
     const lastResult = results.at(-1)!;
 
     ordinaryGasPrice =
-      (lastResult.ethUsed - firstResult.ethUsed) /
+      (lastResult.weiUsed - firstResult.weiUsed) /
       (lastResult.ordinaryGas - firstResult.ordinaryGas);
 
-    const ethUsedRelErrors = results.map((result) => {
-      const prediction = (firstResult.ethUsed
+    const weiUsedRelErrors = results.map((result) => {
+      const prediction = (firstResult.weiUsed
         + ordinaryGasPrice * (result.ordinaryGas - firstResult.ordinaryGas));
 
-      return Number(result.ethUsed - prediction) / Number(result.ethUsed);
+      return Number(result.weiUsed - prediction) / Number(result.weiUsed);
     });
 
-    console.log({ ordinaryGasPrice, ethUsedRelErrors });
+    console.log({ ordinaryGasPrice, weiUsedRelErrors });
   }
 
   {
@@ -102,21 +104,21 @@ async function main() {
       referenceBlock = receipt.blockNumber;
 
       const balanceAfter = await ethers.provider.getBalance(await signer.getAddress(), referenceBlock);
-      const ethUsed = balanceBefore - balanceAfter;
-      const ethUsedForOrdinaryGas = ordinaryGasPrice * ordinaryGas;
-      const ethUsedExtra = ethUsed - ethUsedForOrdinaryGas;
+      const weiUsed = balanceBefore - balanceAfter;
+      const weiUsedForOrdinaryGas = ordinaryGasPrice * ordinaryGas;
+      const weiUsedExtra = weiUsed - weiUsedForOrdinaryGas;
 
       const result = {
         size,
         ordinaryGas,
         reportedGasUsed: receipt.gasUsed,
         reportedGasPrice: receipt.gasPrice,
-        ethUsed,
-        ethUsedForOrdinaryGas,
-        ethUsedExtra,
-        ethUsedFmt: ethers.formatEther(ethUsed),
-        ethUsedForOrdinaryGasFmt: ethers.formatEther(ethUsedForOrdinaryGas),
-        ethUsedExtraFmt: ethers.formatEther(ethUsedExtra),
+        weiUsed,
+        weiUsedForOrdinaryGas,
+        weiUsedExtra,
+        ethUsed: ethers.formatEther(weiUsed),
+        ethUsedForOrdinaryGas: ethers.formatEther(weiUsedForOrdinaryGas),
+        ethUsedExtra: ethers.formatEther(weiUsedExtra),
       };
 
       console.log(result);
@@ -126,30 +128,30 @@ async function main() {
     const firstResult = results[0];
     const lastResult = results.at(-1)!;
 
-    const baselineExtraEth = firstResult.ethUsedExtra;
-    const extraEthPerByte = (lastResult.ethUsedExtra - firstResult.ethUsedExtra) / (lastResult.size - firstResult.size);
+    const baselineExtraWei = firstResult.weiUsedExtra;
+    const extraWeiPerByte = (lastResult.weiUsedExtra - firstResult.weiUsedExtra) / (lastResult.size - firstResult.size);
 
-    const ethUsedRelErrors = results.map((result) => {
+    const weiUsedRelErrors = results.map((result) => {
       const prediction = (
-        baselineExtraEth +
-        extraEthPerByte * result.size +
+        baselineExtraWei +
+        extraWeiPerByte * result.size +
         ordinaryGasPrice * result.ordinaryGas
       );
 
-      return Number(result.ethUsed - prediction) / Number(result.ethUsed);
+      return Number(result.weiUsed - prediction) / Number(result.weiUsed);
     });
 
     console.log();
     console.log();
 
     console.log('Results', {
-      ethUsedRelErrors,
+      weiUsedRelErrors,
       ordinaryGasPrice,
-      baselineExtraEth,
-      extraEthPerByte,
+      baselineExtraWei,
+      extraWeiPerByte,
       ordinaryGasPriceFmt: (Number(ordinaryGasPrice) / 1e9).toFixed(9) + ' gwei',
-      baselineExtraEthFmt: ethers.formatEther(baselineExtraEth),
-      extraEthPerByteFmt: ethers.formatEther(extraEthPerByte),
+      baselineExtraEthFmt: ethers.formatEther(baselineExtraWei),
+      extraEthPerByteFmt: ethers.formatEther(extraWeiPerByte),
     });
   }
 }
