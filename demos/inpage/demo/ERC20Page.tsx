@@ -8,6 +8,7 @@ import Loading from './Loading';
 import useRefresh from './useRefresh';
 import { ERC20Mock__factory, ERC20__factory } from '../hardhat/typechain-types';
 import receiptOf from '../src/helpers/receiptOf';
+import runAsync from './helpers/runAsync';
 
 const ERC20Page = () => {
   const demo = DemoContext.use();
@@ -150,6 +151,7 @@ const ERC20Page = () => {
 
             balanceRefreshTag.current += 1;
 
+            runAsync(() => demo.refreshBalance());
             refresh();
           }}
         >
