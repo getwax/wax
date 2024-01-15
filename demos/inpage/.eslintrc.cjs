@@ -107,7 +107,7 @@ module.exports = {
     camelcase: [
       'error',
       {
-        allow: ['^[a-zA-Z]+__factory$', '^eth_[a-zA-Z]+$'],
+        allow: ['^[a-zA-Z0-9]+__factory$', '^eth_[a-zA-Z]+$'],
       },
     ],
 

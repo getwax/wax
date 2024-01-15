@@ -64,6 +64,9 @@ const LinksPage = () => {
       <Button secondary onPress={() => setPath('/sendEth')}>
         Send ETH
       </Button>
+      <Button secondary onPress={() => setPath('/erc20')}>
+        ERC20
+      </Button>
       <Button secondary onPress={() => setPath('/greeter')}>
         Greeter dApp
       </Button>
