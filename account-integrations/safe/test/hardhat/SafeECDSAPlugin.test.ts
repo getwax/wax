@@ -105,6 +105,7 @@ describe("SafeECDSAPlugin", () => {
     // creates a new account using a staked factory
     // contract, then the entity may also use storage
     // associated with the sender)
+    // https://eips.ethereum.org/EIPS/eip-4337#un-staked-entities
     const initCode = "0x";
 
     const balanceBefore = await provider.getBalance(recipient.address);
