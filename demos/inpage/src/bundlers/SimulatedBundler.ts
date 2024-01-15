@@ -23,6 +23,7 @@ import {
   lookupAddress,
   roundUpPseudoFloat,
 } from '../helpers/encodeUtils';
+import windowDebug from '../../demo/windowDebug';
 
 // This value is needed to account for the overheads of running the entry point
 // that are difficult to attribute directly to each user op. It should be
@@ -35,10 +36,10 @@ export default class SimulatedBundler implements IBundler {
 
   constructor(waxInPage: WaxInPage) {
     this.#waxInPage = waxInPage;
-    (window as any).simulatedBundler = this;
+    windowDebug.simulatedBundler = this;
   }
 
-  async foo() {
+  async submitEmptyBundle() {
     const adminAccount = await this.#waxInPage.requestAdminAccount(
       'simulate-bundler',
     );
