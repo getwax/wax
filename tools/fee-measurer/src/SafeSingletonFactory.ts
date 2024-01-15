@@ -1,4 +1,4 @@
-import { ethers, Signer } from 'ethers';
+import { ethers, Overrides, Signer } from 'ethers';
 import SignerOrProvider from './SignerOrProvider';
 import assert from './assert';
 
@@ -75,6 +75,7 @@ export default class SafeSingletonFactory {
     public signer: ethers.Signer,
     public chainId: bigint,
     public address: string,
+    public overrides: Overrides,
   ) {
     if (!signer.provider) {
       throw new Error('Expected signer with provider');
@@ -85,7 +86,10 @@ export default class SafeSingletonFactory {
     this.viewer = new SafeSingletonFactoryViewer(signer, chainId);
   }
 
-  static async init(signer: ethers.Signer): Promise<SafeSingletonFactory> {
+  static async init(
+    signer: ethers.Signer,
+    overrides: Overrides = {},
+  ): Promise<SafeSingletonFactory> {
     const { provider } = signer;
     assert(provider, 'Expected signer with provider');
 
@@ -98,7 +102,7 @@ export default class SafeSingletonFactory {
     const existingCode = await provider.getCode(address);
 
     if (existingCode !== '0x') {
-      return new SafeSingletonFactory(signer, chainId, address);
+      return new SafeSingletonFactory(signer, chainId, address, overrides);
     }
 
     const deployment = SafeSingletonFactory.deployments[Number(chainId)];
@@ -126,7 +130,12 @@ export default class SafeSingletonFactory {
     const deployedCode = await provider.getCode(deployment.address);
     assert(deployedCode !== '0x', 'Failed to deploy safe singleton factory');
 
-    return new SafeSingletonFactory(signer, chainId, deployment.address);
+    return new SafeSingletonFactory(
+      signer,
+      chainId,
+      deployment.address,
+      overrides,
+    );
   }
 
   static async from(signerOrFactory: ethers.Signer | SafeSingletonFactory) {
@@ -202,6 +211,7 @@ export default class SafeSingletonFactory {
     }
 
     const deployTx = {
+      ...this.overrides,
       to: this.address,
       data: ethers.solidityPacked(['uint256', 'bytes'], [salt, initCode]),
     };
