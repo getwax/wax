@@ -9,7 +9,7 @@ confusion and makes it difficult to compare L2s to each other.
 This tool helps unify L2 fees by approximating them with this model:
 
 ```
-l1GasUsed = fixedL1Gas + l1GasPerEffectiveDataByte * dataBytes
+l1GasUsed = fixedL1Gas + l1GasPerEffectiveDataByte * effectiveDataBytes
 l2GasUsed = (ordinary gas defined by protocol / same on L1 and local dev)
 
 fee = l1GasUsed * l1GasPrice + l2GasUsed * l2GasPrice
@@ -137,15 +137,15 @@ find the right value. For example:
 
 **Step 3: Final Calculation**
 
-From previous steps, you should have `l1Gas` and `l2Gas` values for your
-transaction, as well as the `fixedL1Gas` and `l1GasPerEffectiveDataByte` that
-are built into the model.
+From previous steps, you should have `l2Gas` and  `effectiveDataBytes` values for
+your transaction, as well as the `fixedL1Gas` and `l1GasPerEffectiveDataByte`
+values that are built into the model.
 
 With those values, you can calculate:
 
 ```
-l1GasUsed = fixedL1Gas + l1GasPerEffectiveDataByte * dataBytes
-l2GasUsed = (ordinary gas defined by protocol / same on L1 and local dev)
+l1GasUsed = fixedL1Gas + l1GasPerEffectiveDataByte * effectiveDataBytes
+l2GasUsed = (the number measured in step 1)
 
 fee = l1GasUsed * l1GasPrice + l2GasUsed * l2GasPrice
 ```
