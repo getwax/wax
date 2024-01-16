@@ -81,7 +81,7 @@ yarn hardhat run "${SCRIPT_DIR}/deploy_all.ts" --network localhost
 # Start ERC-4337 bundler
 docker pull ${BUNDLER_IMAGE}
 
-docker run --rm -i --name ${BUNDLER_CONTAINER} -p 3000:3000 -v ./config:/app/workdir:ro --network=${DOCKER_NETWORK} ${BUNDLER_IMAGE} \
+docker run --rm -i --name ${BUNDLER_CONTAINER} -p 3000:3000 -v "$PWD"/config:/app/workdir:ro --network=${DOCKER_NETWORK} ${BUNDLER_IMAGE} \
   --network http://${GETH_CONTAINER}:8545 \
   &
 
