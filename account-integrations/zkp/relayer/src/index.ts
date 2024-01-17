@@ -1,5 +1,6 @@
 import { ImapFlowOptions } from 'imapflow';
 import config from "./config/config";
+import startExpressServer from './server/server';
 import ImapClient from './imap/imapClient';
 
 const imapConfig: ImapFlowOptions = {
@@ -14,6 +15,8 @@ const main = async () => {
     await imapClient.stop();
     process.exit(0);
   });
+
+  startExpressServer();
 
   console.log('Starting imap client');
   await imapClient.start();
