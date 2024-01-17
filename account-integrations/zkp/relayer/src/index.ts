@@ -1,11 +1,25 @@
-import express, { Request, Response } from 'express';
-const app = express();
-const port = 3000;
+import { ImapFlowOptions } from 'imapflow';
+import config from "./config/config";
+import ImapClient from './imap/imapClient';
 
-app.get("/", (req: Request, res: Response) => {
-  res.send("Hello World!");
-});
+const imapConfig: ImapFlowOptions = {
+  ...config,
+  logger: false
+}
 
-app.listen(port, () => {
-  console.log(`Example app listening on port ${port}!`);
+const main = async () => {
+  const imapClient = new ImapClient(imapConfig, 5000);
+
+  process.once('SIGINT', async () => {
+    await imapClient.stop();
+    process.exit(0);
+  });
+
+  console.log('Starting imap client');
+  await imapClient.start();
+}
+
+main().catch(error => {
+  console.log("Error occured running relayer", error);
+  process.exit(1);
 });
