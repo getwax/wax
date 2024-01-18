@@ -137,6 +137,19 @@ export default class SafeSingletonFactory {
     return await SafeSingletonFactory.init(signerOrFactory);
   }
 
+  // TODO: Explain
+  static link<CFC extends ContractFactoryConstructor>(
+    ContractFactoryConstructor: CFC,
+    constructorParams: ConstructorParameters<CFC>,
+  ): CFC {
+    return class LinkedCFC extends (ContractFactoryConstructor as any) {
+      constructor() {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+        super(...constructorParams);
+      }
+    } as CFC;
+  }
+
   calculateAddress<CFC extends ContractFactoryConstructor>(
     ContractFactoryConstructor: CFC,
     deployParams: DeployParams<CFC>,
