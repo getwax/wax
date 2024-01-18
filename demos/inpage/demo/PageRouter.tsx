@@ -4,6 +4,7 @@ import SendEthPage from './SendEthPage';
 import Recovery from './Recovery';
 import usePath from './usePath';
 import RegisterAddressPage from './RegisterAddressPage';
+import ERC20Page from './ERC20Page';
 
 const PageRouter = () => {
   const [path] = usePath();
@@ -18,6 +19,10 @@ const PageRouter = () => {
 
   if (path === '/sendEth') {
     return <SendEthPage />;
+  }
+
+  if (path === '/erc20') {
+    return <ERC20Page />;
   }
 
   if (path === '/recovery') {

@@ -1,0 +1,11 @@
+.erc20-page {
+  display: flex;
+  flex-direction: column;
+  width: 300px;
+  gap: 1em;
+}
+
+.erc20-page input {
+  width: 100%;
+  padding: 0.5em;
+}

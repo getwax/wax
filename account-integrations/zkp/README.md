@@ -11,8 +11,21 @@ WARNING: These circuits are unsafe and are currently not recommended for product
 
 ## Setup
 
-1. Build & install circom from `./lib/circom` using [these instructions](https://docs.circom.io/getting-started/installation/)
-2. `yarn` to install NodeJS dependencies
+**Step 1**: Download git submodules.
+
+```sh
+git submodule update --init
+```
+
+**Step 2**: Install circom.
+
+Follow [these instructions](https://docs.circom.io/getting-started/installation/) replacing the git clone with `cd lib/circom`.
+
+**Step 3**: Install NodeJS dependencies.
+
+```sh
+yarn
+```
 
 ## Build
 

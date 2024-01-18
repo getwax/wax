@@ -9,6 +9,8 @@ import makeLocalWaxStorage, { WaxStorage } from './WaxStorage';
 import {
   AddressRegistry,
   AddressRegistry__factory,
+  ERC20Mock,
+  ERC20Mock__factory,
   EntryPoint,
   EntryPoint__factory,
   FallbackDecompressor,
@@ -44,6 +46,7 @@ import SimpleAccountWrapper from './accounts/SimpleAccountWrapper';
 import SafeCompressionAccountWrapper from './accounts/SafeCompressionAccountWrapper';
 import { hexLen } from './helpers/encodeUtils';
 import JsonRpcError from './JsonRpcError';
+import measureCalldataGas from './measureCalldataGas';
 
 type Config = {
   logRequests?: boolean;
@@ -78,6 +81,7 @@ export type Contracts = {
   fallbackDecompressor: FallbackDecompressor;
   addressRegistry: AddressRegistry;
   safeECDSARecoveryPlugin: SafeECDSARecoveryPlugin;
+  testToken: ERC20Mock;
 };
 
 export default class WaxInPage {
@@ -212,6 +216,7 @@ export default class WaxInPage {
         SafeECDSARecoveryPlugin__factory,
         [],
       ),
+      testToken: viewer.connectAssume(ERC20Mock__factory, []),
     };
 
     if (this.#contractsDeployed) {
@@ -259,6 +264,7 @@ export default class WaxInPage {
       addressRegistry: () => Promise.resolve(addressRegistry),
       safeECDSARecoveryPlugin: () =>
         factory.connectOrDeploy(SafeECDSARecoveryPlugin__factory, []),
+      testToken: () => factory.connectOrDeploy(ERC20Mock__factory, []),
     };
 
     for (const deployment of Object.values(deployments)) {
@@ -477,7 +483,9 @@ export default class WaxInPage {
         description,
         'is',
         hexLen(bytes),
-        'bytes:',
+        `bytes (${(Number(measureCalldataGas(bytes)) / 16).toFixed(
+          1,
+        )} effective):`,
         bytes,
       );
     }

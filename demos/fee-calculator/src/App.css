@@ -1,0 +1,25 @@
+#root {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+  font-family: monospace;
+}
+
+.parameters {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5em;
+}
+
+.outputs {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5em;
+}
+
+.io {
+  display: flex;
+  flex-direction: row;
+  gap: 3em;
+}

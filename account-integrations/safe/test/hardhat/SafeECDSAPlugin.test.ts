@@ -35,7 +35,7 @@ describe("SafeECDSAPlugin", () => {
     const createArgs = [
       safeSingleton,
       entryPointAddress,
-      owner.address,
+      await owner.getAddress(),
       0,
     ] satisfies Parameters<typeof safeECDSAFactory.create.staticCall>;
 
@@ -97,7 +97,7 @@ describe("SafeECDSAPlugin", () => {
     const createArgs = [
       safeSingleton,
       entryPointAddress,
-      owner.address,
+      await owner.getAddress(),
       0,
     ] satisfies Parameters<typeof safeECDSAFactory.create.staticCall>;
 

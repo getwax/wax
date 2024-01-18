@@ -1,4 +1,4 @@
-import { ethers, getBytes, HDNodeWallet, NonceManager } from "ethers";
+import { ethers, getBytes, HDNodeWallet, NonceManager, Signer } from "ethers";
 import { AddressZero } from "@ethersproject/constants";
 import { UserOperationStruct } from "@account-abstraction/contracts";
 import { getUserOpHash } from "@account-abstraction/utils";
@@ -19,7 +19,7 @@ type Plugin = SafeBlsPlugin | SafeWebAuthnPlugin;
 
 export const generateInitCodeAndAddress = async (
   admin: NonceManager,
-  owner: ethers.HDNodeWallet,
+  owner: NonceManager,
   plugin: Plugin,
   safeSingleton: Safe,
   safeProxyFactory: SafeProxyFactory,
@@ -32,7 +32,7 @@ export const generateInitCodeAndAddress = async (
   const encodedInitializer = safeSingleton.interface.encodeFunctionData(
     "setup",
     [
-      [owner.address],
+      [await owner.getAddress()],
       1,
       pluginAddress,
       moduleInitializer,
@@ -131,7 +131,7 @@ export const createUserOperation = async (
 export const createAndSendUserOpWithEcdsaSig = async (
   provider: ethers.JsonRpcProvider,
   bundlerProvider: ethers.JsonRpcProvider,
-  owner: HDNodeWallet,
+  owner: Signer,
   accountAddress: string,
   initCode: string,
   userOpCallData: string,

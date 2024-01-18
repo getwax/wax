@@ -2,7 +2,7 @@
 
 module.exports = {
   root: true,
-  env: { browser: true, es2020: true, mocha: true },
+  env: { browser: true, es2020: true },
   extends: [
     'eslint:recommended',
     'plugin:@typescript-eslint/recommended',
@@ -59,7 +59,6 @@ module.exports = {
           'scripts/**/*.ts',
           'vite.config.ts',
           'hardhat/**/*.ts',
-          'tests/**/*.*',
         ],
       },
     ],
@@ -107,7 +106,7 @@ module.exports = {
     camelcase: [
       'error',
       {
-        allow: ['^[a-zA-Z0-9]+__factory$', '^eth_[a-zA-Z]+$'],
+        allow: ['^[a-zA-Z]+__factory$', '^eth_[a-zA-Z]+$'],
       },
     ],
 

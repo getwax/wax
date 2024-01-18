@@ -5,7 +5,7 @@ import { resolveProperties, ethers } from "ethers";
 import sendUserOpAndWait from "./utils/sendUserOpAndWait";
 import receiptOf from "./utils/receiptOf";
 import {
-  MockPasswordVerifier__factory,
+  MockGroth16Verifier__factory,
   SafeZKPPasswordFactory__factory,
   SafeZKPPasswordPlugin__factory,
 } from "../../typechain-types";
@@ -35,16 +35,16 @@ describe("SafeZKPPasswordPlugin", () => {
     const signer = await provider.getSigner();
     // TODO (merge-ok) Use real verifier from zkp dir
     // https://github.com/getwax/wax/issues/143
-    const passwordVerifier = await new MockPasswordVerifier__factory(
+    const groth16Verifier = await new MockGroth16Verifier__factory(
       signer,
     ).deploy();
 
     const createArgs = [
       safeSingleton,
       entryPointAddress,
-      owner.address,
+      await owner.getAddress(),
       0,
-      passwordVerifier,
+      groth16Verifier,
     ] satisfies Parameters<typeof safeZKPPasswordFactory.create.staticCall>;
 
     const accountAddress = await safeZKPPasswordFactory.create.staticCall(

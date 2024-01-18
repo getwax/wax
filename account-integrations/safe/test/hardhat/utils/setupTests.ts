@@ -26,13 +26,14 @@ export async function setupTests() {
   const provider = new ethers.JsonRpcProvider(NODE_URL);
   await makeDevFaster(provider);
 
-  const [, signer] = getSigners();
+  const [, signer, otherSigner] = getSigners();
   const admin = new NonceManager(signer.connect(provider));
-  const owner = ethers.Wallet.createRandom(provider);
+  const owner = new NonceManager(ethers.Wallet.createRandom(provider));
+  const otherAccount = new NonceManager(otherSigner.connect(provider));
 
   await receiptOf(
     await admin.sendTransaction({
-      to: owner.address,
+      to: await owner.getAddress(),
       value: ethers.parseEther("1"),
     }),
   );
@@ -61,6 +62,7 @@ export async function setupTests() {
     provider,
     admin,
     owner,
+    otherAccount,
     entryPointAddress,
     ssf,
     safeProxyFactory,

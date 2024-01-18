@@ -43,7 +43,7 @@ describe("SafeCompressionPlugin", () => {
       safeSingleton,
       entryPointAddress,
       await fallbackDecompressor.getAddress(),
-      owner.address,
+      await owner.getAddress(),
       0,
     ] satisfies Parameters<typeof safeCompressionFactory.create.staticCall>;
 
