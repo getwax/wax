@@ -1,12 +1,22 @@
 name: test
 
-on: workflow_dispatch
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    paths:
+      - account-integrations/barebones/**
+
+defaults:
+  run:
+    working-directory: ./account-integrations/barebones
 
 env:
   FOUNDRY_PROFILE: ci
 
 jobs:
-  check:
+  build-test:
     strategy:
       fail-fast: true
 
