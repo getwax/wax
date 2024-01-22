@@ -49,13 +49,15 @@ export async function setupTests() {
 
   const entryPointAddress = entryPoints[0];
 
-  const deployer = await DeterministicDeployer.init(admin);
+  const safeDeployer = await DeterministicDeployer.initSafeVersion(admin);
 
-  const safeProxyFactory = await deployer.connectOrDeploy(
+  const safeProxyFactory = await safeDeployer.connectOrDeploy(
     SafeProxyFactory__factory,
     [],
   );
-  const safeSingleton = await deployer.connectOrDeploy(Safe__factory, []);
+  const safeSingleton = await safeDeployer.connectOrDeploy(Safe__factory, []);
+
+  const deployer = await DeterministicDeployer.init(admin);
 
   return {
     bundlerProvider,
@@ -64,7 +66,7 @@ export async function setupTests() {
     owner,
     otherAccount,
     entryPointAddress,
-    deployer: deployer,
+    deployer,
     safeProxyFactory,
     safeSingleton,
   };

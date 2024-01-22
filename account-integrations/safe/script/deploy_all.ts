@@ -28,7 +28,6 @@ async function deploy() {
 
   const contractFactories = [
     SimulateTxAccessor__factory,
-    SafeProxyFactory__factory,
     TokenCallbackHandler__factory,
     CompatibilityFallbackHandler__factory,
     CreateCall__factory,
@@ -36,8 +35,6 @@ async function deploy() {
     MultiSend__factory,
     MultiSendCallOnly__factory,
     SignMessageLib__factory,
-    SafeL2__factory,
-    Safe__factory,
     BLSOpen__factory,
     DeterministicDeployer.link(BLSSignatureAggregator__factory, [
       {
@@ -49,6 +46,21 @@ async function deploy() {
 
   for (const contractFactory of contractFactories) {
     const contract = await deployer.connectOrDeploy(contractFactory, []);
+
+    const contractName = contractFactory.name.split("_")[0];
+    console.log(`deployed ${contractName} to ${await contract.getAddress()}`);
+  }
+
+  const safeDeployer = await DeterministicDeployer.initSafeVersion(wallet);
+
+  const safeContractFactories = [
+    SafeProxyFactory__factory,
+    SafeL2__factory,
+    Safe__factory,
+  ];
+
+  for (const contractFactory of safeContractFactories) {
+    const contract = await safeDeployer.connectOrDeploy(contractFactory, []);
 
     const contractName = contractFactory.name.split("_")[0];
     console.log(`deployed ${contractName} to ${await contract.getAddress()}`);
