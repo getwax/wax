@@ -26,13 +26,17 @@ export type ContractFactoryConstructor = {
 export type DeployParams<CFC extends ContractFactoryConstructor> =
   NonOptionalElementsOf<Parameters<InstanceType<CFC>["deploy"]>>;
 
-type Deployment = {
-  gasPrice: bigint;
-  gasLimit: bigint;
+// Deterministic Deployer Deployment
+export type DDDeployment = {
+  transaction?: string;
+  gasPrice?: bigint;
+  gasLimit?: bigint;
   signerAddress: string;
-  transaction: string;
   address: string;
 };
+
+// AKA SafeSingletonFactory
+const safeDeployerAddress = "0x914d7Fec6aaC8cd542e72Bca78B30650d45643d7";
 
 /**
  * Deploys contracts to deterministic addresses.
@@ -44,7 +48,7 @@ type Deployment = {
  * ensure constructor arguments are correct.
  */
 export default class DeterministicDeployer {
-  static deployment = {
+  static defaultDeployment: DDDeployment = {
     transaction: [
       "0x",
       "f8a58085174876e800830186a08080b853604580600e600039806000f350fe7fffffff",
@@ -65,7 +69,7 @@ export default class DeterministicDeployer {
   private constructor(
     public signer: ethers.Signer,
     public chainId: bigint,
-    public address: string,
+    public deployment: DDDeployment,
   ) {
     if (!signer.provider) {
       throw new Error("Expected signer with provider");
@@ -76,21 +80,30 @@ export default class DeterministicDeployer {
     this.viewer = new DeterministicDeploymentViewer(signer, chainId);
   }
 
-  static async init(signer: ethers.Signer): Promise<DeterministicDeployer> {
+  static async init(
+    signer: ethers.Signer,
+    deployment = DeterministicDeployer.defaultDeployment,
+  ): Promise<DeterministicDeployer> {
     const { provider } = signer;
     assert(provider, "Expected signer with provider");
 
     const { chainId } = await provider.getNetwork();
 
-    const address = DeterministicDeployer.deployment.address;
+    const address = deployment.address;
 
     const existingCode = await provider.getCode(address);
 
     if (existingCode !== "0x") {
-      return new DeterministicDeployer(signer, chainId, address);
+      return new DeterministicDeployer(signer, chainId, deployment);
     }
 
-    const deployment = DeterministicDeployer.deployment;
+    if (
+      !deployment.transaction ||
+      !deployment.gasPrice ||
+      !deployment.gasLimit
+    ) {
+      throw new Error("Missing details for deploying deployer contract");
+    }
 
     // Fund the eoa account for the presigned transaction
     await (
@@ -102,16 +115,95 @@ export default class DeterministicDeployer {
 
     await (await provider.broadcastTransaction(deployment.transaction)).wait();
 
-    const deployedCode = await provider.getCode(
-      DeterministicDeployer.deployment.address,
-    );
-
+    const deployedCode = await provider.getCode(deployment.address);
     assert(deployedCode !== "0x", "Failed to deploy safe singleton factory");
 
-    return new DeterministicDeployer(
-      signer,
-      chainId,
-      DeterministicDeployer.deployment.address,
+    return new DeterministicDeployer(signer, chainId, deployment);
+  }
+
+  /**
+   * Safe forked DeterministicDeployer to create SafeSingletonFactory:
+   * https://github.com/safe-global/safe-singleton-factory
+   *
+   * At the time, Safe wanted to support chains that didn't support the legacy
+   * transactions needed to make a deployment that works for all chains.
+   *
+   * That no longer appears to be an issue, and Arachnid's original version is
+   * much more popular, simple, and removes the need to rely on a third party
+   * (Safe).
+   *
+   * However, since Safe still uses this version, it can be useful for deploying
+   * the Safe contracts themselves to the same addresses that they exist on
+   * other networks, particularly local test nets.
+   */
+  static async initSafeVersion(
+    signer: ethers.Signer,
+  ): Promise<DeterministicDeployer> {
+    const { provider } = signer;
+    assert(provider, "Expected signer with provider");
+
+    const signerAddress = "0xE1CB04A0fA36DdD16a06ea828007E35e1a3cBC37";
+    const address = safeDeployerAddress;
+    const existingCode = await provider.getCode(address);
+
+    if (existingCode !== "0x") {
+      const { chainId } = await provider.getNetwork();
+
+      return new DeterministicDeployer(signer, chainId, {
+        signerAddress,
+        address,
+      });
+    }
+
+    const { chainId } = await provider.getNetwork();
+
+    if (chainId === 1337n) {
+      const deployer = await DeterministicDeployer.init(signer, {
+        transaction: [
+          "0x",
+          "f8a78085174876e800830186a08080b853604580600e600039806000f350fe7fff",
+          "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe03601",
+          "600081602082378035828234f58015156039578182fd5b8082525050506014600c",
+          "f3820a96a0460c6ea9b8f791e5d9e67fbf2c70aba92bf88591c39ac3747ea1bedc",
+          "2ef1750ca04b08a4b5cea15a56276513da7a0c0b34f16e89811d5dd911efba5f86",
+          "25a921cc",
+        ].join(""),
+        gasPrice: 100000000000n,
+        gasLimit: 100000n,
+        signerAddress: "0xE1CB04A0fA36DdD16a06ea828007E35e1a3cBC37",
+        address,
+      });
+
+      return deployer;
+    }
+
+    if (chainId === 31337n) {
+      const deployer = await DeterministicDeployer.init(signer, {
+        transaction: [
+          "0x",
+          "f8a78085174876e800830186a08080b853604580600e600039806000f350fe7fff",
+          "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe03601",
+          "600081602082378035828234f58015156039578182fd5b8082525050506014600c",
+          "f382f4f5a00dc4d1d21b308094a30f5f93da35e4d72e99115378f135f2295bea47",
+          "301a3165a0636b822daad40aa8c52dd5132f378c0c0e6d83b4898228c7e21c84e6",
+          "31a0b891",
+        ].join(""),
+        gasPrice: 100000000000n,
+        gasLimit: 100000n,
+        signerAddress: "0xE1CB04A0fA36DdD16a06ea828007E35e1a3cBC37",
+        address,
+      });
+
+      return deployer;
+    }
+
+    throw new Error(
+      [
+        "Safe singleton factory (0x914d..43d7) has not been deployed on this",
+        "network and we don't have the deployment details to deploy it.",
+        "Consult https://github.com/safe-global/safe-singleton-factory about",
+        `support for network id ${chainId}`,
+      ].join(" "),
     );
   }
 
@@ -239,7 +331,7 @@ export default class DeterministicDeployer {
     }
 
     const deployTx = {
-      to: this.address,
+      to: this.deployment.address,
       data: ethers.solidityPacked(["uint256", "bytes"], [salt, initCode]),
     };
 
@@ -311,16 +403,14 @@ export default class DeterministicDeployer {
 }
 
 export class DeterministicDeploymentViewer {
-  safeSingletonFactoryAddress: string;
   signer?: Signer;
   provider: ethers.Provider;
 
   constructor(
     public signerOrProvider: SignerOrProvider,
     public chainId: bigint,
+    public deployerAddress = DeterministicDeployer.defaultDeployment.address,
   ) {
-    this.safeSingletonFactoryAddress = DeterministicDeployer.deployment.address;
-
     let provider: ethers.Provider | undefined;
 
     if ("getNetwork" in signerOrProvider) {
@@ -338,7 +428,10 @@ export class DeterministicDeploymentViewer {
     this.provider = provider;
   }
 
-  static async from(signerOrProvider: SignerOrProvider) {
+  static async init(
+    signerOrProvider: SignerOrProvider,
+    deployerAddress = DeterministicDeployer.defaultDeployment.address,
+  ) {
     const provider =
       "getNetwork" in signerOrProvider
         ? signerOrProvider
@@ -350,7 +443,18 @@ export class DeterministicDeploymentViewer {
 
     const network = await provider.getNetwork();
 
-    return new DeterministicDeploymentViewer(signerOrProvider, network.chainId);
+    return new DeterministicDeploymentViewer(
+      signerOrProvider,
+      network.chainId,
+      deployerAddress,
+    );
+  }
+
+  static async initSafeVersion(signerOrProvider: SignerOrProvider) {
+    const viewer = await DeterministicDeploymentViewer.init(
+      signerOrProvider,
+      safeDeployerAddress,
+    );
   }
 
   calculateAddress<CFC extends ContractFactoryConstructor>(
@@ -365,7 +469,7 @@ export class DeterministicDeploymentViewer {
       contractFactory.interface.encodeDeploy(deployParams).slice(2);
 
     return ethers.getCreate2Address(
-      this.safeSingletonFactoryAddress,
+      this.deployerAddress,
       salt,
       ethers.keccak256(initCode),
     );
