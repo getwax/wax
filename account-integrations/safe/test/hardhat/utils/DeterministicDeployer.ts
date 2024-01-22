@@ -77,7 +77,11 @@ export default class DeterministicDeployer {
 
     this.provider = signer.provider;
 
-    this.viewer = new DeterministicDeploymentViewer(signer, chainId);
+    this.viewer = new DeterministicDeploymentViewer(
+      signer,
+      chainId,
+      deployment.address,
+    );
   }
 
   static async init(
@@ -455,6 +459,8 @@ export class DeterministicDeploymentViewer {
       signerOrProvider,
       safeDeployerAddress,
     );
+
+    return viewer;
   }
 
   calculateAddress<CFC extends ContractFactoryConstructor>(
