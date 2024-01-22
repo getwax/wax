@@ -1,5 +1,5 @@
 import { ethers } from "ethers";
-import SafeSingletonFactory from "../test/hardhat/utils/SafeSingletonFactory";
+import DeterministicDeployer from "../test/hardhat/utils/DeterministicDeployer";
 import {
   SimulateTxAccessor__factory,
   SafeProxyFactory__factory,
@@ -24,7 +24,7 @@ async function deploy() {
   const hdNode = ethers.HDNodeWallet.fromPhrase(MNEMONIC!);
   const wallet = new ethers.Wallet(hdNode.privateKey, provider);
 
-  const safeSingletonFactory = await SafeSingletonFactory.init(wallet);
+  const deployer = await DeterministicDeployer.init(wallet);
 
   const contractFactories = [
     SimulateTxAccessor__factory,
@@ -39,19 +39,16 @@ async function deploy() {
     SafeL2__factory,
     Safe__factory,
     BLSOpen__factory,
-    SafeSingletonFactory.link(BLSSignatureAggregator__factory, [
+    DeterministicDeployer.link(BLSSignatureAggregator__factory, [
       {
         "lib/account-abstraction/contracts/samples/bls/lib/BLSOpen.sol:BLSOpen":
-          safeSingletonFactory.calculateAddress(BLSOpen__factory, []),
+          deployer.calculateAddress(BLSOpen__factory, []),
       },
     ]),
   ];
 
   for (const contractFactory of contractFactories) {
-    const contract = await safeSingletonFactory.connectOrDeploy(
-      contractFactory,
-      [],
-    );
+    const contract = await deployer.connectOrDeploy(contractFactory, []);
 
     const contractName = contractFactory.name.split("_")[0];
     console.log(`deployed ${contractName} to ${await contract.getAddress()}`);

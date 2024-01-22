@@ -18,23 +18,23 @@ describe("SafeCompressionPlugin", () => {
       admin,
       owner,
       entryPointAddress,
-      ssf,
+      deployer,
       safeSingleton,
     } = await setupTests();
 
     // Deploy compression contracts and compression plugin
-    const safeCompressionFactory = await ssf.connectOrDeploy(
+    const safeCompressionFactory = await deployer.connectOrDeploy(
       SafeCompressionFactory__factory,
       [],
     );
     await safeCompressionFactory.waitForDeployment();
 
-    const addressRegistry = await ssf.connectOrDeploy(
+    const addressRegistry = await deployer.connectOrDeploy(
       AddressRegistry__factory,
       [],
     );
 
-    const fallbackDecompressor = await ssf.connectOrDeploy(
+    const fallbackDecompressor = await deployer.connectOrDeploy(
       FallbackDecompressor__factory,
       [await addressRegistry.getAddress()],
     );

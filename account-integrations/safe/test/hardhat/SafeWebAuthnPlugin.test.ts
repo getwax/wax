@@ -69,14 +69,14 @@ describe("SafeWebAuthnPlugin", () => {
       admin,
       owner,
       entryPointAddress,
-      ssf,
+      deployer,
       safeProxyFactory,
       safeSingleton,
     } = await setupTests();
     const { publicKey, userOpSignature } = getPublicKeyAndSignature();
 
     // Deploy webauthn plugin
-    const safeWebAuthnPlugin = await ssf.connectOrDeploy(
+    const safeWebAuthnPlugin = await deployer.connectOrDeploy(
       SafeWebAuthnPlugin__factory,
       [entryPointAddress, publicKey],
     );

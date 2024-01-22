@@ -8,7 +8,7 @@ import {
 } from "ethers";
 
 import { executeContractCallWithSigners } from "./utils/execution";
-import SafeSingletonFactory from "./utils/SafeSingletonFactory";
+import DeterministicDeployer from "./utils/DeterministicDeployer";
 import {
   Safe,
   SafeECDSAFactory__factory,
@@ -30,7 +30,7 @@ describe("SafeECDSARecoveryPlugin", () => {
   let owner: NonceManager;
   let entryPointAddress: string;
   let safeSingleton: Safe;
-  let ssf: SafeSingletonFactory;
+  let deployer: DeterministicDeployer;
 
   let safeProxyAddress: string;
   let recoveryPlugin: SafeECDSARecoveryPlugin;
@@ -44,11 +44,11 @@ describe("SafeECDSARecoveryPlugin", () => {
       admin,
       owner,
       entryPointAddress,
-      ssf,
+      deployer,
       safeSingleton,
     } = setup);
 
-    const safeECDSAFactory = await ssf.connectOrDeploy(
+    const safeECDSAFactory = await deployer.connectOrDeploy(
       SafeECDSAFactory__factory,
       [],
     );
@@ -73,7 +73,7 @@ describe("SafeECDSARecoveryPlugin", () => {
       }),
     );
 
-    recoveryPlugin = await ssf.connectOrDeploy(
+    recoveryPlugin = await deployer.connectOrDeploy(
       SafeECDSARecoveryPlugin__factory,
       [],
     );
@@ -265,7 +265,7 @@ describe("SafeECDSARecoveryPlugin", () => {
     );
 
     // Deploy guardian smart account
-    const simpleAccountFactory = await ssf.connectOrDeploy(
+    const simpleAccountFactory = await deployer.connectOrDeploy(
       SimpleAccountFactory__factory,
       [entryPointAddress],
     );

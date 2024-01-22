@@ -25,7 +25,7 @@ describe("SafeBlsPlugin", () => {
       admin,
       owner,
       entryPointAddress,
-      ssf,
+      deployer,
       safeProxyFactory,
       safeSingleton,
     } = await setupTests();
@@ -35,10 +35,10 @@ describe("SafeBlsPlugin", () => {
     const signerFactory = await hubbleBlsSigner.BlsSignerFactory.new();
     const blsSigner = signerFactory.getSigner(domain, BLS_PRIVATE_KEY);
 
-    const safeBlsPlugin = await ssf.connectOrDeploy(SafeBlsPlugin__factory, [
-      entryPointAddress,
-      blsSigner.pubkey,
-    ]);
+    const safeBlsPlugin = await deployer.connectOrDeploy(
+      SafeBlsPlugin__factory,
+      [entryPointAddress, blsSigner.pubkey],
+    );
 
     // Construct userOp
     const [, , signer] = getSigners();
