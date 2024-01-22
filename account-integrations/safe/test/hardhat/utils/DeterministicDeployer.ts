@@ -121,7 +121,45 @@ export default class DeterministicDeployer {
     return await DeterministicDeployer.init(signerOrFactory);
   }
 
-  // TODO: Explain
+  /**
+   * When using libraries in solidity, the ContractFactory constructor (in js,
+   * not the smart contract) requires addresses to be specified for those
+   * libraries.
+   *
+   * The limitations of TypeScript's type system cause these required arguments
+   * to be skipped when using methods here that use ContractFactoryConstructor:
+   *
+   * ```ts
+   * const deployer = await DeterministicDeployer.init(signer);
+   *
+   * const widget = await deployer.connectOrDeploy(
+   *   // Implicitly calls `new Widget__factory()`, failing to provide libraries
+   *   Widget__factory,
+   *   [], // <--- constructor arguments go here, but libraries are different
+   * );
+   * ```
+   *
+   * As a workaround, you can use this method like so:
+   *
+   * ```ts
+   * const deployer = await DeterministicDeployer.init(signer);
+   *
+   * const widgetLib = await deployer.connectOrDeploy(
+   *   WidgetLib__factory,
+   *   [],
+   * );
+   *
+   * const widget = await deployer.connectOrDeploy(
+   *   DeterministicDeployer.link(
+   *     Widget__factory,
+   *     {
+   *       "path/to/WidgetLib.sol:WidgetLib": await widgetLib.getAddress(),
+   *     },
+   *   ),
+   *   [],
+   * );
+   * ```
+   */
   static link<CFC extends ContractFactoryConstructor>(
     ContractFactoryConstructor: CFC,
     constructorParams: ConstructorParameters<CFC>,
