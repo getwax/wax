@@ -44,8 +44,6 @@ type Deployment = {
  * ensure constructor arguments are correct.
  */
 export default class DeterministicDeployer {
-  static address = "0x4e59b44847b379578588920ca78fbf26c0b4956c";
-
   static deployment = {
     transaction: [
       "0x",
@@ -58,6 +56,7 @@ export default class DeterministicDeployer {
     gasPrice: 100_000_000_000n, // 100 gwei
     gasLimit: 100_000n,
     signerAddress: "0x3fab184622dc19b6109349b94811493bf2a45362",
+    address: "0x4e59b44847b379578588920ca78fbf26c0b4956c",
   };
 
   provider: ethers.Provider;
@@ -83,7 +82,7 @@ export default class DeterministicDeployer {
 
     const { chainId } = await provider.getNetwork();
 
-    const address = DeterministicDeployer.address;
+    const address = DeterministicDeployer.deployment.address;
 
     const existingCode = await provider.getCode(address);
 
@@ -103,13 +102,16 @@ export default class DeterministicDeployer {
 
     await (await provider.broadcastTransaction(deployment.transaction)).wait();
 
-    const deployedCode = await provider.getCode(DeterministicDeployer.address);
+    const deployedCode = await provider.getCode(
+      DeterministicDeployer.deployment.address,
+    );
+
     assert(deployedCode !== "0x", "Failed to deploy safe singleton factory");
 
     return new DeterministicDeployer(
       signer,
       chainId,
-      DeterministicDeployer.address,
+      DeterministicDeployer.deployment.address,
     );
   }
 
@@ -317,7 +319,7 @@ export class DeterministicDeploymentViewer {
     public signerOrProvider: SignerOrProvider,
     public chainId: bigint,
   ) {
-    this.safeSingletonFactoryAddress = DeterministicDeployer.address;
+    this.safeSingletonFactoryAddress = DeterministicDeployer.deployment.address;
 
     let provider: ethers.Provider | undefined;
 
