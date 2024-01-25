@@ -24,6 +24,7 @@ export default class EthereumService {
             });
         const nonce = await this.publicClient.getTransactionCount({ address: account.address });
         
+        // TODO: fix typing
         const { request } = await this.publicClient.simulateContract({
             address: recoveryPluginAddress,
             abi: contract.abi,
