@@ -2,41 +2,50 @@ import { Database } from "better-sqlite3";
 
 export enum EmailStatus {
     PENDING,
-    PROCESSED
+    PROCESSED,
 }
 
 export type Email = {
-    id: number,
-    status: EmailStatus,
-    subject: string,
-    sender: string
-}
+    id: number;
+    status: EmailStatus;
+    subject: string;
+    sender: string;
+};
 
 type EmailRow = {
-    id: number,
-    status: number,
-    subject: string,
-    sender: string
-}
+    id: number;
+    status: number;
+    subject: string;
+    sender: string;
+};
 
 type InsertEmail = Omit<Email, "id">;
 
-const isEmailRow = (row: any): row is EmailRow => {
-    return row && 
-        typeof row.id === 'number' &&
-        typeof row.status === 'number' &&
-        typeof row.subject === 'string' &&
-        typeof row.sender === 'string';
-}
+const isEmailRow = (row: unknown): row is EmailRow => {
+    if (typeof row !== "object" || row === null) {
+        return false;
+    }
+
+    return (
+        "id" in row &&
+        typeof row.id === "number" &&
+        "status" in row &&
+        typeof row.status === "string" &&
+        "subject" in row &&
+        typeof row.subject === "string" &&
+        "sender" in row &&
+        typeof row.sender === "string"
+    );
+};
 
 const mapEmailRowToEmail = (row: EmailRow): Email => {
     return {
         id: row.id,
         status: row.status as EmailStatus,
         subject: row.subject,
-        sender: row.sender
-    }
-}
+        sender: row.sender,
+    };
+};
 
 const mapEmailToEmailRow = (row: Email): EmailRow => {
     return {
@@ -44,8 +53,8 @@ const mapEmailToEmailRow = (row: Email): EmailRow => {
         status: row.status as number,
         subject: row.subject,
         sender: row.sender,
-    }
-}
+    };
+};
 
 export default class EmailTable {
     constructor(public database: Database) {
@@ -61,7 +70,8 @@ export default class EmailTable {
     }
 
     selectAll(): Array<Email> {
-        const selectAllStatement = this.database.prepare(`SELECT * FROM emails`);
+        const selectAllStatement =
+            this.database.prepare(`SELECT * FROM emails`);
         const rowList = selectAllStatement.all();
 
         return rowList.filter(isEmailRow).map(mapEmailRowToEmail);
@@ -86,13 +96,11 @@ export default class EmailTable {
         insertStatement.run({
             status: email.status,
             subject: email.subject,
-            sender: email.sender
+            sender: email.sender,
         });
     }
 
-    update(
-        email: Email
-    ) {
+    update(email: Email) {
         const emailRow = mapEmailToEmailRow(email);
 
         const updateStatement = this.database.prepare(`
@@ -108,7 +116,7 @@ export default class EmailTable {
             id: emailRow.id,
             status: emailRow.status,
             subject: emailRow.subject,
-            sender: emailRow.sender
+            sender: emailRow.sender,
         });
     }
 }
