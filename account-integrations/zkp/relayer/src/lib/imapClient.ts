@@ -25,7 +25,7 @@ class ImapClient {
         const lock = await this.imapClient.getMailboxLock('INBOX');
         const emails = new Array<EmailResponse>
         try {
-            for await (const message of this.imapClient.fetch(/*{ seen: false } */'1:*', { headers: true, envelope: true, source: true, bodyStructure: true, flags: true })) {
+            for await (const message of this.imapClient.fetch({ seen:  false }, { headers: true, envelope: true, source: true, bodyStructure: true, flags: true })) {
                 if (!message.envelope.sender[0].address) {
                     console.log("No sender found");
                     continue;
@@ -37,10 +37,11 @@ class ImapClient {
                     subject: message.envelope.subject,
                 });
             }
+
+            await this.imapClient.messageFlagsSet({seen: false}, ['\\Seen']);
         } catch (error) {
             console.error("Error fetching emails:", error)
         } finally {
-            // await this.imapClient.messageFlagsAdd({seen: false}, ['\Seen']); // should this be in finally block?
             lock.release();
             return emails;
         }
