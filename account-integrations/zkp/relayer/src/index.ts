@@ -1,7 +1,5 @@
-import { ImapFlowOptions } from 'imapflow';
 import express from 'express';
 import { createPublicClient, createWalletClient, http } from 'viem';
-import { hardhat } from 'viem/chains';
 import { mnemonicToAccount } from 'viem/accounts';
 import Database from "better-sqlite3";
 import EventEmitter from 'node:events';
@@ -12,38 +10,25 @@ import EmailService from './services/emailService';
 import EthereumService from './services/ethereumService';
 import EmailTable from './tables/emailTable';
 
-const imapConfig: ImapFlowOptions = {
-  ...config,
-  logger: false
-}
-
-const viemConfig = {
-    // FIXME: add config
-    // chain
-    // mnenmonic
-}
-
 const app = express();
-const port = 3001;
 
 const main = async () => {
-
   const account = mnemonicToAccount(
-    'test test test test test test test test test test test junk',
+    config.viem.mnenmonic,
     {
       // hardhat account #3
       path: "m/44'/60'/0'/0/3"
     }
   );
 
-  const imapClient = new ImapClient(imapConfig);
+  const imapClient = new ImapClient(config.imapClient);
   const ethPublicClient = createPublicClient({ 
-    chain: hardhat, 
+    chain: config.viem.chain, 
     transport: http(), 
   });
   const ethWalletClient = createWalletClient({
     account: account,
-    chain: hardhat,
+    chain: config.viem.chain,
     transport: http()
   });
 
@@ -55,7 +40,7 @@ const main = async () => {
 
   const emailTable = new EmailTable(db);
   const ethereumService = new EthereumService(ethPublicClient, ethWalletClient, emailTable, eventEmitter);
-  const emailService = new EmailService(imapClient, ethereumService, emailTable, 5000, eventEmitter);
+  const emailService = new EmailService(imapClient, ethereumService, emailTable, config.emailPollingInterval, eventEmitter);
 
   await emailService.start();
 
@@ -66,8 +51,8 @@ const main = async () => {
 
   app.use(router);
     
-  app.listen(port, () => {
-      console.log(`Health check running at http://localhost:${port}`);
+  app.listen(config.healthCheckPort, () => {
+      console.log(`Health check running at http://localhost:${config.healthCheckPort}`);
   });
 }
 

@@ -1,10 +1,13 @@
+import { ImapFlowOptions } from 'imapflow';
+import { Chain } from 'viem';
+
 type ConfigType = {
-  host: string;
-  port: number;
-  secure: boolean;
-  auth: {
-      user: string;
-      pass: string;
+  emailPollingInterval: number,
+  healthCheckPort: number,
+  imapClient: ImapFlowOptions;
+  viem: {
+    chain: Chain,
+    mnenmonic: string,
   }
 };
 
