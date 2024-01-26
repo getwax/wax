@@ -1,7 +1,6 @@
 import { Address, PublicClient, WalletClient } from "viem";
 import { mnemonicToAccount } from "viem/accounts";
 import { hardhat } from "viem/chains";
-import { EventEmitter } from "node:events";
 import EmailTable from "../tables/emailTable";
 import contract from "./SafeZkEmailRecoveryPlugin.json";
 import config from "../config/config";
@@ -16,11 +15,8 @@ export default class EthereumService {
     constructor(
         public publicClient: PublicClient,
         public walletClient: WalletClient,
-        public emailTable: EmailTable,
-        public eventEmitter: EventEmitter
-    ) {
-        this.eventEmitter.on("email processed", this.initiateRecovery);
-    }
+        public emailTable: EmailTable
+    ) {}
 
     async initiateRecovery(
         safeProxyAddress: Address,
