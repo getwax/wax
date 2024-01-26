@@ -39,8 +39,7 @@ const main = async () => {
     const ethereumService = new EthereumService(
         ethPublicClient,
         ethWalletClient,
-        emailTable,
-        eventEmitter
+        emailTable
     );
     const emailService = new EmailService(
         imapClient,
