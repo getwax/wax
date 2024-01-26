@@ -30,7 +30,7 @@ const isEmailRow = (row: unknown): row is EmailRow => {
         "id" in row &&
         typeof row.id === "number" &&
         "status" in row &&
-        typeof row.status === "string" &&
+        typeof row.status === "number" &&
         "subject" in row &&
         typeof row.subject === "string" &&
         "sender" in row &&
