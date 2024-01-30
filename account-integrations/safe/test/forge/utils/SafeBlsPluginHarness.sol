@@ -8,8 +8,9 @@ import {SafeBlsPlugin} from "../../../src/SafeBlsPlugin.sol";
 contract SafeBlsPluginHarness is SafeBlsPlugin {
     constructor(
         address entryPointAddress,
+        address aggregatorAddress,
         uint256[4] memory blsPublicKey
-    ) SafeBlsPlugin(entryPointAddress, blsPublicKey) {}
+    ) SafeBlsPlugin(entryPointAddress, aggregatorAddress, blsPublicKey) {}
 
     function exposed_validateNonce(uint256 nonce) external view {
         _validateNonce(nonce);

@@ -8,18 +8,24 @@ import {SafeBlsPluginHarness} from "./utils/SafeBlsPluginHarness.sol";
 import {SafeBlsPlugin} from "../../src/SafeBlsPlugin.sol";
 import {Safe4337Base} from "../../src/utils/Safe4337Base.sol";
 import {UserOperation, UserOperationLib} from "account-abstraction/contracts/interfaces/IEntryPoint.sol";
+import {BLSSignatureAggregator} from "account-abstraction/contracts/samples/bls/BLSSignatureAggregator.sol";
 
 /* solhint-disable func-name-mixedcase */
 
 contract SafeBlsPluginTest is TestHelper {
     constructor() TestHelper() {}
 
+    BLSSignatureAggregator public blsSignatureAggregator;
     SafeBlsPluginHarness public safeBlsPlugin;
 
     function setUp() public {
         uint256[4] memory blsPublicKey = getBlsPublicKey();
+
+        blsSignatureAggregator = new BLSSignatureAggregator();
+
         safeBlsPlugin = new SafeBlsPluginHarness(
             entryPointAddress,
+            address(blsSignatureAggregator),
             blsPublicKey
         );
     }

@@ -6,24 +6,31 @@ import {HandlerContext} from "safe-contracts/contracts/handler/HandlerContext.so
 
 import {IEntryPoint, UserOperation} from "account-abstraction/contracts/interfaces/IEntryPoint.sol";
 import {BLS} from "account-abstraction/contracts/samples/bls/lib/hubble-contracts/contracts/libs/BLS.sol";
+import {IBLSAccount} from "account-abstraction/contracts/samples/bls/IBLSAccount.sol";
 
 import {Safe4337Base, ISafe} from "./utils/Safe4337Base.sol";
 
 error IncorrectSignatureLength(uint256 length);
 
-contract SafeBlsPlugin is Safe4337Base {
+contract SafeBlsPlugin is Safe4337Base, IBLSAccount {
     // TODO: Use EIP 712 for domain separation
     bytes32 public constant BLS_DOMAIN = keccak256("eip4337.bls.domain");
     address public immutable myAddress;
     uint256[4] private _blsPublicKey;
     address private immutable _entryPoint;
+    address private immutable _aggregator;
 
     address internal constant _SENTINEL_MODULES = address(0x1);
 
-    constructor(address entryPointAddress, uint256[4] memory blsPublicKey) {
+    constructor(
+        address entryPointAddress,
+        address aggregatorAddress,
+        uint256[4] memory blsPublicKey
+    ) {
         myAddress = address(this);
         _blsPublicKey = blsPublicKey;
         _entryPoint = entryPointAddress;
+        _aggregator = aggregatorAddress;
     }
 
     function execTransaction(
@@ -47,31 +54,15 @@ contract SafeBlsPlugin is Safe4337Base {
         return IEntryPoint(_entryPoint);
     }
 
-    function owner() public view returns (uint256[4] memory) {
+    function getBlsPublicKey() public view returns (uint256[4] memory) {
         return _blsPublicKey;
     }
 
     function _validateSignature(
-        UserOperation calldata userOp,
-        bytes32 userOpHash
-    ) internal view override returns (uint256 validationData) {
-        if (userOp.signature.length != 64) {
-            revert IncorrectSignatureLength(userOp.signature.length);
-        }
-
-        uint256[2] memory decodedSignature = abi.decode(userOp.signature, (uint256[2]));
-
-        bytes memory hashBytes = abi.encodePacked(userOpHash);
-        uint256[2] memory message = BLS.hashToPoint(
-            BLS_DOMAIN,
-            hashBytes
-        );
-        (bool verified, bool callSuccess) = BLS.verifySingle(decodedSignature, _blsPublicKey, message);
-
-        if (verified && callSuccess) {
-            return 0;
-        }
-        // TODO: check if wallet recovered
-        return SIG_VALIDATION_FAILED;
+        UserOperation calldata /* userOp */,
+        bytes32 /* userOpHash */
+    ) internal view override returns (uint256) {
+        // TODO: Check initCode (and explain why)
+        return uint256(uint160(_aggregator));
     }
 }
