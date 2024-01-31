@@ -16,6 +16,7 @@ import {
 import { getSigners } from "./utils/getSigners";
 import DeterministicDeployer from "./utils/DeterministicDeployer";
 import getBlsUserOpHash from "./utils/getBlsUserOpHash";
+import appendKeyToInitCode from "./utils/appendKeyToInitCode";
 
 const BLS_PRIVATE_KEY =
   "0xdbe3d601b1b25c42c50015a87855fdce00ea9b3a7e33c92d31c69aeb70708e08";
@@ -52,7 +53,6 @@ describe("SafeBlsPlugin", () => {
       [],
     );
 
-    // TODO: Revise aggregator staking
     await receiptOf(
       blsSignatureAggregator.addStake(entryPointAddress, 100n * 86_400n, {
         value: ethers.parseEther("1"),
@@ -86,8 +86,7 @@ describe("SafeBlsPlugin", () => {
       safeProxyFactory,
     );
 
-    // TODO: Explain (and revise?)
-    initCode += blsSigner.pubkey.map((w) => w.slice(2)).join("");
+    initCode = appendKeyToInitCode(initCode, blsSigner.pubkey);
 
     const unsignedUserOperation = await createUserOperation(
       provider,

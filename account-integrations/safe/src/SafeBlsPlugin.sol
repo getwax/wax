@@ -59,10 +59,22 @@ contract SafeBlsPlugin is Safe4337Base, IBLSAccount {
     }
 
     function _validateSignature(
-        UserOperation calldata /* userOp */,
+        UserOperation calldata userOp,
         bytes32 /* userOpHash */
     ) internal view override returns (uint256) {
-        // TODO: Check initCode (and explain why)
+        uint256 initCodeLen = userOp.initCode.length;
+
+        if (initCodeLen > 0) {
+            bytes32 claimedKeyHash =
+                keccak256(userOp.initCode[initCodeLen - 128:]);
+
+            // See appendKeyToInitCode.ts for a detailed explanation.
+            require(
+                claimedKeyHash == keccak256(abi.encode(getBlsPublicKey())),
+                "Trailing bytes of initCode do not match the public key"
+            );
+        }
+
         return uint256(uint160(_aggregator));
     }
 }
