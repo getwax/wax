@@ -21,7 +21,7 @@
 DOCKER_NETWORK=account-integrations-safe-docker-network
 
 GETH_IMAGE=ethereum/client-go:v1.13.5
-BUNDLER_IMAGE=accountabstraction/bundler:0.6.2
+BUNDLER_IMAGE=patched-bundler-727838b
 
 GETH_CONTAINER=geth${RANDOM}
 BUNDLER_CONTAINER=bundler${RANDOM}
@@ -78,9 +78,13 @@ docker exec ${GETH_CONTAINER} geth \
 # Deploy common contracts
 yarn hardhat run "${SCRIPT_DIR}/deploy_all.ts" --network localhost
 
-# Start ERC-4337 bundler
-docker pull ${BUNDLER_IMAGE}
+if ! docker images | grep -q "${BUNDLER_IMAGE}"; then
+    echo "Building '${BUNDLER_IMAGE}'..."
+    # Build the Docker image from the Dockerfile
+    docker build -f "${SCRIPT_DIR}/${BUNDLER_IMAGE}.dockerfile" -t "${BUNDLER_IMAGE}" .
+fi
 
+# Start ERC-4337 bundler
 docker run --rm -i --name ${BUNDLER_CONTAINER} -p 3000:3000 -v "$PWD"/config:/app/workdir:ro --network=${DOCKER_NETWORK} ${BUNDLER_IMAGE} \
   --network http://${GETH_CONTAINER}:8545 \
   &
