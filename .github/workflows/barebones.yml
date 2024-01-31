@@ -1,4 +1,4 @@
-name: test
+name: account-integrations/barebones
 
 on:
   push:
