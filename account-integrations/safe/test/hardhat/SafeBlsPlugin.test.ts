@@ -14,7 +14,6 @@ import {
   createUserOperation,
 } from "./utils/createUserOp";
 import { getSigners } from "./utils/getSigners";
-// import sendUserOpAndWait from "./utils/sendUserOpAndWait";
 import DeterministicDeployer from "./utils/DeterministicDeployer";
 import getBlsUserOpHash from "./utils/getBlsUserOpHash";
 
@@ -125,6 +124,11 @@ describe("SafeBlsPlugin", () => {
 
     const recipientBalanceBefore = await provider.getBalance(recipientAddress);
 
+    // TODO: Ideally we would use the bundler here via `sendUserOpAndWait`.
+    // However, eth-infinitism's bundler doesn't appear to have any support for
+    // sending aggregated bundles, since handleAggregatedOps does not appear in
+    // its code.
+
     // Send userOp
     const receipt = await receiptOf(
       entryPoint.connect(admin).handleAggregatedOps(
@@ -138,14 +142,6 @@ describe("SafeBlsPlugin", () => {
         await admin.getAddress(),
       ),
     );
-
-    // TODO: Send via bundler (previously dependent on #138, now failing for
-    //         different reason)
-    // await sendUserOpAndWait(
-    //   { ...userOperation, signature: "0x" },
-    //   entryPointAddress,
-    //   bundlerProvider,
-    // );
 
     await entryPoint.getUserOpHash(userOperation);
 
