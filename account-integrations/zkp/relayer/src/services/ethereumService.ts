@@ -2,7 +2,7 @@ import { Address, PublicClient, WalletClient } from "viem";
 import { mnemonicToAccount } from "viem/accounts";
 import { hardhat } from "viem/chains";
 import EmailTable from "../tables/emailTable";
-import contract from "./SafeZkEmailRecoveryPlugin.json";
+import pluginArtifact from "../config/SafeZkEmailRecoveryPlugin.json";
 import config from "../config/config";
 import parseViemError from "../utils/parseViemError";
 
@@ -39,7 +39,7 @@ export default class EthereumService {
         try {
             const { request } = await this.publicClient.simulateContract({
                 address: recoveryPluginAddress,
-                abi: contract.abi,
+                abi: pluginArtifact.abi,
                 functionName: "initiateRecovery",
                 args: [safeProxyAddress, newOwnerAddress, emailDomain, a, b, c],
                 account: account,
