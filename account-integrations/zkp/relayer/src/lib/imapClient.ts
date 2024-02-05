@@ -1,5 +1,12 @@
 import { ImapFlow, ImapFlowOptions } from "imapflow";
 
+type EmailResponse = {
+    headers: Buffer;
+    sender: string;
+    subject: string;
+    uid: number;
+};
+
 class ImapClient {
     public imapClient: ImapFlow;
 
@@ -15,10 +22,10 @@ class ImapClient {
         await this.imapClient.logout();
     }
 
-    public async fetchEmails() {
+    public async fetchEmails(): Promise<Array<EmailResponse>> {
         const lock = await this.imapClient.getMailboxLock("INBOX");
 
-        const emails = [];
+        const emails = new Array<EmailResponse>();
         try {
             // For some reason calling .status() seems to "refresh" the inbox so that
             // new emails can be detected. Without this line, new emails are not detected.
@@ -47,7 +54,6 @@ class ImapClient {
 
                 if (emails.length > 0) {
                     const uids = emails.map((email) => email.uid).join(",");
-                    console.log("uids:", uids);
                     await this.imapClient.messageFlagsSet(`${uids}`, [
                         "\\Seen",
                     ]);
