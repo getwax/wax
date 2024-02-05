@@ -66,10 +66,9 @@ const main = async () => {
         eventEmitter
     );
 
-    await emailService.start();
+    await emailService.pollEmails();
 
     process.once("SIGINT", async () => {
-        await emailService.stop();
         process.exit(0);
     });
 

@@ -1,48 +1,28 @@
 import { ImapFlow, ImapFlowOptions } from "imapflow";
 
-type EmailResponse = {
-    headers: Buffer;
-    sender: string;
-    subject: string;
-};
-
 class ImapClient {
-    private imapClient: ImapFlow;
+    public imapConfig: ImapFlowOptions;
 
     constructor(imapConfig: ImapFlowOptions) {
-        this.imapClient = new ImapFlow(imapConfig);
+        this.imapConfig = imapConfig;
     }
 
-    public async start(): Promise<void> {
-        await this.imapClient.connect();
-    }
+    public async fetchEmails() {
+        const imapClient = new ImapFlow(this.imapConfig);
+        await imapClient.connect();
 
-    public async stop(): Promise<void> {
-        await this.imapClient.logout();
-    }
+        const lock = await imapClient.getMailboxLock("INBOX");
 
-    public async fetchEmails(): Promise<Array<EmailResponse>> {
-        const lock = await this.imapClient.getMailboxLock("INBOX");
-        const emails = new Array<EmailResponse>();
-
+        const emails = [];
         try {
-            const unreadMessages = this.imapClient.fetch(
+            for await (const message of imapClient.fetch(
                 { seen: false },
-                {
-                    headers: true,
-                    envelope: true,
-                    source: true,
-                    bodyStructure: true,
-                    flags: true,
-                }
-            );
-
-            for await (const message of unreadMessages) {
+                { headers: true, envelope: true }
+            )) {
                 if (!message.envelope.sender[0].address) {
                     console.log("No sender found");
                     continue;
                 }
-
                 emails.push({
                     headers: message.headers,
                     sender: message.envelope.sender[0].address,
@@ -50,13 +30,12 @@ class ImapClient {
                 });
             }
 
-            await this.imapClient.messageFlagsSet({ seen: false }, ["\\Seen"]);
-        } catch (error) {
-            console.error("Error fetching emails:", error);
+            await imapClient.messageFlagsSet({ seen: false }, ["\\Seen"]);
         } finally {
             lock.release();
         }
 
+        await imapClient.logout();
         return emails;
     }
 }
