@@ -17,10 +17,21 @@ export default class EmailService {
         this.eventEmitter.on("email(s) saved", () => this.processEmails());
     }
 
+    async start() {
+        await this.pollEmails();
+    }
+
+    async stop() {
+        await this.imapClient.stop();
+    }
+
     public async pollEmails(): Promise<void> {
+        await this.imapClient.start();
+
         // eslint-disable-next-line no-constant-condition
         while (true) {
             const emails = await this.imapClient.fetchEmails();
+            console.log(`Received ${emails.length} emails`);
 
             // TODO: (merge-ok) handle duplicate emails
             if (emails.length > 0) {

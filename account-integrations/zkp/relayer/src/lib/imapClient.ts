@@ -1,41 +1,62 @@
 import { ImapFlow, ImapFlowOptions } from "imapflow";
 
 class ImapClient {
-    public imapConfig: ImapFlowOptions;
+    public imapClient: ImapFlow;
 
-    constructor(imapConfig: ImapFlowOptions) {
-        this.imapConfig = imapConfig;
+    constructor(imapClientConfig: ImapFlowOptions) {
+        this.imapClient = new ImapFlow(imapClientConfig);
+    }
+
+    public async start() {
+        await this.imapClient.connect();
+    }
+
+    public async stop() {
+        await this.imapClient.logout();
     }
 
     public async fetchEmails() {
-        const imapClient = new ImapFlow(this.imapConfig);
-        await imapClient.connect();
-
-        const lock = await imapClient.getMailboxLock("INBOX");
+        const lock = await this.imapClient.getMailboxLock("INBOX");
 
         const emails = [];
         try {
-            for await (const message of imapClient.fetch(
-                { seen: false },
-                { headers: true, envelope: true }
-            )) {
-                if (!message.envelope.sender[0].address) {
-                    console.log("No sender found");
-                    continue;
-                }
-                emails.push({
-                    headers: message.headers,
-                    sender: message.envelope.sender[0].address,
-                    subject: message.envelope.subject,
-                });
-            }
+            // For some reason calling .status() seems to "refresh" the inbox so that
+            // new emails can be detected. Without this line, new emails are not detected.
+            const mailbox = await this.imapClient.status("INBOX", {
+                unseen: true,
+            });
 
-            await imapClient.messageFlagsSet({ seen: false }, ["\\Seen"]);
+            if (mailbox.unseen && mailbox.unseen > 0) {
+                const messages = this.imapClient.fetch(
+                    { seen: false },
+                    { headers: true, envelope: true }
+                );
+
+                for await (const message of messages) {
+                    if (!message.envelope.sender[0].address) {
+                        console.log("No sender found");
+                        continue;
+                    }
+                    emails.push({
+                        uid: message.uid,
+                        headers: message.headers,
+                        sender: message.envelope.sender[0].address,
+                        subject: message.envelope.subject,
+                    });
+                }
+
+                if (emails.length > 0) {
+                    const uids = emails.map((email) => email.uid).join(",");
+                    console.log("uids:", uids);
+                    await this.imapClient.messageFlagsSet(`${uids}`, [
+                        "\\Seen",
+                    ]);
+                }
+            }
         } finally {
             lock.release();
         }
 
-        await imapClient.logout();
         return emails;
     }
 }
