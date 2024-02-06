@@ -1,5 +1,10 @@
 node_modules
 dist
+
+# config
 config.ts
 
-
+# db files
+relayer.db
+relayer.db-shm
+relayer.db-wal
