@@ -2,7 +2,7 @@ import { expect } from "chai";
 import { JsonRpcProvider, NonceManager, Signer, ethers } from "ethers";
 
 import { executeContractCallWithSigners } from "./utils/execution";
-import SafeSingletonFactory from "./utils/SafeSingletonFactory";
+import DeterministicDeployer from "./utils/DeterministicDeployer";
 import {
   MockDKIMRegsitry,
   MockDKIMRegsitry__factory,
@@ -29,7 +29,7 @@ describe("SafeZkEmailRecoveryPlugin", () => {
   let entryPointAddress: string;
   let safeSingleton: Safe;
   let mockDkimRegistry: MockDKIMRegsitry;
-  let ssf: SafeSingletonFactory;
+  let deployer: DeterministicDeployer;
 
   let safeProxyAddress: string;
   let recoveryPlugin: SafeZkEmailRecoveryPlugin;
@@ -43,11 +43,11 @@ describe("SafeZkEmailRecoveryPlugin", () => {
       owner,
       otherAccount,
       entryPointAddress,
-      ssf,
+      deployer,
       safeSingleton,
     } = setup);
 
-    const safeECDSAFactory = await ssf.connectOrDeploy(
+    const safeECDSAFactory = await deployer.connectOrDeploy(
       SafeECDSAFactory__factory,
       [],
     );
@@ -72,19 +72,22 @@ describe("SafeZkEmailRecoveryPlugin", () => {
       }),
     );
 
-    const mockGroth16Verifier = await ssf.connectOrDeploy(
+    const mockGroth16Verifier = await deployer.connectOrDeploy(
       MockGroth16Verifier__factory,
       [],
     );
 
-    const defaultDkimRegistry = await ssf.connectOrDeploy(
+    const defaultDkimRegistry = await deployer.connectOrDeploy(
       MockDKIMRegsitry__factory,
       [],
     );
 
-    mockDkimRegistry = await ssf.connectOrDeploy(MockDKIMRegsitry__factory, []);
+    mockDkimRegistry = await deployer.connectOrDeploy(
+      MockDKIMRegsitry__factory,
+      [],
+    );
 
-    recoveryPlugin = await ssf.connectOrDeploy(
+    recoveryPlugin = await deployer.connectOrDeploy(
       SafeZkEmailRecoveryPlugin__factory,
       [
         await mockGroth16Verifier.getAddress(),
@@ -318,7 +321,7 @@ describe("SafeZkEmailRecoveryPlugin", () => {
     );
 
     // Deploy guardian smart account
-    const simpleAccountFactory = await ssf.connectOrDeploy(
+    const simpleAccountFactory = await deployer.connectOrDeploy(
       SimpleAccountFactory__factory,
       [entryPointAddress],
     );

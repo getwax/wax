@@ -3,7 +3,7 @@ import {
   SafeProxyFactory__factory,
   Safe__factory,
 } from "../../../typechain-types";
-import SafeSingletonFactory from "./SafeSingletonFactory";
+import DeterministicDeployer from "./DeterministicDeployer";
 import receiptOf from "./receiptOf";
 import makeDevFaster from "./makeDevFaster";
 import { getSigners } from "./getSigners";
@@ -49,13 +49,15 @@ export async function setupTests() {
 
   const entryPointAddress = entryPoints[0];
 
-  const ssf = await SafeSingletonFactory.init(admin);
+  const safeDeployer = await DeterministicDeployer.initSafeVersion(admin);
 
-  const safeProxyFactory = await ssf.connectOrDeploy(
+  const safeProxyFactory = await safeDeployer.connectOrDeploy(
     SafeProxyFactory__factory,
     [],
   );
-  const safeSingleton = await ssf.connectOrDeploy(Safe__factory, []);
+  const safeSingleton = await safeDeployer.connectOrDeploy(Safe__factory, []);
+
+  const deployer = await DeterministicDeployer.init(admin);
 
   return {
     bundlerProvider,
@@ -64,7 +66,7 @@ export async function setupTests() {
     owner,
     otherAccount,
     entryPointAddress,
-    ssf,
+    deployer,
     safeProxyFactory,
     safeSingleton,
   };

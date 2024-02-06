@@ -20,14 +20,14 @@ describe("SafeZKPPasswordPlugin", () => {
       admin,
       owner,
       entryPointAddress,
-      ssf,
+      deployer,
       safeSingleton,
     } = await setupTests();
 
     const zkpClient = await ERC4337ZKPPasswordClient.create();
 
     // Deploy zk password plugin
-    const safeZKPPasswordFactory = await ssf.connectOrDeploy(
+    const safeZKPPasswordFactory = await deployer.connectOrDeploy(
       SafeZKPPasswordFactory__factory,
       [],
     );

@@ -18,7 +18,7 @@ describe("SafeECDSAPlugin", () => {
       admin,
       owner,
       entryPointAddress,
-      ssf,
+      deployer,
       safeSingleton,
     } = await setupTests();
 
@@ -27,7 +27,7 @@ describe("SafeECDSAPlugin", () => {
     const dummySignature = await owner.signMessage("dummy sig");
 
     // Deploy ecdsa plugin
-    const safeECDSAFactory = await ssf.connectOrDeploy(
+    const safeECDSAFactory = await deployer.connectOrDeploy(
       SafeECDSAFactory__factory,
       [],
     );
@@ -86,10 +86,16 @@ describe("SafeECDSAPlugin", () => {
   });
 
   it("should not allow execTransaction from unrelated address", async () => {
-    const { provider, admin, owner, entryPointAddress, ssf, safeSingleton } =
-      await setupTests();
+    const {
+      provider,
+      admin,
+      owner,
+      entryPointAddress,
+      deployer,
+      safeSingleton,
+    } = await setupTests();
 
-    const safeECDSAFactory = await ssf.connectOrDeploy(
+    const safeECDSAFactory = await deployer.connectOrDeploy(
       SafeECDSAFactory__factory,
       [],
     );

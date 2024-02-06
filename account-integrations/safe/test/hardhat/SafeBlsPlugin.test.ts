@@ -1,8 +1,9 @@
 import { expect } from "chai";
 import { ethers, getBytes, keccak256, solidityPacked } from "ethers";
 import { signer as hubbleBlsSigner } from "@thehubbleproject/bls";
-import { getUserOpHash } from "@account-abstraction/utils";
 import {
+  BLSOpen__factory,
+  BLSSignatureAggregator__factory,
   EntryPoint__factory,
   SafeBlsPlugin__factory,
 } from "../../typechain-types";
@@ -13,6 +14,9 @@ import {
   createUserOperation,
 } from "./utils/createUserOp";
 import { getSigners } from "./utils/getSigners";
+import DeterministicDeployer from "./utils/DeterministicDeployer";
+import getBlsUserOpHash from "./utils/getBlsUserOpHash";
+import appendKeyToInitCode from "./utils/appendKeyToInitCode";
 
 const BLS_PRIVATE_KEY =
   "0xdbe3d601b1b25c42c50015a87855fdce00ea9b3a7e33c92d31c69aeb70708e08";
@@ -25,48 +29,64 @@ describe("SafeBlsPlugin", () => {
       admin,
       owner,
       entryPointAddress,
-      ssf,
+      deployer,
       safeProxyFactory,
       safeSingleton,
     } = await setupTests();
+
+    const entryPoint = EntryPoint__factory.connect(entryPointAddress, admin);
 
     // Deploy bls plugin
     const domain = getBytes(keccak256(Buffer.from("eip4337.bls.domain")));
     const signerFactory = await hubbleBlsSigner.BlsSignerFactory.new();
     const blsSigner = signerFactory.getSigner(domain, BLS_PRIVATE_KEY);
 
-    const safeBlsPlugin = await ssf.connectOrDeploy(SafeBlsPlugin__factory, [
-      entryPointAddress,
-      blsSigner.pubkey,
-    ]);
+    const blsOpen = await deployer.connectOrDeploy(BLSOpen__factory, []);
 
-    // Construct userOp
-    const [, , signer] = getSigners();
+    const blsSignatureAggregator = await deployer.connectOrDeploy(
+      DeterministicDeployer.link(BLSSignatureAggregator__factory, [
+        {
+          "lib/account-abstraction/contracts/samples/bls/lib/BLSOpen.sol:BLSOpen":
+            await blsOpen.getAddress(),
+        },
+      ]),
+      [],
+    );
 
-    const recipientAddress = await signer.getAddress();
+    await receiptOf(
+      blsSignatureAggregator.addStake(entryPointAddress, 100n * 86_400n, {
+        value: ethers.parseEther("1"),
+      }),
+    );
+
+    const safeBlsPlugin = await deployer.connectOrDeploy(
+      SafeBlsPlugin__factory,
+      [
+        entryPointAddress,
+        await blsSignatureAggregator.getAddress(),
+        blsSigner.pubkey,
+      ],
+    );
+
+    const [, , recipient] = getSigners();
+    const recipientAddress = await recipient.getAddress();
+
     const transferAmount = ethers.parseEther("1");
-
-    const encoder = ethers.AbiCoder.defaultAbiCoder();
-    const dummyHash = ethers.keccak256(
-      encoder.encode(["string"], ["dummyHash"]),
-    );
-    const dummySignature = solidityPacked(
-      ["uint256", "uint256"],
-      blsSigner.sign(dummyHash),
-    );
 
     const userOpCallData = safeBlsPlugin.interface.encodeFunctionData(
       "execTransaction",
-      [recipientAddress, transferAmount, "0x00"],
+      [recipientAddress, transferAmount, "0x"],
     );
 
-    const { initCode, deployedAddress } = await generateInitCodeAndAddress(
+    let { initCode, deployedAddress } = await generateInitCodeAndAddress(
       admin,
       owner,
       safeBlsPlugin,
       safeSingleton,
       safeProxyFactory,
     );
+
+    initCode = appendKeyToInitCode(initCode, blsSigner.pubkey);
 
     const unsignedUserOperation = await createUserOperation(
       provider,
@@ -75,38 +95,60 @@ describe("SafeBlsPlugin", () => {
       initCode,
       userOpCallData,
       entryPointAddress,
-      dummySignature,
+      "0x",
     );
 
-    const userOpHash = getUserOpHash(
+    const blsUserOpHash = getBlsUserOpHash(
+      (await provider.getNetwork()).chainId,
+      await blsSignatureAggregator.getAddress(),
+      blsSigner.pubkey,
       unsignedUserOperation,
-      entryPointAddress,
-      Number((await provider.getNetwork()).chainId),
     );
 
-    const userOpSignature = blsSigner.sign(userOpHash);
+    const aggReportedUserOpHash = await blsSignatureAggregator.getUserOpHash(
+      unsignedUserOperation,
+    );
+
+    expect(blsUserOpHash).to.equal(aggReportedUserOpHash);
 
     const userOperation = {
       ...unsignedUserOperation,
-      signature: solidityPacked(["uint256", "uint256"], userOpSignature),
+      signature: solidityPacked(
+        ["uint256[2]"],
+        [blsSigner.sign(blsUserOpHash)],
+      ),
     };
+
+    await blsSignatureAggregator.validateUserOpSignature(userOperation);
 
     const recipientBalanceBefore = await provider.getBalance(recipientAddress);
 
-    // TODO: #138 Send via bundler once BLS lib is 4337 compatible
-    // await sendUserOpAndWait(userOperation, entryPointAddress, bundlerProvider);
-
-    const entryPoint = EntryPoint__factory.connect(entryPointAddress, admin);
+    // TODO: Ideally we would use the bundler here via `sendUserOpAndWait`.
+    // However, eth-infinitism's bundler doesn't appear to have any support for
+    // sending aggregated bundles, since handleAggregatedOps does not appear in
+    // its code.
 
     // Send userOp
-    await receiptOf(
-      entryPoint
-        .connect(admin)
-        .handleOps([userOperation], await admin.getAddress()),
+    const receipt = await receiptOf(
+      entryPoint.connect(admin).handleAggregatedOps(
+        [
+          {
+            userOps: [{ ...userOperation, signature: "0x" }],
+            aggregator: await blsSignatureAggregator.getAddress(),
+            signature: userOperation.signature,
+          },
+        ],
+        await admin.getAddress(),
+      ),
     );
+
     await entryPoint.getUserOpHash(userOperation);
 
-    const recipientBalanceAfter = await provider.getBalance(recipientAddress);
+    const recipientBalanceAfter = await provider.getBalance(
+      recipientAddress,
+      receipt.blockNumber,
+    );
+
     const expectedRecipientBalance = recipientBalanceBefore + transferAmount;
 
     expect(recipientBalanceAfter).to.equal(expectedRecipientBalance);
