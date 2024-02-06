@@ -3,12 +3,14 @@ import { createPublicClient, createWalletClient, http } from "viem";
 import { mnemonicToAccount } from "viem/accounts";
 import Database from "better-sqlite3";
 import EventEmitter from "node:events";
+import nodemailer from "nodemailer";
 import config from "./config/config";
 import ImapClient from "./lib/imapClient";
 import router from "./routes/healthCheck";
 import EmailService from "./services/emailService";
 import EthereumService from "./services/ethereumService";
 import EmailTable from "./tables/emailTable";
+import SmtpClient from "./lib/smtpClient";
 
 const app = express();
 
@@ -19,6 +21,20 @@ const main = async () => {
     });
 
     const imapClient = new ImapClient(config.imapClient);
+
+    const transporter = nodemailer.createTransport(config.smtpClient);
+    transporter.verify((error) => {
+        if (error) {
+            console.log(
+                "An error occured verifying the SMTP configuration:",
+                error
+            );
+        } else {
+            console.log("SMTP configuration verified");
+        }
+    });
+
+    const smtpClient = new SmtpClient(transporter, config.smtpClient.auth.user);
     const ethPublicClient = createPublicClient({
         chain: config.viem.chain,
         transport: http(),
@@ -43,6 +59,7 @@ const main = async () => {
     );
     const emailService = new EmailService(
         imapClient,
+        smtpClient,
         ethereumService,
         emailTable,
         config.emailPollingInterval,

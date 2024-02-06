@@ -6,7 +6,7 @@ import contract from "./SafeZkEmailRecoveryPlugin.json";
 import config from "../config/config";
 import parseViemError from "../utils/parseViemError";
 
-type InitiateRecoveryResult = {
+export type InitiateRecoveryResult = {
     success: boolean;
     message: string;
 };

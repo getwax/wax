@@ -1,12 +1,14 @@
 import { EventEmitter } from "stream";
 import { Address } from "viem";
 import ImapClient from "../lib/imapClient";
+import SmtpClient from "../lib/smtpClient";
 import EmailTable, { Email, EmailStatus } from "../tables/emailTable";
-import EthereumService from "./ethereumService";
+import EthereumService, { InitiateRecoveryResult } from "./ethereumService";
 
 export default class EmailService {
     constructor(
         public imapClient: ImapClient,
+        public smtpClient: SmtpClient,
         public ethereumService: EthereumService,
         public emailTable: EmailTable,
         public pollingInterval: number,
@@ -61,38 +63,18 @@ export default class EmailService {
                 c,
             } = await this.generateRecoveryArgs(emails[i]);
 
-            const initiateRecoveryResult =
-                await this.ethereumService.initiateRecovery(
-                    safeProxyAddress,
-                    newOwnerAddress,
-                    recoveryPluginAddress,
-                    emailDomain,
-                    a,
-                    b,
-                    c
-                );
+            const initiateRecoveryResult = await this.initiateRecovery(
+                emails[i],
+                safeProxyAddress,
+                newOwnerAddress,
+                recoveryPluginAddress,
+                emailDomain,
+                a,
+                b,
+                c
+            );
 
-            if (initiateRecoveryResult.success) {
-                this.emailTable.update({
-                    ...emails[i],
-                    status: EmailStatus.PROCESSED,
-                });
-                console.log(`Recovery initiated by: ${emails[i].sender}`);
-            } else {
-                if (
-                    initiateRecoveryResult.message ===
-                    "RECOVERY_ALREADY_INITIATED"
-                ) {
-                    this.emailTable.update({
-                        ...emails[i],
-                        status: EmailStatus.PROCESSED,
-                    });
-                }
-
-                console.log(
-                    `Could not initiate recovery. ${initiateRecoveryResult.message}`
-                );
-            }
+            await this.replyToSender(emails[i].sender, initiateRecoveryResult);
         }
     }
 
@@ -123,5 +105,57 @@ export default class EmailService {
             b,
             c,
         };
+    }
+
+    async initiateRecovery(
+        email: Email,
+        safeProxyAddress: Address,
+        newOwnerAddress: Address,
+        recoveryPluginAddress: Address,
+        emailDomain: string,
+        a: [bigint, bigint],
+        b: [[bigint, bigint], [bigint, bigint]],
+        c: [bigint, bigint]
+    ): Promise<InitiateRecoveryResult> {
+        const initiateRecoveryResult =
+            await this.ethereumService.initiateRecovery(
+                safeProxyAddress,
+                newOwnerAddress,
+                recoveryPluginAddress,
+                emailDomain,
+                a,
+                b,
+                c
+            );
+
+        if (initiateRecoveryResult.success) {
+            this.emailTable.update({
+                ...email,
+                status: EmailStatus.PROCESSED,
+            });
+            console.log(`Recovery initiated by: ${email.sender}`);
+            return initiateRecoveryResult;
+        } else {
+            if (
+                initiateRecoveryResult.message === "RECOVERY_ALREADY_INITIATED"
+            ) {
+                this.emailTable.update({
+                    ...email,
+                    status: EmailStatus.PROCESSED,
+                });
+            }
+
+            console.log(
+                `Could not initiate recovery. ${initiateRecoveryResult.message}`
+            );
+            return initiateRecoveryResult;
+        }
+    }
+
+    async replyToSender(
+        to: string,
+        initiateRecoveryResult: InitiateRecoveryResult
+    ) {
+        await this.smtpClient.sendConfirmateEmail(to, initiateRecoveryResult);
     }
 }

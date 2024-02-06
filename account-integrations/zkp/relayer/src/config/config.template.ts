@@ -23,6 +23,15 @@ const config: ConfigType = {
         },
         logger: false,
     },
+    smtpClient: {
+        service: "gmail",
+        port: 587,
+        secure: true,
+        auth: {
+            user: "yourEmailAddress",
+            pass: "yourEmailPassword",
+        },
+    },
     viem: {
         chain: hardhat,
         mnenmonic:
