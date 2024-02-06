@@ -6,6 +6,8 @@ import EmailTable, { Email, EmailStatus } from "../tables/emailTable";
 import EthereumService, { InitiateRecoveryResult } from "./ethereumService";
 
 export default class EmailService {
+    private running = false;
+
     constructor(
         public imapClient: ImapClient,
         public smtpClient: SmtpClient,
@@ -18,18 +20,19 @@ export default class EmailService {
     }
 
     async start() {
+        this.running = true;
         await this.pollEmails();
     }
 
     async stop() {
+        this.running = false;
         await this.imapClient.stop();
     }
 
     public async pollEmails(): Promise<void> {
         await this.imapClient.start();
 
-        // eslint-disable-next-line no-constant-condition
-        while (true) {
+        while (this.running) {
             const emails = await this.imapClient.fetchEmails();
             console.log(`Received ${emails.length} emails`);
 
