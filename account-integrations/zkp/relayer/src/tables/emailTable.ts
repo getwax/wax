@@ -57,7 +57,7 @@ const mapEmailToEmailRow = (row: Email): EmailRow => {
 };
 
 export default class EmailTable {
-    constructor(public database: Database) {
+    constructor(private database: Database) {
         const createTableStatement = this.database.prepare(`
             CREATE TABLE IF NOT EXISTS emails (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,

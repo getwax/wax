@@ -1,7 +1,6 @@
 import { Address, PublicClient, WalletClient } from "viem";
 import { mnemonicToAccount } from "viem/accounts";
 import { hardhat } from "viem/chains";
-import EmailTable from "../tables/emailTable";
 import pluginArtifact from "../config/SafeZkEmailRecoveryPlugin.json";
 import config from "../config/config";
 import parseViemError from "../utils/parseViemError";
@@ -13,9 +12,8 @@ export type InitiateRecoveryResult = {
 
 export default class EthereumService {
     constructor(
-        public publicClient: PublicClient,
-        public walletClient: WalletClient,
-        public emailTable: EmailTable
+        private publicClient: PublicClient,
+        private walletClient: WalletClient
     ) {}
 
     async initiateRecovery(

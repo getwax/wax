@@ -3,8 +3,8 @@ import { InitiateRecoveryResult } from "../services/ethereumService";
 
 export default class SmtpClient {
     constructor(
-        public transporter: Transporter,
-        public relayerEmail: string
+        private transporter: Transporter,
+        private relayerEmail: string
     ) {}
 
     public async sendConfirmateEmail(

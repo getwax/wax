@@ -9,12 +9,12 @@ export default class EmailService {
     private running = false;
 
     constructor(
-        public imapClient: ImapClient,
-        public smtpClient: SmtpClient,
-        public ethereumService: EthereumService,
-        public emailTable: EmailTable,
-        public pollingInterval: number,
-        public eventEmitter: EventEmitter
+        private imapClient: ImapClient,
+        private smtpClient: SmtpClient,
+        private ethereumService: EthereumService,
+        private emailTable: EmailTable,
+        private pollingInterval: number,
+        private eventEmitter: EventEmitter
     ) {
         this.eventEmitter.on("email(s) saved", () => this.processEmails());
     }

@@ -54,8 +54,7 @@ const main = async () => {
     const emailTable = new EmailTable(db);
     const ethereumService = new EthereumService(
         ethPublicClient,
-        ethWalletClient,
-        emailTable
+        ethWalletClient
     );
     const emailService = new EmailService(
         imapClient,

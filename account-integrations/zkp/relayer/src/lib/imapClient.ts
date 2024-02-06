@@ -8,7 +8,7 @@ type EmailResponse = {
 };
 
 class ImapClient {
-    public imapClient: ImapFlow;
+    private imapClient: ImapFlow;
 
     constructor(imapClientConfig: ImapFlowOptions) {
         this.imapClient = new ImapFlow(imapClientConfig);
