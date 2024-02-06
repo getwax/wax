@@ -150,7 +150,7 @@ export default class EmailService {
                 });
             }
 
-            console.log(
+            console.error(
                 `Could not initiate recovery. ${initiateRecoveryResult.message}`
             );
             return initiateRecoveryResult;
@@ -161,6 +161,6 @@ export default class EmailService {
         to: string,
         initiateRecoveryResult: InitiateRecoveryResult
     ) {
-        await this.smtpClient.sendConfirmateEmail(to, initiateRecoveryResult);
+        await this.smtpClient.sendConfirmationEmail(to, initiateRecoveryResult);
     }
 }

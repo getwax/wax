@@ -7,7 +7,7 @@ export default class SmtpClient {
         private relayerEmail: string
     ) {}
 
-    public async sendConfirmateEmail(
+    public async sendConfirmationEmail(
         to: string,
         initiateRecoveryResult: InitiateRecoveryResult
     ) {
