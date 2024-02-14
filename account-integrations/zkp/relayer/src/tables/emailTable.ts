@@ -57,7 +57,7 @@ const mapEmailToEmailRow = (row: Email): EmailRow => {
 };
 
 export default class EmailTable {
-    constructor(public database: Database) {
+    constructor(private database: Database) {
         const createTableStatement = this.database.prepare(`
             CREATE TABLE IF NOT EXISTS emails (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -69,7 +69,7 @@ export default class EmailTable {
         createTableStatement.run();
     }
 
-    selectAll(): Array<Email> {
+    public selectAll(): Array<Email> {
         const selectAllStatement =
             this.database.prepare(`SELECT * FROM emails`);
         const rowList = selectAllStatement.all();
@@ -77,7 +77,7 @@ export default class EmailTable {
         return rowList.filter(isEmailRow).map(mapEmailRowToEmail);
     }
 
-    findEligible(): Array<Email> {
+    public findEligible(): Array<Email> {
         const selectEligibleStatement = this.database.prepare(`
             SELECT * FROM emails
                 WHERE
@@ -89,7 +89,7 @@ export default class EmailTable {
         return rowList.filter(isEmailRow).map(mapEmailRowToEmail);
     }
 
-    insert(email: InsertEmail) {
+    public insert(email: InsertEmail) {
         const insertStatement = this.database.prepare(
             `INSERT INTO emails (status, subject, sender) VALUES ($status, $subject, $sender)`
         );
@@ -100,7 +100,7 @@ export default class EmailTable {
         });
     }
 
-    update(email: Email) {
+    public update(email: Email) {
         const emailRow = mapEmailToEmailRow(email);
 
         const updateStatement = this.database.prepare(`

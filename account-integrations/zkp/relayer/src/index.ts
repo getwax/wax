@@ -25,7 +25,7 @@ const main = async () => {
     const transporter = nodemailer.createTransport(config.smtpClient);
     transporter.verify((error) => {
         if (error) {
-            console.log(
+            console.error(
                 "An error occured verifying the SMTP configuration:",
                 error
             );
@@ -54,8 +54,7 @@ const main = async () => {
     const emailTable = new EmailTable(db);
     const ethereumService = new EthereumService(
         ethPublicClient,
-        ethWalletClient,
-        emailTable
+        ethWalletClient
     );
     const emailService = new EmailService(
         imapClient,
@@ -83,6 +82,6 @@ const main = async () => {
 };
 
 main().catch((error) => {
-    console.log("Error occured running relayer", error);
+    console.error("Error occured running relayer", error);
     process.exit(1);
 });

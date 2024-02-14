@@ -6,30 +6,33 @@ import EmailTable, { Email, EmailStatus } from "../tables/emailTable";
 import EthereumService, { InitiateRecoveryResult } from "./ethereumService";
 
 export default class EmailService {
+    private running = false;
+
     constructor(
-        public imapClient: ImapClient,
-        public smtpClient: SmtpClient,
-        public ethereumService: EthereumService,
-        public emailTable: EmailTable,
-        public pollingInterval: number,
-        public eventEmitter: EventEmitter
+        private imapClient: ImapClient,
+        private smtpClient: SmtpClient,
+        private ethereumService: EthereumService,
+        private emailTable: EmailTable,
+        private pollingInterval: number,
+        private eventEmitter: EventEmitter
     ) {
         this.eventEmitter.on("email(s) saved", () => this.processEmails());
     }
 
-    async start() {
+    public async start() {
+        this.running = true;
         await this.pollEmails();
     }
 
-    async stop() {
+    public async stop() {
+        this.running = false;
         await this.imapClient.stop();
     }
 
-    public async pollEmails(): Promise<void> {
+    private async pollEmails(): Promise<void> {
         await this.imapClient.start();
 
-        // eslint-disable-next-line no-constant-condition
-        while (true) {
+        while (this.running) {
             const emails = await this.imapClient.fetchEmails();
             console.log(`Received ${emails.length} emails`);
 
@@ -51,7 +54,7 @@ export default class EmailService {
         }
     }
 
-    public async processEmails() {
+    private async processEmails() {
         const emails = this.emailTable.findEligible();
 
         for (let i = 0; i < emails.length; i++) {
@@ -82,7 +85,7 @@ export default class EmailService {
 
     // TODO: (merge-ok) - mocking this stuff for now to come back to in future PR
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    async generateRecoveryArgs(emails: Email) {
+    private async generateRecoveryArgs(emails: Email) {
         const safeProxyAddress: Address =
             "0x05d1EE1Ac4151918b9A222CD6e68103aC34b4bcD";
         const newOwnerAddress: Address =
@@ -109,7 +112,7 @@ export default class EmailService {
         };
     }
 
-    async initiateRecovery(
+    private async initiateRecovery(
         email: Email,
         safeProxyAddress: Address,
         newOwnerAddress: Address,
@@ -130,16 +133,10 @@ export default class EmailService {
                 c
             );
 
-        if (initiateRecoveryResult.success) {
-            this.emailTable.update({
-                ...email,
-                status: EmailStatus.PROCESSED,
-            });
-            console.log(`Recovery initiated by: ${email.sender}`);
-            return initiateRecoveryResult;
-        } else {
+        if ("revertReason" in initiateRecoveryResult) {
             if (
-                initiateRecoveryResult.message === "RECOVERY_ALREADY_INITIATED"
+                initiateRecoveryResult.revertReason ===
+                "RECOVERY_ALREADY_INITIATED"
             ) {
                 this.emailTable.update({
                     ...email,
@@ -147,17 +144,24 @@ export default class EmailService {
                 });
             }
 
-            console.log(
-                `Could not initiate recovery. ${initiateRecoveryResult.message}`
+            console.error(
+                `Could not initiate recovery. ${initiateRecoveryResult.revertReason}`
             );
+            return initiateRecoveryResult;
+        } else {
+            this.emailTable.update({
+                ...email,
+                status: EmailStatus.PROCESSED,
+            });
+            console.log(`Recovery initiated by: ${email.sender}`);
             return initiateRecoveryResult;
         }
     }
 
-    async replyToSender(
+    private async replyToSender(
         to: string,
         initiateRecoveryResult: InitiateRecoveryResult
     ) {
-        await this.smtpClient.sendConfirmateEmail(to, initiateRecoveryResult);
+        await this.smtpClient.sendConfirmationEmail(to, initiateRecoveryResult);
     }
 }
