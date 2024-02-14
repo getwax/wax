@@ -11,7 +11,7 @@ import { hardhat } from "viem/chains";
 import ConfigType from "./ConfigType";
 
 const config: ConfigType = {
-    emailPollingInterval: 5000,
+    emailPollingInterval: 8000,
     healthCheckPort: 3001,
     imapClient: {
         host: "imap.gmail.com",

@@ -27,9 +27,11 @@ export default class EmailService {
 
     public async pollEmails(): Promise<void> {
         await this.imapClient.start();
+
         // eslint-disable-next-line no-constant-condition
         while (true) {
             const emails = await this.imapClient.fetchEmails();
+            console.log(`Received ${emails.length} emails`);
 
             // TODO: (merge-ok) handle duplicate emails
             if (emails.length > 0) {

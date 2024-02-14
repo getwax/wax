@@ -3,6 +3,7 @@ dist
 
 # config
 config.ts
+SafeZkEmailRecoveryPlugin.json
 
 # db files
 relayer.db
