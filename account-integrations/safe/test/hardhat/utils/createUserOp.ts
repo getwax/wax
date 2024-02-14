@@ -10,6 +10,7 @@ import {
   SafeBlsPlugin,
   SafeECDSAPlugin,
   SafeECDSAPluginStateless,
+  SafeProxyFactoryBrokenDeployment,
   SafeWebAuthnPlugin,
 } from "../../../typechain-types";
 import receiptOf from "./receiptOf";
@@ -28,7 +29,11 @@ export const generateInitCodeAndAddress = async (
   owner: ethers.HDNodeWallet,
   plugin: Plugin,
   safeSingleton: Safe,
-  safeProxyFactory: SafeProxyFactory,
+  safeProxyFactory: SafeProxyFactory | SafeProxyFactoryBrokenDeployment,
+  createFunctionName:
+    | "createProxyWithNonce"
+    | "createProxyWithNonceExtraCREATE2Opcode"
+    | "createProxyWithNonceWithCREATEOpcode",
 ) => {
   const pluginAddress = await plugin.getAddress();
   const singletonAddress = await safeSingleton.getAddress();
@@ -75,14 +80,40 @@ export const generateInitCodeAndAddress = async (
 
   // The initCode contains 20 bytes of the factory address and the rest is the
   // calldata to be forwarded
-  const initCode = ethers.concat([
-    factoryAddress,
-    safeProxyFactory.interface.encodeFunctionData("createProxyWithNonce", [
-      singletonAddress,
-      encodedInitializer,
-      73,
-    ]),
-  ]);
+  let initCode: string;
+
+  if (
+    createFunctionName === "createProxyWithNonceExtraCREATE2Opcode" &&
+    "createProxyWithNonceExtraCREATE2Opcode" in safeProxyFactory
+  ) {
+    initCode = ethers.concat([
+      factoryAddress,
+      safeProxyFactory.interface.encodeFunctionData(
+        "createProxyWithNonceExtraCREATE2Opcode",
+        [singletonAddress, encodedInitializer, 73],
+      ),
+    ]);
+  } else if (
+    createFunctionName === "createProxyWithNonceWithCREATEOpcode" &&
+    "createProxyWithNonceExtraCREATE2Opcode" in safeProxyFactory
+  ) {
+    initCode = ethers.concat([
+      factoryAddress,
+      safeProxyFactory.interface.encodeFunctionData(
+        "createProxyWithNonceWithCREATEOpcode",
+        [singletonAddress, encodedInitializer, 73],
+      ),
+    ]);
+  } else {
+    initCode = ethers.concat([
+      factoryAddress,
+      safeProxyFactory.interface.encodeFunctionData("createProxyWithNonce", [
+        singletonAddress,
+        encodedInitializer,
+        73,
+      ]),
+    ]);
+  }
 
   return { initCode, deployedAddress };
 };

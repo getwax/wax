@@ -162,6 +162,7 @@ describe("SafeECDSAPlugin", () => {
       safeEcdsaPlugin,
       safeSingleton,
       safeProxyFactory,
+      "createProxyWithNonce",
     );
 
     // Native tokens for the pre-fund

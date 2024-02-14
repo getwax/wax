@@ -98,6 +98,7 @@ describe.skip("SafeWebAuthnPlugin", () => {
       safeWebAuthnPlugin,
       safeSingleton,
       safeProxyFactory,
+      "createProxyWithNonce",
     );
 
     const recipientBalanceBefore = await provider.getBalance(recipientAddress);

@@ -66,6 +66,7 @@ describe("SafeBlsPlugin", () => {
       safeBlsPlugin,
       safeSingleton,
       safeProxyFactory,
+      "createProxyWithNonce",
     );
 
     const unsignedUserOperation = await createUserOperation(

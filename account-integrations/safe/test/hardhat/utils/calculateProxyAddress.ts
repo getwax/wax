@@ -1,8 +1,11 @@
 import { ethers } from "ethers";
-import { SafeProxyFactory } from "../../../typechain-types";
+import {
+  SafeProxyFactory,
+  SafeProxyFactoryBrokenDeployment,
+} from "../../../typechain-types";
 
 export const calculateProxyAddress = async (
-  factory: SafeProxyFactory,
+  factory: SafeProxyFactory | SafeProxyFactoryBrokenDeployment,
   singleton: string,
   inititalizer: string,
   nonce: number | string,
