@@ -3,6 +3,7 @@ pragma solidity >=0.7.0 <0.9.0;
 pragma abicoder v2;
 
 import {Safe4337Base, ISafe} from "./utils/Safe4337Base.sol";
+import {SafeStorage} from "safe-contracts/contracts/libraries/SafeStorage.sol";
 import {IEntryPoint, UserOperation} from "account-abstraction/contracts/interfaces/IEntryPoint.sol";
 import {UserOperation} from "account-abstraction/contracts/interfaces/IEntryPoint.sol";
 
@@ -12,7 +13,7 @@ struct ECDSAOwnerStorage {
     address owner;
 }
 
-contract SafeECDSAPluginStateless is Safe4337Base {
+contract SafeECDSAPluginStateless is SafeStorage, Safe4337Base {
     using ECDSA for bytes32;
     // TODO: Find out if this clashes with the same slot on the safe proxy
     mapping(address => ECDSAOwnerStorage) public ecdsaOwnerStorage;
@@ -79,7 +80,7 @@ contract SafeECDSAPluginStateless is Safe4337Base {
         UserOperation calldata userOp,
         bytes32 userOpHash
     ) internal override returns (uint256 validationData) {
-        uint256 mappingLocation = uint256(0);
+        uint256 mappingLocation = uint256(9);
         address safeAddress = address(_currentSafe());
         bytes32 ownerSlot = keccak256(abi.encode(safeAddress, mappingLocation));
 

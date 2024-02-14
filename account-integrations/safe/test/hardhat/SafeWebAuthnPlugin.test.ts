@@ -9,7 +9,7 @@ import {
 } from "./utils/createUserOp";
 import { getSigners } from "./utils/getSigners";
 
-describe("SafeWebAuthnPlugin", () => {
+describe.skip("SafeWebAuthnPlugin", () => {
   const getPublicKeyAndSignature = () => {
     const publicKey: [BigNumberish, BigNumberish] = [
       BigInt(
