@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/parameter-properties */
 import { AddressLike, JsonRpcProvider, Provider, Signer, ethers } from "ethers";
 
 // Import from Safe contracts repo once fixed
@@ -6,38 +7,7 @@ import {
   SafeSignature,
   buildSignatureBytes,
 } from "./execution";
-
-export type UserOperation = {
-  sender: string;
-  nonce: string;
-  initCode: string;
-  callData: string;
-  callGasLimit: string;
-  verificationGasLimit: string;
-  preVerificationGas: string;
-  maxFeePerGas: string;
-  maxPriorityFeePerGas: string;
-  paymasterAndData: string;
-  signature: string;
-};
-
-export const EIP712_SAFE_OPERATION_TYPE = {
-  SafeOp: [
-    { type: "address", name: "safe" },
-    { type: "uint256", name: "nonce" },
-    { type: "bytes", name: "initCode" },
-    { type: "bytes", name: "callData" },
-    { type: "uint256", name: "callGasLimit" },
-    { type: "uint256", name: "verificationGasLimit" },
-    { type: "uint256", name: "preVerificationGas" },
-    { type: "uint256", name: "maxFeePerGas" },
-    { type: "uint256", name: "maxPriorityFeePerGas" },
-    { type: "bytes", name: "paymasterAndData" },
-    { type: "uint48", name: "validAfter" },
-    { type: "uint48", name: "validUntil" },
-    { type: "address", name: "entryPoint" },
-  ],
-};
+import { UserOperation, EIP712_SAFE_OPERATION_TYPE } from "./userOp";
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 const AddressOne = "0x0000000000000000000000000000000000000001";
@@ -200,10 +170,10 @@ export class MultiProvider4337 extends JsonRpcProvider {
     userOp: UserOperation,
     entryPoint: AddressLike,
   ): Promise<string> {
-    return await super.send("eth_sendUserOperation", [
+    return (await super.send("eth_sendUserOperation", [
       userOp,
       await ethers.resolveAddress(entryPoint, this),
-    ]);
+    ])) as string;
   }
 }
 
@@ -310,7 +280,7 @@ export class Safe4337Operation {
         safe.address,
         0,
       ])
-    )[0];
+    )[0] as bigint;
     const estimateOperation = {
       sender: safe.address,
       callData: actionCalldata(action),
@@ -326,12 +296,16 @@ export class Safe4337Operation {
       maxFeePerGas: "0x10",
       maxPriorityFeePerGas: "0x10",
     };
-    const estimates = await provider.send("eth_estimateUserOperationGas", [
+    const estimates = (await provider.send("eth_estimateUserOperationGas", [
       {
         ...estimateOperation,
       },
       globalConfig.entryPoint,
-    ]);
+    ])) as {
+      verificationGasLimit: string;
+      preVerificationGas: string;
+      callGasLimit: string;
+    };
     console.log(estimates);
 
     const feeData = await provider.getFeeData();

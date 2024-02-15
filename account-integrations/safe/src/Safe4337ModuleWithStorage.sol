@@ -7,10 +7,15 @@ import {IAccount} from "account-abstraction/contracts/interfaces/IAccount.sol";
 import {UserOperation} from "account-abstraction/contracts/interfaces/UserOperation.sol";
 import {_packValidationData} from "account-abstraction/contracts/core/Helpers.sol";
 import {ISafe} from "./utils/Safe4337Base.sol";
-// import {ECDSA} from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+// import "hardhat/console.sol";
+
+struct ECDSAOwnerStorage {
+    address owner;
+}
 
 /**
- * @title Safe4337Module - An extension to the Safe contract that implements the ERC4337 interface.
+ * @title Safe4337ModuleWithStorage - An extension to the Safe contract that implements the ERC4337 interface.
  * @dev The contract is both a module and fallback handler.
  *      Safe forwards the `validateUserOp` call to this contract, it validates the user operation and returns the result.
  *      It also executes a module transaction to pay the prefund. Similar flow for the actual operation execution.
@@ -20,13 +25,26 @@ import {ISafe} from "./utils/Safe4337Base.sol";
  *      - The user operation is not allowed to execute any other function than `executeUserOp` and `executeUserOpWithErrorString`.
  *      - Replay protection is handled by the entry point.
  */
-contract Safe4337Module is IAccount, HandlerContext, CompatibilityFallbackHandler {
-    // using ECDSA for bytes32;
+contract Safe4337ModuleWithStorage is
+    IAccount,
+    HandlerContext,
+    CompatibilityFallbackHandler
+{
+    using ECDSA for bytes32;
 
     /**
      * @notice The EIP-712 type-hash for the domain separator used for verifying Safe operation signatures.
      */
-    bytes32 private constant DOMAIN_SEPARATOR_TYPEHASH = keccak256("EIP712Domain(uint256 chainId,address verifyingContract)");
+    bytes32 private constant DOMAIN_SEPARATOR_TYPEHASH =
+        keccak256("EIP712Domain(uint256 chainId,address verifyingContract)");
+
+    /**
+     * Return value in case of signature failure, with no time-range.
+     * Equivalent to _packValidationData(true,0,0).
+     */
+    uint256 internal constant SIG_VALIDATION_FAILED = 1;
+
+    mapping(address => ECDSAOwnerStorage) public ecdsaOwnerStorage;
 
     /**
      * @notice The EIP-712 type-hash for a SafeOp, representing the structure of a User Operation for the Safe.
@@ -49,12 +67,6 @@ contract Safe4337Module is IAccount, HandlerContext, CompatibilityFallbackHandle
         keccak256(
             "SafeOp(address safe,uint256 nonce,bytes initCode,bytes callData,uint256 callGasLimit,uint256 verificationGasLimit,uint256 preVerificationGas,uint256 maxFeePerGas,uint256 maxPriorityFeePerGas,bytes paymasterAndData,uint48 validAfter,uint48 validUntil,address entryPoint)"
         );
-
-    // /**
-    //  * Return value in case of signature failure, with no time-range.
-    //  * Equivalent to _packValidationData(true,0,0).
-    //  */
-    // uint256 internal constant SIG_VALIDATION_FAILED = 1;
 
     /**
      * @dev A structure used internally for manually encoding a Safe operation for when computing the EIP-712 struct hash.
@@ -86,11 +98,18 @@ contract Safe4337Module is IAccount, HandlerContext, CompatibilityFallbackHandle
         SUPPORTED_ENTRYPOINT = entryPoint;
     }
 
+    function enableModule(address owner) external {
+        ecdsaOwnerStorage[msg.sender].owner = owner;
+    }
+
     /**
      * @notice Validates the call is initiated by the entry point.
      */
     modifier onlySupportedEntryPoint() {
-        require(_msgSender() == SUPPORTED_ENTRYPOINT, "Unsupported entry point");
+        require(
+            _msgSender() == SUPPORTED_ENTRYPOINT,
+            "Unsupported entry point"
+        );
         _;
     }
 
@@ -100,7 +119,7 @@ contract Safe4337Module is IAccount, HandlerContext, CompatibilityFallbackHandle
      */
     function validateUserOp(
         UserOperation calldata userOp,
-        bytes32,
+        bytes32 userOpHash,
         uint256 missingAccountFunds
     ) external onlySupportedEntryPoint returns (uint256 validationData) {
         address payable safeAddress = payable(userOp.sender);
@@ -112,19 +131,26 @@ contract Safe4337Module is IAccount, HandlerContext, CompatibilityFallbackHandle
         // We check the execution function signature to make sure the entry point can't call any other function
         // and make sure the execution of the user operation is handled by the module
         require(
-            this.executeUserOp.selector == bytes4(userOp.callData) || this.executeUserOpWithErrorString.selector == bytes4(userOp.callData),
+            this.executeUserOp.selector == bytes4(userOp.callData) ||
+                this.executeUserOpWithErrorString.selector ==
+                bytes4(userOp.callData),
             "Unsupported execution function id"
         );
 
         // The userOp nonce is validated in the entry point (for 0.6.0+), therefore we will not check it again
-        validationData = _validateSignatures(userOp);
+        validationData = _validateSignatures(userOp, userOpHash);
 
         // We trust the entry point to set the correct prefund value, based on the operation params
         // We need to perform this even if the signature is not valid, else the simulation function of the entry point will not work.
         if (missingAccountFunds != 0) {
             // We intentionally ignore errors in paying the missing account funds, as the entry point is responsible for
             // verifying the prefund has been paid. This behaviour matches the reference base account implementation.
-            ISafe(safeAddress).execTransactionFromModule(SUPPORTED_ENTRYPOINT, missingAccountFunds, "", 0);
+            ISafe(safeAddress).execTransactionFromModule(
+                SUPPORTED_ENTRYPOINT,
+                missingAccountFunds,
+                "",
+                0
+            );
         }
     }
 
@@ -135,8 +161,21 @@ contract Safe4337Module is IAccount, HandlerContext, CompatibilityFallbackHandle
      * @param data Data payload of the user operation.
      * @param operation Operation type of the user operation.
      */
-    function executeUserOp(address to, uint256 value, bytes memory data, uint8 operation) external onlySupportedEntryPoint {
-        require(ISafe(msg.sender).execTransactionFromModule(to, value, data, operation), "Execution failed");
+    function executeUserOp(
+        address to,
+        uint256 value,
+        bytes memory data,
+        uint8 operation
+    ) external onlySupportedEntryPoint {
+        require(
+            ISafe(msg.sender).execTransactionFromModule(
+                to,
+                value,
+                data,
+                operation
+            ),
+            "Execution failed"
+        );
     }
 
     /**
@@ -146,8 +185,14 @@ contract Safe4337Module is IAccount, HandlerContext, CompatibilityFallbackHandle
      * @param data Data payload of the user operation.
      * @param operation Operation type of the user operation.
      */
-    function executeUserOpWithErrorString(address to, uint256 value, bytes memory data, uint8 operation) external onlySupportedEntryPoint {
-        (bool success, bytes memory returnData) = ISafe(msg.sender).execTransactionFromModuleReturnData(to, value, data, operation);
+    function executeUserOpWithErrorString(
+        address to,
+        uint256 value,
+        bytes memory data,
+        uint8 operation
+    ) external onlySupportedEntryPoint {
+        (bool success, bytes memory returnData) = ISafe(msg.sender)
+            .execTransactionFromModuleReturnData(to, value, data, operation);
         if (!success) {
             // solhint-disable-next-line no-inline-assembly
             assembly ("memory-safe") {
@@ -161,7 +206,10 @@ contract Safe4337Module is IAccount, HandlerContext, CompatibilityFallbackHandle
      * @return The EIP-712 domain separator hash for this contract.
      */
     function domainSeparator() public view returns (bytes32) {
-        return keccak256(abi.encode(DOMAIN_SEPARATOR_TYPEHASH, block.chainid, this));
+        return
+            keccak256(
+                abi.encode(DOMAIN_SEPARATOR_TYPEHASH, block.chainid, this)
+            );
     }
 
     /**
@@ -170,42 +218,51 @@ contract Safe4337Module is IAccount, HandlerContext, CompatibilityFallbackHandle
      * @param userOp The ERC-4337 user operation.
      * @return operationHash Operation hash.
      */
-    function getOperationHash(UserOperation calldata userOp) external view returns (bytes32 operationHash) {
+    function getOperationHash(
+        UserOperation calldata userOp
+    ) external view returns (bytes32 operationHash) {
         (bytes memory operationData, , , ) = _getSafeOp(userOp);
         operationHash = keccak256(operationData);
     }
 
     /**
-     * @dev Validates that the user operation is correctly signed and returns an ERC-4337 packed validation data
-     * of `validAfter || validUntil || authorizer`:
-     *  - `authorizer`: 20-byte address, 0 for valid signature or 1 to mark signature failure (this module does not make use of signature aggregators).
-     *  - `validUntil`: 6-byte timestamp value, or zero for "infinite". The user operation is valid only up to this time.
-     *  - `validAfter`: 6-byte timestamp. The user operation is valid only after this time.
+     * @dev Validates that the user operation is correctly signed. Reverts if signatures are invalid.
      * @param userOp User operation struct.
      * @return validationData An integer indicating the result of the validation.
      */
-    function _validateSignatures(UserOperation calldata userOp) internal view returns (uint256 validationData) {
-        (bytes memory operationData, uint48 validAfter, uint48 validUntil, bytes calldata signatures) = _getSafeOp(userOp);
-        try ISafe(payable(userOp.sender)).checkSignatures(keccak256(operationData), operationData, signatures) {
-            // The timestamps are validated by the entry point, therefore we will not check them again
-            validationData = _packValidationData(false, validUntil, validAfter);
-        } catch {
-            validationData = _packValidationData(true, validUntil, validAfter);
+    function _validateSignatures(
+        UserOperation calldata userOp,
+        bytes32 userOpHash
+    ) internal view returns (uint256 validationData) {
+        // (
+        //     bytes memory operationData,
+        //     uint48 validAfter,
+        //     uint48 validUntil,
+        //     bytes calldata signatures
+        // ) = _getSafeOp(userOp);
+        // try
+        //     ISafe(payable(userOp.sender)).checkSignatures(
+        //         keccak256(operationData),
+        //         operationData,
+        //         signatures
+        //     )
+        // {
+        //     // The timestamps are validated by the entry point, therefore we will not check them again
+        //     validationData = _packValidationData(false, validUntil, validAfter);
+        // } catch {
+        //     validationData = _packValidationData(true, validUntil, validAfter);
+        // }
+        // address keyOwner = ecdsaOwnerStorage[msg.sender].owner;
+        address keyOwner = ISafe(userOp.sender).getOwners()[0];
+        bytes32 hash = userOpHash.toEthSignedMessageHash();
+
+        if (keyOwner != hash.recover(userOp.signature)) {
+            return SIG_VALIDATION_FAILED;
         }
+        // console.log("HEREEEEE _validateSignatures");
+
+        return 0;
     }
-    // function _validateSignatures(
-    //     UserOperation calldata userOp,
-    //     bytes32 userOpHash
-    // ) internal view returns (uint256 validationData) {
-    //     address keyOwner = ISafe(userOp.sender).getOwners()[0];
-    //     bytes32 hash = userOpHash.toEthSignedMessageHash();
-
-    //     if (keyOwner != hash.recover(userOp.signature)) {
-    //         return SIG_VALIDATION_FAILED;
-    //     }
-
-    //     return 0;
-    // }
 
     /**
      * @dev Decodes an ERC-4337 user operation into a Safe operation.
@@ -217,7 +274,16 @@ contract Safe4337Module is IAccount, HandlerContext, CompatibilityFallbackHandle
      */
     function _getSafeOp(
         UserOperation calldata userOp
-    ) internal view returns (bytes memory operationData, uint48 validAfter, uint48 validUntil, bytes calldata signatures) {
+    )
+        internal
+        view
+        returns (
+            bytes memory operationData,
+            uint48 validAfter,
+            uint48 validUntil,
+            bytes calldata signatures
+        )
+    {
         // Extract additional Safe operation fields from the user operation signature which is encoded as:
         // `abi.encodePacked(validAfter, validUntil, signatures)`
         {
@@ -262,7 +328,12 @@ contract Safe4337Module is IAccount, HandlerContext, CompatibilityFallbackHandle
                 safeOpStructHash := keccak256(encodedSafeOp, 448)
             }
 
-            operationData = abi.encodePacked(bytes1(0x19), bytes1(0x01), domainSeparator(), safeOpStructHash);
+            operationData = abi.encodePacked(
+                bytes1(0x19),
+                bytes1(0x01),
+                domainSeparator(),
+                safeOpStructHash
+            );
         }
     }
 }
