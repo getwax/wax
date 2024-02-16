@@ -8,6 +8,7 @@ import {IEntryPoint, UserOperation} from "account-abstraction/contracts/interfac
 import {UserOperation} from "account-abstraction/contracts/interfaces/IEntryPoint.sol";
 
 import {ECDSA} from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
+// import "hardhat/console.sol";
 
 struct ECDSAOwnerStorage {
     address owner;
@@ -96,7 +97,16 @@ contract SafeECDSAPluginStateless is SafeStorage, Safe4337Base {
             return SIG_VALIDATION_FAILED;
         }
 
-        address keyOwner = address(uint160(uint256(bytes32(returnData))));
+        address keyOwner;
+        if (userOp.initCode.length == 0) {
+            keyOwner = ecdsaOwnerStorage[userOp.sender].owner; // This value is "0x0000000000000000000000000000000000000000". Which leads to the error: "Invalid UserOp signature or paymaster signature"
+            // console.log("keyOwner - no initCode:   ", keyOwner);
+        } else {
+            keyOwner = address(uint160(uint256(bytes32(returnData))));
+            // keyOwner = ecdsaOwnerStorage[userOp.sender].owner; // Trying to do something like this would result in the error: "unstaked account accessed"
+            // console.log("keyOwner - with initCode: ", keyOwner);
+        }
+
         bytes32 hash = userOpHash.toEthSignedMessageHash();
 
         if (keyOwner != hash.recover(userOp.signature)) {

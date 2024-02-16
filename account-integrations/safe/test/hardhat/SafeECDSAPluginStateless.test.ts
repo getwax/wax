@@ -14,7 +14,7 @@ import {
 const oneEther = ethers.parseEther("1");
 
 describe("SafeECDSAPluginStateless", () => {
-  it("should pass the ERC4337 validation", async () => {
+  it("should pass the ERC4337 validation (then fails when sending another userOp that tries to access a mapping value that doesn't exist)", async () => {
     const {
       bundlerProvider,
       provider,
@@ -94,6 +94,23 @@ describe("SafeECDSAPluginStateless", () => {
 
     expect(await provider.getBalance(recipient.address)).to.equal(
       balanceBefore + oneEther,
+    );
+
+    const initCodeEmpty = "0x";
+
+    const createAndSendUserOp = createAndSendUserOpWithEcdsaSig(
+      provider,
+      bundlerProvider,
+      owner,
+      deployedAddress,
+      initCodeEmpty,
+      userOpCallData,
+      entryPointAddress,
+      dummySignature,
+    );
+
+    await expect(createAndSendUserOp).to.eventually.be.rejectedWith(
+      "Invalid UserOp signature or paymaster signature",
     );
   });
 
