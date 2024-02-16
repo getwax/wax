@@ -3,6 +3,7 @@ import { ethers } from "ethers";
 import {
   SafeECDSAPluginStateless__factory,
   SafeProxyFactoryBrokenDeployment__factory,
+  Safe__factory,
 } from "../../typechain-types";
 import receiptOf from "./utils/receiptOf";
 import { setupTests } from "./utils/setupTests";
@@ -96,6 +97,32 @@ describe("SafeECDSAPluginStateless", () => {
       balanceBefore + oneEther,
     );
 
+    const safe = Safe__factory.connect(deployedAddress, admin);
+
+    const singletonAddress = await safeSingleton.getAddress();
+    const expectedSingletonAddressPadded = ethers.solidityPacked(
+      ["uint256"],
+      [singletonAddress],
+    );
+
+    const ownerSlot = ethers.keccak256(
+      ethers.AbiCoder.defaultAbiCoder().encode(
+        ["address", "uint256"],
+        [deployedAddress, 9n],
+      ),
+    );
+    const expectedOwnerAddressPadded = ethers.solidityPacked(
+      ["uint256"],
+      [owner.address],
+    );
+
+    let singleton = await safe.getStorageAt(0, 1);
+    expect(singleton).to.equal(expectedSingletonAddressPadded); // checking we weren't overriding the singleton address when not inheriting from SafeStorage.sol
+    // (the contract under test is currently inheriting from SafeStorage.sol, so this check is redundent unless the contract is reverted to a previous state)
+
+    let ownerFromMapping = await safe.getStorageAt(ownerSlot, 1);
+    expect(ownerFromMapping).to.equal(expectedOwnerAddressPadded); // checking we are storing the owner address on the Safe itself
+
     const initCodeEmpty = "0x";
 
     const createAndSendUserOp = createAndSendUserOpWithEcdsaSig(
@@ -108,6 +135,13 @@ describe("SafeECDSAPluginStateless", () => {
       entryPointAddress,
       dummySignature,
     );
+
+    singleton = await safe.getStorageAt(0, 1);
+    expect(singleton).to.equal(expectedSingletonAddressPadded); // checking we weren't overriding the singleton address when not inheriting from SafeStorage.sol
+    // (the contract under test is currently inheriting from SafeStorage.sol, so this check is redundent unless the contract is reverted to a previous state)
+
+    ownerFromMapping = await safe.getStorageAt(ownerSlot, 1);
+    expect(ownerFromMapping).to.equal(expectedOwnerAddressPadded); // checking we are storing the owner address on the Safe itself
 
     await expect(createAndSendUserOp).to.eventually.be.rejectedWith(
       "Invalid UserOp signature or paymaster signature",

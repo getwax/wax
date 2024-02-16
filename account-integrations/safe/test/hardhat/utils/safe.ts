@@ -26,6 +26,7 @@ const INTERFACES = new ethers.Interface([
   "function getThreshold() view returns (uint256)",
   "function getModulesPaginated(address, uint256) returns (address[], address)",
   "function getOperationHash(address,bytes,uint256,uint256,uint256,uint256,uint256,uint256,address)",
+  "function getStorageAt(uint256,uint256) view returns (bytes)",
 ]);
 
 export type OperationParams = {
