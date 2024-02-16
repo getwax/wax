@@ -82,6 +82,14 @@ contract SafeECDSAPluginStateless is SafeStorage, Safe4337Base {
         bytes32 userOpHash
     ) internal override returns (uint256 validationData) {
         uint256 mappingLocation = uint256(9);
+        // uint256 mappingLocation = uint256(0); // slot 0 in the Safe should theoretically be
+        // the slot for the singleton address - so very important and not something we should
+        // be accessing/modifying with delegatecall, I think the reason this didn't break before when
+        // it was slot 0, was because the mapping slot is only needed as a salt for computing
+        // the location of the mapping values along with it's keys. According to the solidity
+        // docs "For mappings, the slot stays empty", slot being the slot where the mapping
+        // is declared, which when not inheriting from SafeStorage, should have been the singleton address.
+        // https://docs.soliditylang.org/en/latest/internals/layout_in_storage.html#mappings-and-dynamic-arrays.
         address safeAddress = address(_currentSafe());
         bytes32 ownerSlot = keccak256(abi.encode(safeAddress, mappingLocation));
 
