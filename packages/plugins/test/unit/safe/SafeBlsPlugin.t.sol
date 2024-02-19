@@ -3,10 +3,10 @@ pragma solidity ^0.8.12;
 
 import "forge-std/Test.sol";
 import "forge-std/console2.sol";
-import {TestHelper} from "./utils/TestHelper.sol";
-import {SafeBlsPluginHarness} from "./utils/SafeBlsPluginHarness.sol";
-import {SafeBlsPlugin} from "../../src/SafeBlsPlugin.sol";
-import {Safe4337Base} from "../../src/utils/Safe4337Base.sol";
+import {TestHelper} from "../utils/TestHelper.sol";
+import {SafeBlsPluginHarness} from "../utils/SafeBlsPluginHarness.sol";
+import {SafeBlsPlugin} from "../../../src/safe/SafeBlsPlugin.sol";
+import {Safe4337Base} from "../../../src/safe/utils/Safe4337Base.sol";
 import {UserOperation, UserOperationLib} from "account-abstraction/contracts/interfaces/IEntryPoint.sol";
 import {BLSSignatureAggregator} from "account-abstraction/contracts/samples/bls/BLSSignatureAggregator.sol";
 

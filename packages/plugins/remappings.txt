@@ -5,3 +5,4 @@ openzeppelin-contracts/=lib/openzeppelin-contracts/
 account-abstraction/=lib/account-abstraction/
 safe-contracts/=lib/safe-contracts/
 wax/primitives/=lib/primitives/
+kernel/=lib/kernel/

@@ -16,12 +16,6 @@
 [submodule "packages/plugins/lib/account-abstraction"]
 	path = packages/plugins/lib/account-abstraction
 	url = https://github.com/eth-infinitism/account-abstraction
-[submodule "packages/kernel/lib/forge-std"]
-	path = packages/kernel/lib/forge-std
-	url = https://github.com/foundry-rs/forge-std
-[submodule "packages/kernel/lib/kernel"]
-	path = packages/kernel/lib/kernel
-	url = https://github.com/zerodevapp/kernel
 [submodule "primitives/lib/forge-std"]
 	path = primitives/lib/forge-std
 	url = https://github.com/foundry-rs/forge-std

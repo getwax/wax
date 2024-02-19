@@ -11,7 +11,7 @@ import "kernel/src/test/TestERC721.sol";
 import "forge-std/Test.sol";
 import {ERC4337Utils} from "kernel/test/foundry/ERC4337Utils.sol";
 // // BLS validator
-import {BLSValidator} from "../../src/BLSValidator.sol";
+import {BLSValidator} from "../../../src/kernel/BLSValidator.sol";
 
 using ERC4337Utils for EntryPoint;
 

@@ -1,5 +1,5 @@
 import { ethers } from "ethers";
-import DeterministicDeployer from "../test/hardhat/utils/DeterministicDeployer";
+import DeterministicDeployer from "../test/e2e/utils/DeterministicDeployer";
 import {
   SimulateTxAccessor__factory,
   SafeProxyFactory__factory,
@@ -15,7 +15,7 @@ import {
   BLSSignatureAggregator__factory,
   BLSOpen__factory,
 } from "../typechain-types";
-import makeDevFaster from "../test/hardhat/utils/makeDevFaster";
+import makeDevFaster from "../test/e2e/utils/makeDevFaster";
 
 async function deploy() {
   const { NODE_URL, MNEMONIC } = process.env;

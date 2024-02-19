@@ -5,7 +5,7 @@ pragma solidity >=0.8.4 <0.9.0;
 import "kernel/src/validator/IValidator.sol";
 import "openzeppelin-contracts/contracts/utils/cryptography/EIP712.sol";
 import "kernel/src/utils/KernelHelper.sol";
-import "account-abstraction/samples/bls/lib/hubble-contracts/contracts/libs/BLS.sol";
+import "account-abstraction/contracts/samples/bls/lib/hubble-contracts/contracts/libs/BLS.sol";
 
 // BLSValidator is a validator that uses BLS signatures to validate transactions.
 // TODO: Consider account recovery, aggregate signatures, and use EIP 712.

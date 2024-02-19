@@ -3,11 +3,11 @@ pragma solidity ^0.8.12;
 
 import "forge-std/Test.sol";
 import "forge-std/console2.sol";
-import {TestHelper} from "./utils/TestHelper.sol";
-import {SafeZkEmailRecoveryPlugin, RecoveryRequest} from "../../src/SafeZkEmailRecoveryPlugin.sol";
-import {SafeECDSAPlugin} from "../../src/SafeECDSAPlugin.sol";
-import {MockGroth16Verifier} from "../../src/utils/MockGroth16Verifier.sol";
-import {MockDKIMRegsitry} from "../../src/utils/MockDKIMRegsitry.sol";
+import {TestHelper} from "../utils/TestHelper.sol";
+import {SafeZkEmailRecoveryPlugin, RecoveryRequest} from "../../../src/safe/SafeZkEmailRecoveryPlugin.sol";
+import {SafeECDSAPlugin} from "../../../src/safe/SafeECDSAPlugin.sol";
+import {MockGroth16Verifier} from "../../../src/safe/utils/MockGroth16Verifier.sol";
+import {MockDKIMRegsitry} from "../../../src/safe/utils/MockDKIMRegsitry.sol";
 import {Safe} from "safe-contracts/contracts/Safe.sol";
 import {SafeProxy} from "safe-contracts/contracts/proxies/SafeProxy.sol";
 import {ECDSA} from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";

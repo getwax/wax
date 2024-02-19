@@ -7,8 +7,8 @@ import {HandlerContext} from "safe-contracts/contracts/handler/HandlerContext.so
 import {IEntryPoint, UserOperation} from "account-abstraction/contracts/interfaces/IEntryPoint.sol";
 
 import {Safe4337Base, ISafe} from "./utils/Safe4337Base.sol";
-import {WaxLib as W} from "./compression/WaxLib.sol";
-import {IDecompressor} from "./compression/decompressors/IDecompressor.sol";
+import {WaxLib as W} from "../compression/WaxLib.sol";
+import {IDecompressor} from "../compression/decompressors/IDecompressor.sol";
 
 struct ECDSAOwnerStorage {
     address owner;

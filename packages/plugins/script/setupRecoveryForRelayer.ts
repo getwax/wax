@@ -1,10 +1,10 @@
 import { expect } from "chai";
 import { JsonRpcProvider, NonceManager, Signer, ethers } from "ethers";
-import SafeSingletonFactory from "../test/hardhat/utils/SafeSingletonFactory";
-import { createAndSendUserOpWithEcdsaSig } from "../test/hardhat/utils/createUserOp";
-import { executeContractCallWithSigners } from "../test/hardhat/utils/execution";
-import receiptOf from "../test/hardhat/utils/receiptOf";
-import { setupTests } from "../test/hardhat/utils/setupTests";
+import SafeSingletonFactory from "../test/e2e/utils/SafeSingletonFactory";
+import { createAndSendUserOpWithEcdsaSig } from "../test/e2e/utils/createUserOp";
+import { executeContractCallWithSigners } from "../test/e2e/utils/execution";
+import receiptOf from "../test/e2e/utils/receiptOf";
+import { setupTests } from "../test/e2e/utils/setupTests";
 import {
   Safe,
   MockDKIMRegsitry,
@@ -16,7 +16,7 @@ import {
   Safe__factory,
   SafeECDSAPlugin__factory,
 } from "../typechain-types";
-import { getSigners } from "./../test/hardhat/utils/getSigners";
+import { getSigners } from "../test/e2e/utils/getSigners";
 
 async function setupRecoveryForRelayer() {
   let bundlerProvider: JsonRpcProvider;
