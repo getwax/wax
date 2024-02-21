@@ -2,8 +2,8 @@
 pragma solidity ^0.8.12;
 
 import "forge-std/Test.sol";
-import {TestHelper} from "./utils/TestHelper.sol";
-import {WebAuthnHarness} from "./utils/WebAuthnHarness.sol";
+import {TestHelper} from "./TestHelper.sol";
+import {WebAuthnHarness} from "./WebAuthnHarness.sol";
 
 /* solhint-disable func-name-mixedcase */
 

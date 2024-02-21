@@ -16,9 +16,6 @@
 [submodule "packages/plugins/lib/account-abstraction"]
 	path = packages/plugins/lib/account-abstraction
 	url = https://github.com/eth-infinitism/account-abstraction
-[submodule "primitives/lib/forge-std"]
-	path = primitives/lib/forge-std
-	url = https://github.com/foundry-rs/forge-std
 [submodule "packages/zkp/lib/circom"]
 	path = packages/zkp/lib/circom
 	url = https://github.com/iden3/circom.git

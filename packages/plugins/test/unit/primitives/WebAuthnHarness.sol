@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.12;
 
-import {WebAuthn} from "../../src/WebAuthn.sol";
+import {WebAuthn} from "../../../src/primitives/WebAuthn.sol";
 
 /** Helper contract to expose internal functions for testing */
 contract WebAuthnHarness is WebAuthn {
