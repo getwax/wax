@@ -18,7 +18,7 @@
 # $ docker ps # for container ids/names
 # $ docker stop BUNDLER_CONTAINER_ID_OR_NAME GETH_CONTAINER_ID_OR_NAME
 
-DOCKER_NETWORK=account-integrations-safe-docker-network
+DOCKER_NETWORK=packages-plugins-docker-network
 
 GETH_IMAGE=ethereum/client-go:v1.13.5
 BUNDLER_IMAGE=patched-bundler-727838b

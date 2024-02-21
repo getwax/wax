@@ -4,7 +4,7 @@ Please note, these plugins are in a pre-alpha state and are not ready for produc
 
 # Getting Started
 
-1. `cd account-integrations/safe`
+1. `cd packages/plugins`
 2. Run `yarn` to install hardhat dependencies
 3. Run `forge install` to install foundry dependencies
 

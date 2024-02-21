@@ -9,7 +9,7 @@ import {
 import EthereumRpc from '../EthereumRpc';
 import IAccount from './IAccount';
 import WaxInPage from '..';
-import { SafeECDSAFactory } from '../../hardhat/typechain-types/lib/account-integrations/safe/src/SafeECDSAFactory';
+import { SafeECDSAFactory } from '../../hardhat/typechain-types/lib/packages/plugins/src/SafeECDSAFactory';
 import receiptOf from '../helpers/receiptOf';
 import { executeContractCallWithSigners } from './execution';
 import assert from '../helpers/assert';

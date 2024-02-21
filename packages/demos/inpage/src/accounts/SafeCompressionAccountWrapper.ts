@@ -7,7 +7,7 @@ import {
 import EthereumRpc from '../EthereumRpc';
 import IAccount from './IAccount';
 import WaxInPage from '..';
-import { SafeCompressionFactory } from '../../hardhat/typechain-types/lib/account-integrations/safe/src/SafeCompressionFactory';
+import { SafeCompressionFactory } from '../../hardhat/typechain-types/lib/packages/plugins/src/SafeCompressionFactory';
 import receiptOf from '../helpers/receiptOf';
 import {
   encodeBitStack,

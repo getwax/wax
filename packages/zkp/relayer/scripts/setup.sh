@@ -15,7 +15,7 @@ else
 fi
 
 if [ ! -f $ARTIFACT_SOURCE ]; then
-    echo "$ARTIFACT_SOURCE does not exist, generate contract artifacts with 'forge build' in 'account-integrations/safe'"
+    echo "$ARTIFACT_SOURCE does not exist, generate contract artifacts with 'forge build' in 'packages/plugins'"
 else
     cp $ARTIFACT_SOURCE $ARTIFACT_DESTINATION
 
