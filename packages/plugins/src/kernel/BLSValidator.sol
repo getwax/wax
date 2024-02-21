@@ -2,10 +2,10 @@
 
 pragma solidity >=0.8.4 <0.9.0;
 
-import "kernel/src/validator/IValidator.sol";
-import "openzeppelin-contracts/contracts/utils/cryptography/EIP712.sol";
-import "kernel/src/utils/KernelHelper.sol";
-import "account-abstraction/contracts/samples/bls/lib/hubble-contracts/contracts/libs/BLS.sol";
+import {IKernelValidator, UserOperation} from "kernel/src/interfaces/IKernelValidator.sol";
+import {ValidationData} from "kernel/src/common/Types.sol";
+import {SIG_VALIDATION_FAILED, ValidationData} from "kernel/src/common/Constants.sol";
+import {BLS} from "account-abstraction/contracts/samples/bls/lib/hubble-contracts/contracts/libs/BLS.sol";
 
 // BLSValidator is a validator that uses BLS signatures to validate transactions.
 // TODO: Consider account recovery, aggregate signatures, and use EIP 712.
@@ -17,11 +17,11 @@ contract BLSValidator is IKernelValidator {
 
     mapping(address => uint256[4]) public blsValidatorStorage;
 
-    function disable(bytes calldata) external override {
+    function disable(bytes calldata) external payable override {
         delete blsValidatorStorage[msg.sender];
     }
 
-    function enable(bytes calldata _data) external override {
+    function enable(bytes calldata _data) external payable override {
         require(_data.length >= 128, "Calldata is not long enough for bls public key");
 
         uint256[4] memory publicKey = abi.decode(_data, (uint256[4]));
@@ -33,9 +33,9 @@ contract BLSValidator is IKernelValidator {
 
     function validateUserOp(UserOperation calldata _userOp, bytes32 _userOpHash, uint256)
         external
-        view
+        payable
         override
-        returns (uint256 validationData)
+        returns (ValidationData)
     {
         require(_userOp.signature.length == 64, "BLS Validator: Sig bytes length must be 64");
 
@@ -52,14 +52,14 @@ contract BLSValidator is IKernelValidator {
         (bool verified, bool callSuccess) = BLS.verifySingle(decodedSignature, publicKey, message);
 
         if (verified && callSuccess) {
-            return 0;
+            return ValidationData.wrap(0);
         }
         // TODO: check if wallet recovered
         return SIG_VALIDATION_FAILED;
     }
 
 
-    function validateSignature(bytes32 hash, bytes calldata signature) public view override returns (uint256) {
+    function validateSignature(bytes32 hash, bytes calldata signature) public view override returns (ValidationData) {
         require(signature.length == 64, "VG: Sig bytes length must be 64");
 
         uint256[4] memory publicKey = blsValidatorStorage[msg.sender];
@@ -73,9 +73,13 @@ contract BLSValidator is IKernelValidator {
         (bool verified, bool callSuccess) = BLS.verifySingle(decodedSignature, publicKey, message);
 
         if (verified && callSuccess) {
-            return 0;
+            return ValidationData.wrap(0);
         }
         // TODO: check if wallet recovered
         return SIG_VALIDATION_FAILED;
+    }
+
+    function validCaller(address caller, bytes calldata data) external view returns (bool) {
+        revert("Not implemented");
     }
 }

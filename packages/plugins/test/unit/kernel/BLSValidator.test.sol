@@ -1,52 +1,69 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity 0.8.19;
 
-import "kernel/src/factory/KernelFactory.sol";
-import "kernel/src/factory/ECDSAKernelFactory.sol";
+import {KernelFactory} from "kernel/src/factory/KernelFactory.sol";
+import {Kernel, UserOperation, ECDSA} from "kernel/src/Kernel.sol";
+import {ECDSAValidator} from "kernel/src/validator/ECDSAValidator.sol";
+import {IKernelValidator} from "kernel/src/interfaces/IKernelValidator.sol";
+import {KernelStorage} from "kernel/src/abstract/KernelStorage.sol";
+import {KERNEL_VERSION, KERNEL_NAME} from "kernel/src/common/Constants.sol";
+import {ExecutionDetail} from "kernel/src/common/Structs.sol";
+import {TestExecutor} from "kernel/test/foundry/mock/TestExecutor.sol";
+import {ERC4337Utils} from "kernel/test/foundry/utils/ERC4337Utils.sol";
 
-// // test artifacts
-import "kernel/src/test/TestExecutor.sol";
-import "kernel/src/test/TestERC721.sol";
-// // test utils
-import "forge-std/Test.sol";
-import {ERC4337Utils} from "kernel/test/foundry/ERC4337Utils.sol";
-// // BLS validator
+import {IEntryPoint} from "I4337/interfaces/IEntryPoint.sol";
+import {ENTRYPOINT_0_6_ADDRESS, ENTRYPOINT_0_6_BYTECODE, CREATOR_0_6_BYTECODE, CREATOR_0_6_ADDRESS} from "I4337/artifacts/EntryPoint_0_6.sol";
+import {EntryPoint} from "account-abstraction/contracts/core/EntryPoint.sol";
+
 import {BLSValidator} from "../../../src/kernel/BLSValidator.sol";
+import "forge-std/Test.sol";
 
-using ERC4337Utils for EntryPoint;
+using ERC4337Utils for IEntryPoint;
 
 contract BLSValidatorTest is Test {
     Kernel kernel;
+    Kernel kernelImpl;
     KernelFactory factory;
-    ECDSAKernelFactory ecdsaFactory;
-    EntryPoint entryPoint;
-    ECDSAValidator validator;
+    IEntryPoint entryPoint;
+    IKernelValidator defaultValidator;
     address owner;
     uint256 ownerKey;
     address payable beneficiary;
+    address factoryOwner;
 
     function setUp() public {
         (owner, ownerKey) = makeAddrAndKey("owner");
-        entryPoint = new EntryPoint();
-        factory = new KernelFactory(entryPoint);
-
-        validator = new ECDSAValidator();
-        ecdsaFactory = new ECDSAKernelFactory(factory, validator, entryPoint);
-
-        kernel = Kernel(payable(address(ecdsaFactory.createAccount(owner, 0))));
-        vm.deal(address(kernel), 1e30);
+        (factoryOwner, ) = makeAddrAndKey("factoryOwner");
         beneficiary = payable(address(makeAddr("beneficiary")));
+        
+        vm.etch(ENTRYPOINT_0_6_ADDRESS, ENTRYPOINT_0_6_BYTECODE);
+        entryPoint = IEntryPoint(payable(ENTRYPOINT_0_6_ADDRESS));
+        vm.etch(CREATOR_0_6_ADDRESS, CREATOR_0_6_BYTECODE);
+
+        kernelImpl = new Kernel(entryPoint);
+        factory = new KernelFactory(factoryOwner, entryPoint);
+
+        vm.startPrank(factoryOwner);
+        factory.setImplementation(address(kernelImpl), true);
+        vm.stopPrank();
+
+        defaultValidator = new ECDSAValidator();
+
+        bytes memory initializeData = abi.encodeWithSelector(KernelStorage.initialize.selector, defaultValidator, abi.encodePacked(owner));
+        kernel = Kernel(payable(address(factory.createAccount(address(kernelImpl), initializeData, 0))));
+        vm.deal(address(kernel), 1e30);
     }
 
     function test_mode_2_bls() external {
         BLSValidator blsValidator = new BLSValidator();
-        // Note: With the Kernel wallet validation and execution are seperate
-        // Executors are plugins that add custom functions to Kernel and each function
-        // is tied to a validator.  In this test we will be enabling the blsValidator and
-        // tying the TextExecutor to it.
         TestExecutor testExecutor = new TestExecutor();
+
+        uint48 validAfter = uint48(0);
+        uint48 validUntil = uint48(0);
+        bytes4 executionSig = TestExecutor.doNothing.selector;
+
         UserOperation memory op =
-            entryPoint.fillUserOp(address(kernel), abi.encodeWithSelector(TestExecutor.doNothing.selector));
+            entryPoint.fillUserOp(address(kernel), abi.encodePacked(executionSig));
 
         // BLS public/private key pair and signatures created using the '@thehubbleproject/bls' library.
         // Hard coded in the test because I don't know of a way to do this in solidity.
@@ -58,52 +75,44 @@ contract BLSValidatorTest is Test {
         ];
 
         bytes memory enableData = abi.encodePacked(
-            blsPublicKey,
-            uint48(0),
-            TestExecutor.doNothing.selector,
-            uint48(0),
-            uint48(0),
-            uint32(16)
+            blsPublicKey
         );
 
         bytes32 digest = getTypedDataHash(
-            address(kernel),
-            TestExecutor.doNothing.selector,
-            0,
-            0,
+            executionSig,
+            validAfter,
+            validUntil,
             address(blsValidator),
             address(testExecutor),
             enableData
         );
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerKey, digest);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerKey, ECDSA.toEthSignedMessageHash(digest));
+        bytes memory ecdsaSignature = abi.encodePacked(r, s, v);
 
         op.signature = abi.encodePacked(
             bytes4(0x00000002),
-            uint48(0),
-            uint48(0),
+            validAfter,
+            validUntil,
             address(blsValidator),
             address(testExecutor),
             uint256(enableData.length),
             enableData,
-            uint256(65),
-            r,
-            s,
-            v
+            ecdsaSignature.length,
+            ecdsaSignature
         );
 
         // The signature is hardcoded because the userOpHash is signed outside
-        // the test is a seperate script.
+        // the test in a seperate script.
         // bytes32 hash = entryPoint.getUserOpHash(op);
-        uint256[2] memory signature = [
-            0x238bd40a43095cc868aa13820ced70e0deedc62f588a029cd9aad8a6b72a2283,
-            0x21f8022a28193d60e8f28bb4ce35086c28b1bbe5bb5bf1564bc7b63a2e544f54
-        ];
-
+        uint256[2] memory blsSignature = [
+            0x24be0af8d5ea3090ede5bfb58d9a23fa094614f8e2e0ffeb6bea0cf17640cf53,
+            0x2f12fff5b8d783745e12c641a4474917fefc03b93a30066ae8bd7c7ad6ad46ba
+        ]; 
         // First signature is the ecdsa signature for the default (ecdsa) validator. We
         // need that signature to validate the BLSValidator for the kernel account.
         // Second signature is the BLS signature for the BLSValidator. We are calling
         // the TestExecutor with the BLSValidator as the validator.
-        op.signature = bytes.concat(op.signature, abi.encodePacked(signature));
+        op.signature = bytes.concat(op.signature, abi.encodePacked(blsSignature));
         UserOperation[] memory ops = new UserOperation[](1);
         ops[0] = op;
 
@@ -128,54 +137,45 @@ contract BLSValidatorTest is Test {
         vm.stopPrank();
         revert(string(abi.encodePacked(gas - gasleft())));
     }
+
+    // computes the hash of a permit
+    function getStructHash(
+        bytes4 sig,
+        uint48 validUntil,
+        uint48 validAfter,
+        address validator,
+        address executor,
+        bytes memory enableData
+    ) internal pure returns (bytes32) {
+        return keccak256(
+            abi.encode(
+                keccak256("ValidatorApproved(bytes4 sig,uint256 validatorData,address executor,bytes enableData)"),
+                bytes4(sig),
+                uint256(uint256(uint160(validator)) | (uint256(validAfter) << 160) | (uint256(validUntil) << (48 + 160))),
+                executor,
+                keccak256(enableData)
+            )
+        );
+    }
+
+    // computes the hash of the fully encoded EIP-712 message for the domain, which can be used to recover the signer
+    function getTypedDataHash(
+        bytes4 sig,
+        uint48 validUntil,
+        uint48 validAfter,
+        address validator,
+        address executor,
+        bytes memory enableData
+    ) internal view returns (bytes32) {
+        return keccak256(
+            abi.encodePacked(
+                "\x19\x01",
+                ERC4337Utils._buildDomainSeparator(KERNEL_NAME, KERNEL_VERSION, address(kernel)),
+                ERC4337Utils.getStructHash(sig, validUntil, validAfter, validator, executor, enableData)
+            )
+        );
+    }
 }
 
-// computes the hash of a permit
-function getStructHash(
-    bytes4 sig,
-    uint48 validUntil,
-    uint48 validAfter,
-    address validator,
-    address executor,
-    bytes memory enableData
-) pure returns (bytes32) {
-    return keccak256(
-        abi.encode(
-            keccak256("ValidatorApproved(bytes4 sig,uint256 validatorData,address executor,bytes enableData)"),
-            bytes4(sig),
-            uint256(uint256(uint160(validator)) | (uint256(validAfter) << 160) | (uint256(validUntil) << (48 + 160))),
-            executor,
-            keccak256(enableData)
-        )
-    );
-}
 
-// computes the hash of the fully encoded EIP-712 message for the domain, which can be used to recover the signer
-function getTypedDataHash(
-    address sender,
-    bytes4 sig,
-    uint48 validUntil,
-    uint48 validAfter,
-    address validator,
-    address executor,
-    bytes memory enableData
-) view returns (bytes32) {
-    return keccak256(
-        abi.encodePacked(
-            "\x19\x01",
-            _buildDomainSeparator("Kernel", "0.0.2", sender),
-            getStructHash(sig, validUntil, validAfter, validator, executor, enableData)
-        )
-    );
-}
 
-function _buildDomainSeparator(string memory name, string memory version, address verifyingContract)
-    view
-    returns (bytes32)
-{
-    bytes32 hashedName = keccak256(bytes(name));
-    bytes32 hashedVersion = keccak256(bytes(version));
-    bytes32 typeHash = keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
-
-    return keccak256(abi.encode(typeHash, hashedName, hashedVersion, block.chainid, address(verifyingContract)));
-}

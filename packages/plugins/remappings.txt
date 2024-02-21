@@ -6,3 +6,5 @@ account-abstraction/=lib/account-abstraction/
 safe-contracts/=lib/safe-contracts/
 wax/primitives/=lib/primitives/
 kernel/=lib/kernel/
+I4337/=lib/kernel/lib/I4337/src/
+solady/=lib/kernel/lib/solady/src/

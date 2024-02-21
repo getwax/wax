@@ -9,7 +9,7 @@ import {SafeProxy} from "safe-contracts/contracts/proxies/SafeProxy.sol";
 import {EntryPoint} from "account-abstraction/contracts/core/EntryPoint.sol";
 
 import {SafeCompressionPlugin} from "./SafeCompressionPlugin.sol";
-import {IDecompressor} from "./compression/decompressors/IDecompressor.sol";
+import {IDecompressor} from "../compression/decompressors/IDecompressor.sol";
 
 contract SafeCompressionFactory {
     function create(
