@@ -1,4 +1,4 @@
-import { ethers, getBytes, HDNodeWallet, NonceManager, Signer } from "ethers";
+import { ethers, getBytes, NonceManager, Signer } from "ethers";
 import { AddressZero } from "@ethersproject/constants";
 import { UserOperationStruct } from "@account-abstraction/contracts";
 import { getUserOpHash } from "@account-abstraction/utils";

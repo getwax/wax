@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import { JsonRpcProvider, NonceManager, Signer, ethers } from "ethers";
-import SafeSingletonFactory from "../test/e2e/utils/SafeSingletonFactory";
+import DeterministicDeployer from "../test/e2e/utils/DeterministicDeployer";
 import { createAndSendUserOpWithEcdsaSig } from "../test/e2e/utils/createUserOp";
 import { executeContractCallWithSigners } from "../test/e2e/utils/execution";
 import receiptOf from "../test/e2e/utils/receiptOf";
@@ -26,7 +26,7 @@ async function setupRecoveryForRelayer() {
   let entryPointAddress: string;
   let safeSingleton: Safe;
   let mockDkimRegistry: MockDKIMRegsitry;
-  let ssf: SafeSingletonFactory;
+  let deployer: DeterministicDeployer;
 
   let safeProxyAddress: string;
   let recoveryPlugin: SafeZkEmailRecoveryPlugin;
@@ -38,13 +38,13 @@ async function setupRecoveryForRelayer() {
     admin,
     otherAccount,
     entryPointAddress,
-    ssf,
+    deployer,
     safeSingleton,
   } = setup);
 
   const [, signer, otherSigner, otherOtherSigner] = getSigners();
 
-  const safeECDSAFactory = await ssf.connectOrDeploy(
+  const safeECDSAFactory = await deployer.connectOrDeploy(
     SafeECDSAFactory__factory,
     [],
   );
@@ -69,21 +69,24 @@ async function setupRecoveryForRelayer() {
     }),
   );
 
-  const mockGroth16Verifier = await ssf.connectOrDeploy(
+  const mockGroth16Verifier = await deployer.connectOrDeploy(
     MockGroth16Verifier__factory,
     [],
   );
 
-  const defaultDkimRegistry = await ssf.connectOrDeploy(
+  const defaultDkimRegistry = await deployer.connectOrDeploy(
     MockDKIMRegsitry__factory,
     [],
   );
   const mockGroth16VerifierAddress = await mockGroth16Verifier.getAddress();
   const defaultDkimRegistryAddress = await defaultDkimRegistry.getAddress();
 
-  mockDkimRegistry = await ssf.connectOrDeploy(MockDKIMRegsitry__factory, []);
+  mockDkimRegistry = await deployer.connectOrDeploy(
+    MockDKIMRegsitry__factory,
+    [],
+  );
 
-  recoveryPlugin = await ssf.connectOrDeploy(
+  recoveryPlugin = await deployer.connectOrDeploy(
     SafeZkEmailRecoveryPlugin__factory,
     [mockGroth16VerifierAddress, defaultDkimRegistryAddress],
   );
