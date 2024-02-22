@@ -16,4 +16,3 @@ import {SafeL2} from "safe-contracts/contracts/SafeL2.sol";
 import {Safe} from "safe-contracts/contracts/Safe.sol";
 import {EntryPoint} from "account-abstraction/contracts/core/EntryPoint.sol";
 import {SimpleAccountFactory} from "account-abstraction/contracts/samples/SimpleAccountFactory.sol";
-import {WebAuthn} from "wax/primitives/src/WebAuthn.sol";

@@ -4,7 +4,7 @@ pragma solidity >=0.8.0 <0.9.0;
 import {HandlerContext} from "safe-contracts/contracts/handler/HandlerContext.sol";
 import {BaseAccount} from "account-abstraction/contracts/core/BaseAccount.sol";
 import {IEntryPoint, UserOperation} from "account-abstraction/contracts/interfaces/IEntryPoint.sol";
-import {WebAuthn} from "wax/primitives/src/WebAuthn.sol";
+import {WebAuthn} from "../primitives/WebAuthn.sol";
 
 import {Safe4337Base} from "./utils/Safe4337Base.sol";
 
