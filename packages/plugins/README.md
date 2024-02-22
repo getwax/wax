@@ -1,4 +1,4 @@
-# Safe plugins
+# Plugins
 
 Please note, these plugins are in a pre-alpha state and are not ready for production use. In their current state, the plugins are meant for testing and experimentation.
 
@@ -15,7 +15,7 @@ Link `zkp` directory for ZKP based plugins. Make sure you have [circom installed
 cd ../zkp
 yarn
 yarn link
-cd ../safe
+cd ../plugins
 yarn link '@getwax/circuits'
 ```
 

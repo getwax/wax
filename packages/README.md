@@ -1,16 +1,20 @@
-# Smart Account Integrations
+# Packages
+
+## Barebones
+
+Lightweight Smart Account
 
 ## Compression
 
 Contracts implementing compression for ERC-4337 accounts
 
-## Kernel
+## Demos
 
-Plugins for [Kernel](https://github.com/zerodevapp/kernel)
+Demos showcasing WAX components
 
-## Safe
+## Plugins
 
-Plugins for [Safe](https://github.com/safe-global/safe-contracts/)
+Plugins for Smart Accounts
 
 ## SDK
 
@@ -18,4 +22,4 @@ Plugins for [Safe](https://github.com/safe-global/safe-contracts/)
 
 ## ZKP
 
-Circuits related to ERC-4337 accounts
+Circuits related to ERC-4337 accounts and a typescript relayer
