@@ -31,3 +31,6 @@
 [submodule "packages/plugins/lib/openzeppelin-contracts-upgradeable"]
 	path = packages/plugins/lib/openzeppelin-contracts-upgradeable
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable
+[submodule "packages/zkp/relayer/contracts/lib/clave-contracts"]
+	path = packages/zkp/relayer/contracts/lib/clave-contracts
+	url = https://github.com/getclave/clave-contracts
