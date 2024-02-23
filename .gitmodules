@@ -28,3 +28,6 @@
 [submodule "packages/plugins/lib/kernel"]
 	path = packages/plugins/lib/kernel
 	url = https://github.com/zerodevapp/kernel
+[submodule "packages/plugins/lib/clave-contracts"]
+	path = packages/plugins/lib/clave-contracts
+	url = https://github.com/getclave/clave-contracts
