@@ -1,36 +1,30 @@
 [submodule "compression/lib/forge-std"]
-	path = account-integrations/compression/lib/forge-std
+	path = packages/compression/lib/forge-std
 	url = https://github.com/foundry-rs/forge-std
 [submodule "compression/lib/openzeppelin-contracts"]
-	path = account-integrations/compression/lib/openzeppelin-contracts
+	path = packages/compression/lib/openzeppelin-contracts
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts
-[submodule "account-integrations/safe/lib/forge-std"]
-	path = account-integrations/safe/lib/forge-std
+[submodule "packages/plugins/lib/forge-std"]
+	path = packages/plugins/lib/forge-std
 	url = https://github.com/foundry-rs/forge-std
-[submodule "account-integrations/safe/lib/openzeppelin-contracts"]
-	path = account-integrations/safe/lib/openzeppelin-contracts
+[submodule "packages/plugins/lib/openzeppelin-contracts"]
+	path = packages/plugins/lib/openzeppelin-contracts
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts
-[submodule "account-integrations/safe/lib/safe-contracts"]
-	path = account-integrations/safe/lib/safe-contracts
+[submodule "packages/plugins/lib/safe-contracts"]
+	path = packages/plugins/lib/safe-contracts
 	url = https://github.com/safe-global/safe-contracts
-[submodule "account-integrations/safe/lib/account-abstraction"]
-	path = account-integrations/safe/lib/account-abstraction
+[submodule "packages/plugins/lib/account-abstraction"]
+	path = packages/plugins/lib/account-abstraction
 	url = https://github.com/eth-infinitism/account-abstraction
-[submodule "account-integrations/kernel/lib/forge-std"]
-	path = account-integrations/kernel/lib/forge-std
-	url = https://github.com/foundry-rs/forge-std
-[submodule "account-integrations/kernel/lib/kernel"]
-	path = account-integrations/kernel/lib/kernel
-	url = https://github.com/zerodevapp/kernel
-[submodule "primitives/lib/forge-std"]
-	path = primitives/lib/forge-std
-	url = https://github.com/foundry-rs/forge-std
-[submodule "account-integrations/zkp/lib/circom"]
-	path = account-integrations/zkp/lib/circom
+[submodule "packages/zkp/lib/circom"]
+	path = packages/zkp/lib/circom
 	url = https://github.com/iden3/circom.git
-[submodule "account-integrations/barebones/lib/openzeppelin-contracts"]
-	path = account-integrations/barebones/lib/openzeppelin-contracts
+[submodule "packages/barebones/lib/openzeppelin-contracts"]
+	path = packages/barebones/lib/openzeppelin-contracts
 	url = https://github.com/openzeppelin/openzeppelin-contracts
-[submodule "account-integrations/barebones/lib/forge-std"]
-	path = account-integrations/barebones/lib/forge-std
+[submodule "packages/barebones/lib/forge-std"]
+	path = packages/barebones/lib/forge-std
 	url = https://github.com/foundry-rs/forge-std
+[submodule "packages/plugins/lib/kernel"]
+	path = packages/plugins/lib/kernel
+	url = https://github.com/zerodevapp/kernel

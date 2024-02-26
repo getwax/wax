@@ -1,4 +1,4 @@
-name: account-integrations/compression
+name: packages/compression
 
 on:
   push:
@@ -6,11 +6,11 @@ on:
       - main
   pull_request:
     paths:
-      - account-integrations/compression/**
+      - packages/compression/**
 
 defaults:
   run:
-    working-directory: ./account-integrations/compression
+    working-directory: ./packages/compression
 
 jobs:
   check:

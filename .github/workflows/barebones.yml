@@ -1,4 +1,4 @@
-name: account-integrations/barebones
+name: packages/barebones
 
 on:
   push:
@@ -6,11 +6,11 @@ on:
       - main
   pull_request:
     paths:
-      - account-integrations/barebones/**
+      - packages/barebones/**
 
 defaults:
   run:
-    working-directory: ./account-integrations/barebones
+    working-directory: ./packages/barebones
 
 env:
   FOUNDRY_PROFILE: ci
