@@ -65,18 +65,35 @@ export default class EmailService {
             const { accountAddress, newOwner, recoveryPluginAddress } =
                 await this.extractSubjectValues(emails[i]);
 
-            if (!accountAddress || !newOwner || !recoveryPluginAddress) {
+            if (!accountAddress) {
                 this.emailTable.update({
                     ...emails[i],
                     status: EmailStatus.FAILED,
                 });
-                console.log("Invalid email subject");
+                console.log("Invalid or no account address in email subject");
+                continue;
+            }
+            if (!newOwner) {
+                this.emailTable.update({
+                    ...emails[i],
+                    status: EmailStatus.FAILED,
+                });
+                console.log("Invalid or no new owner in email subject");
+                continue;
+            }
+            if (!recoveryPluginAddress) {
+                this.emailTable.update({
+                    ...emails[i],
+                    status: EmailStatus.FAILED,
+                });
+                console.log("Invalid or no plugin address in email subject");
                 continue;
             }
 
             const emailDomain = "google.com";
             const { a, b, c } = await this.generateProof(emails[i]);
 
+            console.log("emails[i]:", emails[i]);
             const initiateRecoveryResult = await this.initiateRecovery(
                 emails[i],
                 accountAddress,
@@ -146,15 +163,10 @@ export default class EmailService {
             );
 
         if ("revertReason" in initiateRecoveryResult) {
-            if (
-                initiateRecoveryResult.revertReason ===
-                "RECOVERY_ALREADY_INITIATED"
-            ) {
-                this.emailTable.update({
-                    ...email,
-                    status: EmailStatus.FAILED,
-                });
-            }
+            this.emailTable.update({
+                ...email,
+                status: EmailStatus.FAILED,
+            });
 
             console.error(
                 `Could not initiate recovery. ${initiateRecoveryResult.revertReason}`

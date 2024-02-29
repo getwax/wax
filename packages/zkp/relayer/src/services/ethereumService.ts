@@ -177,7 +177,7 @@ export default class EthereumService {
                 functionName: "startRecovery",
                 args: [recoveryData, guardianData],
                 account: account,
-                chain: config.viem.networks.hardhat.chain,
+                chain: config.viem.networks.zkSyncEraInMemory.chain,
                 nonce: nonce,
             });
 
@@ -220,7 +220,7 @@ export default class EthereumService {
             newOwner: newOwnerPublicKey,
             recoveryPlugin: recoveryPluginAddress,
             // executeAfter: timelockExpiry,
-            executeAfter: blockTimestamp,
+            executeAfter: blockTimestamp + 1n,
             blockTimestamp,
         };
     }

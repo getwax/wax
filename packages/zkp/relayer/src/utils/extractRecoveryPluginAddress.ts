@@ -5,7 +5,7 @@ export default function extractRecoveryPluginAddress(
 ): Address | null {
     const subjectWords = subject.split(" ");
 
-    const index = subjectWords.indexOf("account");
+    const index = subjectWords.indexOf("plugin");
     if (index === -1) {
         return null;
     }

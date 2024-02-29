@@ -3,7 +3,7 @@ import { isHex } from "viem";
 export default function extractNewOwner(subject: string): `0x${string}` | null {
     const subjectWords = subject.split(" ");
 
-    const index = subjectWords.indexOf("plugin");
+    const index = subjectWords.indexOf("owner");
     if (index === -1) {
         return null;
     }

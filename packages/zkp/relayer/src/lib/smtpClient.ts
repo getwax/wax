@@ -116,7 +116,7 @@ export default class SmtpClient {
                 result = "the proof is invalid.";
                 break;
             default:
-                result = "an unknown error as occured.";
+                result = "an unknown error has occured.";
         }
 
         return errorStringPrefix + result;

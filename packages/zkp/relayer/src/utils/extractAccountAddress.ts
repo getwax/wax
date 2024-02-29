@@ -3,7 +3,7 @@ import { Address, isAddress } from "viem";
 export default function extractAccountAddress(subject: string): Address | null {
     const subjectWords = subject.split(" ");
 
-    const index = subjectWords.indexOf("owner");
+    const index = subjectWords.indexOf("account");
     if (index === -1) {
         return null;
     }
