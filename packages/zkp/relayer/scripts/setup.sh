@@ -3,7 +3,7 @@
 CONFIG_SOURCE="./src/config/config.template.ts"
 CONFIG_DESTINATION="./src/config/config.ts"
 
-ARTIFACT_SOURCE="../../safe/out/SafeZkEmailRecoveryPlugin.sol/SafeZkEmailRecoveryPlugin.json"
+ARTIFACT_SOURCE="../../plugins/out/SafeZkEmailRecoveryPlugin.sol/SafeZkEmailRecoveryPlugin.json"
 ARTIFACT_DESTINATION="./src/config/SafeZkEmailRecoveryPlugin.json"
 
 if [ ! -f $CONFIG_DESTINATION ]; then

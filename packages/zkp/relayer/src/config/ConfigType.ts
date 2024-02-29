@@ -24,8 +24,18 @@ type ConfigType = {
         };
     };
     viem: {
-        chain: Chain;
-        mnenmonic: string;
+        networks: {
+            hardhat: {
+                chain: Chain;
+                mnenmonic: string;
+                path: `m/44'/60'/${string}` | undefined;
+            };
+            zkSyncEraInMemory: {
+                chain: Chain;
+                mnenmonic: string;
+                path: `m/44'/60'/${string}` | undefined;
+            };
+        };
     };
 };
 

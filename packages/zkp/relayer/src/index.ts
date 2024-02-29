@@ -15,10 +15,13 @@ import SmtpClient from "./lib/smtpClient";
 const app = express();
 
 const main = async () => {
-    const account = mnemonicToAccount(config.viem.mnenmonic, {
-        // hardhat account #3
-        path: "m/44'/60'/0'/0/3",
-    });
+    const network = getNetwork(process.env.NETWORK);
+
+    const account = network.path
+        ? mnemonicToAccount(network.mnenmonic, {
+              path: network.path,
+          })
+        : mnemonicToAccount(network.mnenmonic);
 
     const imapClient = new ImapClient(config.imapClient);
 
@@ -36,12 +39,12 @@ const main = async () => {
 
     const smtpClient = new SmtpClient(transporter, config.smtpClient.auth.user);
     const ethPublicClient = createPublicClient({
-        chain: config.viem.chain,
+        chain: network.chain,
         transport: http(),
     });
     const ethWalletClient = createWalletClient({
         account: account,
-        chain: config.viem.chain,
+        chain: network.chain,
         transport: http(),
     });
 
@@ -79,6 +82,17 @@ const main = async () => {
             `Health check running at http://localhost:${config.healthCheckPort}`
         );
     });
+};
+
+const getNetwork = (network: string | undefined) => {
+    switch (network) {
+        case "hardhat":
+            return config.viem.networks.hardhat;
+        case "zksync":
+            return config.viem.networks.zkSyncEraInMemory;
+        default:
+            return config.viem.networks.hardhat;
+    }
 };
 
 main().catch((error) => {

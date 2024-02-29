@@ -4,6 +4,9 @@ import ImapClient from "../lib/imapClient";
 import SmtpClient from "../lib/smtpClient";
 import EmailTable, { Email, EmailStatus } from "../tables/emailTable";
 import EthereumService, { InitiateRecoveryResult } from "./ethereumService";
+import extractAccountAddress from "../utils/extractAccountAddress";
+import extractNewOwner from "../utils/extractNewOwner";
+import extractRecoveryPluginAddress from "../utils/extractRecoveryPluginAddress";
 
 export default class EmailService {
     private running = false;
@@ -58,20 +61,21 @@ export default class EmailService {
         const emails = this.emailTable.findEligible();
 
         for (let i = 0; i < emails.length; i++) {
-            const {
-                safeProxyAddress,
-                newOwnerAddress,
-                recoveryPluginAddress,
-                emailDomain,
-                a,
-                b,
-                c,
-            } = await this.generateRecoveryArgs(emails[i]);
+            const { accountAddress, newOwner, recoveryPluginAddress } =
+                await this.extractSubjectValues(emails[i]);
+
+            if (!accountAddress || !newOwner || !recoveryPluginAddress) {
+                // TODO: mark email as having invalid subject
+                continue;
+            }
+
+            const emailDomain = "google.com";
+            const { a, b, c } = await this.generateProof(emails[i]);
 
             const initiateRecoveryResult = await this.initiateRecovery(
                 emails[i],
-                safeProxyAddress,
-                newOwnerAddress,
+                accountAddress,
+                newOwner,
                 recoveryPluginAddress,
                 emailDomain,
                 a,
@@ -83,17 +87,23 @@ export default class EmailService {
         }
     }
 
+    private async extractSubjectValues(email: Email) {
+        const recoveryPluginAddress = extractRecoveryPluginAddress(
+            email.subject
+        );
+        const newOwner = extractNewOwner(email.subject);
+        const accountAddress = extractAccountAddress(email.subject);
+
+        return {
+            accountAddress,
+            newOwner,
+            recoveryPluginAddress,
+        };
+    }
+
     // TODO: (merge-ok) - mocking this stuff for now to come back to in future PR
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    private async generateRecoveryArgs(emails: Email) {
-        const safeProxyAddress: Address =
-            "0x05d1EE1Ac4151918b9A222CD6e68103aC34b4bcD";
-        const newOwnerAddress: Address =
-            "0x90F79bf6EB2c4f870365E785982E1f101E93b906";
-        const recoveryPluginAddress: Address =
-            "0x68B15952EF368a6b5482Abdd7AE6d6CfDa31c752";
-        const emailDomain = "google.com";
-
+    private async generateProof(email: Email) {
         const a: [bigint, bigint] = [BigInt(0), BigInt(0)];
         const b: [[bigint, bigint], [bigint, bigint]] = [
             [BigInt(0), BigInt(0)],
@@ -102,10 +112,6 @@ export default class EmailService {
         const c: [bigint, bigint] = [BigInt(0), BigInt(0)];
 
         return {
-            safeProxyAddress,
-            newOwnerAddress,
-            recoveryPluginAddress,
-            emailDomain,
             a,
             b,
             c,
@@ -114,18 +120,19 @@ export default class EmailService {
 
     private async initiateRecovery(
         email: Email,
-        safeProxyAddress: Address,
-        newOwnerAddress: Address,
+        accountAddress: Address,
+        newOwner: string,
         recoveryPluginAddress: Address,
         emailDomain: string,
         a: [bigint, bigint],
         b: [[bigint, bigint], [bigint, bigint]],
         c: [bigint, bigint]
     ): Promise<InitiateRecoveryResult> {
+        // FIXME: gracefully handle correct function call
         const initiateRecoveryResult =
-            await this.ethereumService.initiateRecovery(
-                safeProxyAddress,
-                newOwnerAddress,
+            await this.ethereumService.initiateRecoveryClave(
+                accountAddress,
+                newOwner,
                 recoveryPluginAddress,
                 emailDomain,
                 a,

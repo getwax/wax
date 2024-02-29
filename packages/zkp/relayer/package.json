@@ -7,7 +7,8 @@
         "build": "tsc",
         "start": "node dist/index.js",
         "setup": "yarn && scripts/setup.sh",
-        "dev": "nodemon src/index.ts",
+        "dev:hardhat": "NETWORK=hardhat nodemon src/index.ts",
+        "dev:zksync": "NETWORK=zksync nodemon src/index.ts",
         "lint": "eslint . --ext ts --fix && prettier . --write"
     },
     "dependencies": {

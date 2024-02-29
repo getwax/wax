@@ -24,7 +24,7 @@ export default class SmtpClient {
                 to,
                 initiateRecoveryResult.newOwner,
                 initiateRecoveryResult.recoveryPlugin,
-                initiateRecoveryResult.safeAddress,
+                initiateRecoveryResult.accountAddress,
                 initiateRecoveryResult.revertReason
             );
         } else {
@@ -32,7 +32,7 @@ export default class SmtpClient {
                 to,
                 initiateRecoveryResult.newOwner,
                 initiateRecoveryResult.recoveryPlugin,
-                initiateRecoveryResult.safeAddress,
+                initiateRecoveryResult.accountAddress,
                 initiateRecoveryResult.executeAfter,
                 initiateRecoveryResult.blockTimestamp
             );
@@ -49,7 +49,7 @@ export default class SmtpClient {
         to: string,
         newOwner: string,
         pluginAddress: string,
-        safeAddress: string,
+        accountAddress: string,
         executeAfter: bigint,
         blockTimestamp: bigint
     ): Message {
@@ -60,8 +60,8 @@ export default class SmtpClient {
         const subject = "Recovery initiated";
         const text =
             `Recovery was initiated successfully. A new owner has been ` +
-            `set to "${newOwner}" for the plugin "${pluginAddress}", on Safe ` +
-            `"${safeAddress}". This is a pending request so recovery can only ` +
+            `set to "${newOwner}" for the plugin "${pluginAddress}", on account ` +
+            `"${accountAddress}". This is a pending request so recovery can only ` +
             `be executed after a pre-determined delay. There is a delay of ${delay}` +
             ` - you can complete recovery after ${executeAfterUtcDate}.`;
 
@@ -77,15 +77,15 @@ export default class SmtpClient {
         to: string,
         newOwner: string,
         pluginAddress: string,
-        safeAddress: string,
+        accountAddress: string,
         revertReason: string
     ): Message {
         const formattedRevertReason = this.formatRevertReason(revertReason);
         const subject = "Failed to initiate recovery";
         const text =
             `Failed to initiate recovery. The owner on plugin "${pluginAddress}" ` +
-            `could not be rotated to new owner "${newOwner}", on Safe ` +
-            `"${safeAddress}". ${formattedRevertReason}`;
+            `could not be rotated to new owner "${newOwner}", on account ` +
+            `"${accountAddress}". ${formattedRevertReason}`;
 
         return {
             from: this.relayerEmail,

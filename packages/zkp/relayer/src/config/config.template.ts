@@ -33,9 +33,33 @@ const config: ConfigType = {
         },
     },
     viem: {
-        chain: hardhat,
-        mnenmonic:
-            "test test test test test test test test test test test junk",
+        networks: {
+            hardhat: {
+                chain: hardhat,
+                mnenmonic:
+                    "test test test test test test test test test test test junk",
+                path: "m/44'/60'/0'/0/3",
+            },
+            zkSyncEraInMemory: {
+                chain: {
+                    id: 260,
+                    name: "zk sync era in-memory node",
+                    nativeCurrency: {
+                        decimals: 18,
+                        name: "Ether",
+                        symbol: "ETH",
+                    },
+                    rpcUrls: {
+                        default: {
+                            http: ["http://127.0.0.1:8011"],
+                        },
+                    },
+                },
+                mnenmonic:
+                    "crumble clutch mammal lecture lazy broken nominee visit gentle gather gym erupt",
+                path: undefined,
+            },
+        },
     },
 };
 
