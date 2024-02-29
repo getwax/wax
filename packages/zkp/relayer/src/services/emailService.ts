@@ -1,4 +1,4 @@
-import { EventEmitter } from "stream";
+import { EventEmitter } from "node:events";
 import { Address } from "viem";
 import ImapClient from "../lib/imapClient";
 import SmtpClient from "../lib/smtpClient";
@@ -43,9 +43,10 @@ export default class EmailService {
             if (emails.length > 0) {
                 for (const email of emails) {
                     this.emailTable.insert({
-                        status: EmailStatus.PENDING,
+                        headers: email.headers,
                         subject: email.subject,
                         sender: email.sender,
+                        status: EmailStatus.PENDING,
                     });
                 }
                 this.eventEmitter.emit("email(s) saved");
@@ -65,7 +66,11 @@ export default class EmailService {
                 await this.extractSubjectValues(emails[i]);
 
             if (!accountAddress || !newOwner || !recoveryPluginAddress) {
-                // TODO: mark email as having invalid subject
+                this.emailTable.update({
+                    ...emails[i],
+                    status: EmailStatus.FAILED,
+                });
+                console.log("Invalid email subject");
                 continue;
             }
 
@@ -147,7 +152,7 @@ export default class EmailService {
             ) {
                 this.emailTable.update({
                     ...email,
-                    status: EmailStatus.PROCESSED,
+                    status: EmailStatus.FAILED,
                 });
             }
 

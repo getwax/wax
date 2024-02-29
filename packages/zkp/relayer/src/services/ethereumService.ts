@@ -7,7 +7,7 @@ import {
     keccak256,
     encodeAbiParameters,
 } from "viem";
-import { mnemonicToAccount, privateKeyToAccount } from "viem/accounts";
+import { mnemonicToAccount } from "viem/accounts";
 import { hardhat } from "viem/chains";
 import safeZkEmailRecoveryPluginArtifact from "../config/SafeZkEmailRecoveryPlugin.json";
 import claveEmailRecoveryModuleArtifact from "../config/EmailRecoveryModule.json";
@@ -124,8 +124,8 @@ export default class EthereumService {
         b: [[bigint, bigint], [bigint, bigint]],
         c: [bigint, bigint]
     ): Promise<InitiateRecoveryResult> {
-        const account = privateKeyToAccount(
-            "0x71781d3a358e7a65150e894264ccc594993fbc0ea12d69508a340bc1d4f5bfbc"
+        const account = mnemonicToAccount(
+            config.viem.networks.zkSyncEraInMemory.mnenmonic
         );
         const nonce = await this.publicClient.getTransactionCount({
             address: account.address,
@@ -220,7 +220,7 @@ export default class EthereumService {
             newOwner: newOwnerPublicKey,
             recoveryPlugin: recoveryPluginAddress,
             // executeAfter: timelockExpiry,
-            executeAfter: 100n,
+            executeAfter: blockTimestamp,
             blockTimestamp,
         };
     }

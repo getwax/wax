@@ -1,10 +1,10 @@
 import { ImapFlow, ImapFlowOptions } from "imapflow";
 
 type EmailResponse = {
+    uid: number;
     headers: Buffer;
     sender: string;
     subject: string;
-    uid: number;
 };
 
 class ImapClient {
