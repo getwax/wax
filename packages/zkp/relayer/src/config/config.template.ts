@@ -7,7 +7,7 @@
 // If config.ts doesn't yet exist, it will be created as a copy of the template
 // during `yarn setup`.
 
-import { hardhat } from "viem/chains";
+import { hardhat, zkSyncSepoliaTestnet } from "viem/chains";
 import ConfigType from "./ConfigType";
 
 const config: ConfigType = {
@@ -39,6 +39,11 @@ const config: ConfigType = {
                 mnenmonic:
                     "test test test test test test test test test test test junk",
                 path: "m/44'/60'/0'/0/3",
+            },
+            zkSyncSepoliaTestnet: {
+                chain: zkSyncSepoliaTestnet,
+                mnenmonic: "",
+                path: undefined,
             },
             zkSyncEraInMemory: {
                 chain: {

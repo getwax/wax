@@ -30,6 +30,11 @@ type ConfigType = {
                 mnenmonic: string;
                 path: `m/44'/60'/${string}` | undefined;
             };
+            zkSyncSepoliaTestnet: {
+                chain: Chain;
+                mnenmonic: string;
+                path: `m/44'/60'/${string}` | undefined;
+            };
             zkSyncEraInMemory: {
                 chain: Chain;
                 mnenmonic: string;

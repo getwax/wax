@@ -3,9 +3,9 @@ import {
     TransactionReceipt,
     PublicClient,
     WalletClient,
-    decodeEventLog,
     keccak256,
     encodeAbiParameters,
+    toHex,
 } from "viem";
 import { mnemonicToAccount } from "viem/accounts";
 import { hardhat } from "viem/chains";
@@ -13,6 +13,7 @@ import safeZkEmailRecoveryPluginArtifact from "../config/SafeZkEmailRecoveryPlug
 import claveEmailRecoveryModuleArtifact from "../config/EmailRecoveryModule.json";
 import config from "../config/config";
 import parseViemError from "../utils/parseViemError";
+import decodeEventFromReceipt from "../utils/decodeLogs";
 
 type InitiateRecoverySuccess = {
     accountAddress: Address;
@@ -87,18 +88,21 @@ export default class EthereumService {
             };
         }
 
-        // TODO: better error handling here
-        const log = decodeEventLog({
-            abi: safeZkEmailRecoveryPluginArtifact.abi,
-            data: receipt.logs[0].data,
-            topics: receipt.logs[0].topics,
-        });
+        const eventSignature = keccak256(
+            toHex("RecoveryInitiated(address,address,uint256)")
+        );
+        const recoveryInitiatedLog = decodeEventFromReceipt(
+            receipt,
+            recoveryPluginAddress,
+            safeZkEmailRecoveryPluginArtifact.abi,
+            eventSignature
+        );
 
         // TODO: (merge-ok) fix typing - https://github.com/getwax/wax/issues/205
         // viem docs suggest type should be inferred so shouldn't need
         // to do this - https://viem.sh/docs/contract/decodeEventLog#return-value.
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const args = log.args as any;
+        const args = recoveryInitiatedLog.args as any;
         const executeAfter = args.executeAfter as bigint;
 
         const block = await this.publicClient.getBlock({
@@ -196,19 +200,22 @@ export default class EthereumService {
             };
         }
 
-        // TODO: better error handling here + also find correct log
-        // const log = decodeEventLog({
-        //     abi: claveEmailRecoveryModuleArtifact.abi,
-        //     data: receipt.logs[0].data,
-        //     topics: receipt.logs[0].topics,
-        // });
+        const eventSignature = keccak256(
+            toHex("RecoveryStarted(address,bytes,uint256)")
+        );
+        const recoveryStartedLog = decodeEventFromReceipt(
+            receipt,
+            recoveryPluginAddress,
+            claveEmailRecoveryModuleArtifact.abi,
+            eventSignature
+        );
 
         // TODO: (merge-ok) fix typing - https://github.com/getwax/wax/issues/205
         // viem docs suggest type should be inferred so shouldn't need
         // to do this - https://viem.sh/docs/contract/decodeEventLog#return-value.
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        // const args = log.args as any;
-        // const timelockExpiry = args.timelockExpiry as bigint;
+        const args = recoveryStartedLog.args as any;
+        const timelockExpiry = args.timelockExpiry as bigint;
 
         const block = await this.publicClient.getBlock({
             blockHash: receipt.blockHash,
@@ -219,8 +226,7 @@ export default class EthereumService {
             accountAddress: accountAddress,
             newOwner: newOwnerPublicKey,
             recoveryPlugin: recoveryPluginAddress,
-            // executeAfter: timelockExpiry,
-            executeAfter: blockTimestamp + 1n,
+            executeAfter: timelockExpiry,
             blockTimestamp,
         };
     }

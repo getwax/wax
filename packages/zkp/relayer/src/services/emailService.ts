@@ -93,7 +93,6 @@ export default class EmailService {
             const emailDomain = "google.com";
             const { a, b, c } = await this.generateProof(emails[i]);
 
-            console.log("emails[i]:", emails[i]);
             const initiateRecoveryResult = await this.initiateRecovery(
                 emails[i],
                 accountAddress,

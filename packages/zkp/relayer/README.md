@@ -4,7 +4,7 @@
 
 -   [x] Email can be sent to server (POP3 or IMAP)
 -   [ ] Relayer can generate proof/query service that can generare proof
--   [ ] Generated proof can be sent to the onchain verifier and recovery can be executed
+-   [x] Proof can be sent to the onchain verifier and recovery can be executed
 -   [x] Confirmation email is sent (SMTP)
 
 ## Getting started
@@ -16,5 +16,5 @@ yarn setup
 
 ```bash
 # start the development server
-yarn dev
+yarn dev:hardhat
 ```
