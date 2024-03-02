@@ -1,0 +1,102 @@
+Return-Path: <jacque006@gmail.com>
+X-Original-To: jake@jacque006.com
+Delivered-To: jake@jacque006.com
+Authentication-Results: mail.protonmail.ch; dkim=pass (Good 2048 bit
+    rsa-sha256 signature) header.d=gmail.com header.a=rsa-sha256
+Authentication-Results: mail.protonmail.ch; dmarc=pass (p=none dis=none)
+ header.from=gmail.com
+Authentication-Results: mail.protonmail.ch; spf=pass smtp.mailfrom=gmail.com
+Authentication-Results: mail.protonmail.ch; arc=none smtp.remote-ip=209.85.128.174
+Authentication-Results: mail.protonmail.ch; dkim=pass (2048-bit key) header.d=gmail.com
+ header.i=@gmail.com header.b="a+nmgGhN"
+Received: from mail-yw1-f174.google.com (mail-yw1-f174.google.com [209.85.128.174])
+ (using TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
+  key-exchange X25519 server-signature RSA-PSS (4096 bits) server-digest SHA256) (No
+ client certificate requested) by mailin026.protonmail.ch (Postfix) with ESMTPS id
+ 4TZW973cFhz9vNPc for <jake@jacque006.com>; Wed, 14 Feb 2024 08:10:51 +0000 (UTC)
+Received: by mail-yw1-f174.google.com with SMTP id 00721157ae682-60777552d72so20682927b3.1
+        for <jake@jacque006.com>; Wed, 14 Feb 2024 00:10:51 -0800 (PST)
+Dkim-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=gmail.com; s=20230601; t=1707898250; x=1708503050; darn=jacque006.com;
+        h=to:subject:message-id:date:from:mime-version:from:to:cc:subject
+         :date:message-id:reply-to;
+        bh=ZF+iG8ai30e0fQ3GNIX4CTTLMy/lfh7E1FPgIoeKDHU=;
+        b=a+nmgGhNXkCl9JdktN6qyxw10jXe8kea00sEaA1MpKec8NpA/ZftlMK0+x81k0MgSN
+         xm1EM2yX4XqUtHEtuT6lzMigSWf7M4AINl7HhwXUxcc8qMSW9ST2Me1GZNCLDmq+MF1I
+         0qzrhELjHcgmKq+AFayuW/nnQjRAlL2ei07zoD4ygEUrnE+a1Yo2hwu/QX7aesTrkmHN
+         VAvfIGn763WHjLJyVpQW/66scxl5wg2mD6ProTkejG9iJS/WjP9RtPCY/UemE8Fbj7UK
+         jqIXfHfw4Wgbieutw9y5Y9w9m64l4Me7XUZFWgI7jaBf9w5yXYXPTqDpyOdBr+HPu6cO
+         JieA==
+X-Google-Dkim-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20230601; t=1707898250; x=1708503050;
+        h=to:subject:message-id:date:from:mime-version:x-gm-message-state
+         :from:to:cc:subject:date:message-id:reply-to;
+        bh=ZF+iG8ai30e0fQ3GNIX4CTTLMy/lfh7E1FPgIoeKDHU=;
+        b=YpWvhUFIC0tPvLnI3Bzwb9XgkkxTZgLVdhNb53k0EXPjtVpbOE8uwe71MJO3Z1Wpgh
+         pT2SEbU63LiHip9nA47QkfLYKOr31htZVjorql3ZMGnomeNdByjl5M1VPiAS4JvjIyot
+         hiiN0wXfrHnxoUh+a88f89OpbRy2df7goARVJEAtCE5vjuxEicKANQbVp80RCabmplDx
+         LWC6Qhl5k7saP5ASyyqW5OpEUnvYubSo8aYNJv45i7i2tVquwgQo3onL0UxT8CBstfxD
+         j5fXeDNc3btcI/ZKWIOjzb8/Pr3KXJ1nbCanOHdISvjl0XIc9BAM8UsENWH5pNRePJBG
+         ll9g==
+X-Gm-Message-State: AOJu0YxvB3kTmtInM9YvepsQ0lYq35wKeBVLojcwGiOaWPHbzwIq4evn
+ a8U0iIwOXZMMyzTnkffmk+CiyIg9Ea9m2OS7BT4KSMeykB7igf4pTKAUkj3ymskriLlwqTjaYaL
+ DT7krJOov6R7htcRBqTb/Kr44e3nLD+GIIwg=
+X-Google-Smtp-Source: AGHT+IFlTKtPvGWUkDJNsr/TAlBfqBXDAlqY+yEpQXgbybS1eokh6As1eLkNIMYU9d2XjCxm2w+QnF69dlbdfoJn934=
+X-Received: by 2002:a81:9297:0:b0:607:87ca:ea8d with SMTP id
+ j145-20020a819297000000b0060787caea8dmr1659901ywg.23.1707898250177; Wed, 14 Feb 2024
+ 00:10:50 -0800 (PST)
+Mime-Version: 1.0
+From: Jake Caban-Tomski <jacque006@gmail.com>
+Date: Wed, 14 Feb 2024 01:10:39 -0700
+Message-Id: <CAMmHEGgp0ZwJ_LNE4CCo0YuG2CTGinv_auYd22JXoG3tPv6bzA@mail.gmail.com>
+Subject: Update owner for plugin 0xA52956234ceDCff0E37c8f2a81C4d7A776f21704 to
+ 0x4A86962379FaAf330ECdC55Ac2d7ABd640267c9D on safe
+ 0xd762941BdDc636BDf5160999E6C9Db5e98fDfF05
+To: jake@jacque006.com
+Content-Type: multipart/mixed;boundary=---------------------37f439025f343caeb12896d3b9482cb1
+X-Pm-Spam: 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
+X-Pm-Origin: external
+X-Pm-Transfer-Encryption: TLSv1.3 with cipher TLS_AES_256_GCM_SHA384 (256/256 bits)
+X-Pm-Content-Encryption: on-delivery
+X-Pm-Spamscore: 2
+X-Pm-Spam-Action: inbox
+
+-----------------------37f439025f343caeb12896d3b9482cb1
+Content-Type: multipart/related;boundary=---------------------d5ff8cea6f4df6a95b8fd13f80dc6cf5
+
+-----------------------d5ff8cea6f4df6a95b8fd13f80dc6cf5
+Content-Type: text/html;charset=utf-8
+Content-Transfer-Encoding: base64
+
+PGRpdiBkaXI9Imx0ciI+PGJyPjwvZGl2Pgo=
+-----------------------d5ff8cea6f4df6a95b8fd13f80dc6cf5--
+-----------------------37f439025f343caeb12896d3b9482cb1--
