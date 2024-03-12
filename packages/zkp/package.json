@@ -18,7 +18,7 @@
     "test": "ts-mocha -p tsconfig.json test/**/*.ts --timeout 30000 --exit",
     "precompile": "scripts/prerequisites.sh && mkdir -p zk/circuits zk/zkeys zk/vkeys zk/verifiers",
     "compile": "for circuit in circuits/*.circom; do circom $circuit --r1cs --sym --wasm -l ./node_modules/ -o zk/circuits;done && tsc",
-    "export:sample-zkey": "for circuit in zk/circuits/*.r1cs; do snarkjs groth16 setup $circuit powersOfTau28_hez_final_15.ptau zk/zkeys/$(basename -- $circuit .r1cs).zkey;done",
+    "export:sample-zkey": "for circuit in zk/circuits/*.r1cs; do snarkjs groth16 setup $circuit pot20_final.ptau zk/zkeys/$(basename -- $circuit .r1cs).zkey;done",
     "export:vkey": "for zkey in zk/zkeys/*.zkey; do snarkjs zkey export verificationkey $zkey zk/vkeys/$(basename -- $zkey .zkey).json;done",
     "export:verifier": "for zkey in zk/zkeys/*.zkey; do snarkjs zkey export solidityverifier $zkey zk/verifiers/$(basename -- $zkey .zkey | perl -nE 'say ucfirst').sol;done",
     "build": "yarn compile && yarn export:sample-zkey && yarn export:vkey && yarn export:verifier",
