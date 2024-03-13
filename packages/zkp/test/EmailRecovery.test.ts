@@ -19,9 +19,12 @@ describe("EmailRecovery", function () {
   // TODO Add chai-as-promised
   it.only("generates email proof & verifies", async function () {
     console.log("starting email proof generation...");
-    const { grothProof } = await client.prove(rawEmail);
+    console.time("proof generation time");
+    const chainid = 0;
+    const { grothProof } = await client.prove(rawEmail, chainid);
     console.log("groth proof", grothProof);
+    console.timeEnd("proof generation time");
     // TODO This fails, figure out why
-    expect(await client.verify(grothProof)).to.be.true;
+    expect(await client.verify(grothProof, chainid)).to.be.true;
   })
 });

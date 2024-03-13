@@ -63,18 +63,31 @@ export class EmailRecoveryClient {
     grothProof: Groth16Proof, contractProof: ContractProof
   }> {
     const dkimResult = await verifyDKIMSignature(Buffer.from(rawEmail));
+    // const parsedEmail = await emailWalletUtils.parseEmail(rawEmail);
     
-    const inputs = generateCircuitInputs({
+    const emailInputs = generateCircuitInputs({
       rsaSignature: dkimResult.signature, // The RSA signature of the email
       rsaPublicKey: dkimResult.publicKey, // The RSA public key used for verification
-      body: dkimResult.body, // body of the email 
-      bodyHash: dkimResult.bodyHash, // hash of the email body
+      // body: dkimResult.body, // body of the email
+      // bodyHash: dkimResult.bodyHash, // hash of the email body
+      body: Buffer.from(""),
+      bodyHash: "",
       message: dkimResult.message, // the message that was signed (header + bodyHash)
       // TODO Check that these are correct values
       maxMessageLength: 1024, // Maximum allowed length of the message in circuit
-      maxBodyLength: 1024, // Maximum allowed length of the body in circuit
+      maxBodyLength: 64, // Maximum allowed length of the body in circuit
       ignoreBodyHashCheck: true, // To be used when ignore_body_hash_check is true in circuit
     });
+
+    // const senderEmailIdxes = emailWalletUtils.extractFromAddrIdxes(parsedEmail.canonicalizedHeader)[0];
+    // const fromEmailAddrPart = parsedEmail.canonicalizedHeader.slice(senderEmailIdxes[0], senderEmailIdxes[1]);
+    // const domainIdx = emailWalletUtils.extractEmailDomainIdxes(fromEmailAddrPart)[0][0];
+    // const subjectEmailIdxes = emailWalletUtils.extractSubjectAllIdxes(parsedEmail.canonicalizedHeader)[0];
+    // const subject = parsedEmail.canonicalizedHeader.slice(subjectEmailIdxes[0], subjectEmailIdxes[1]);
+
+    const inputs = {
+      ...emailInputs,
+    };
 
     const wtns = await this.calculator.calculateWTNSBin(inputs, 0);
     const { proof } = await snarkjs.groth16.prove(this.zkey, wtns);
@@ -89,11 +102,10 @@ export class EmailRecoveryClient {
    * Verifies proof
    *
    * @param proof proof generated from client
-   * @param userOpHash hash of the UserOp to verify
    * @returns whether the proof is valid for a given UserOp
    */
   public async verify(proof: Groth16Proof): Promise<boolean> {
-    const publicSignals = [BigInt(0)]; // TODO Update
+    const publicSignals: [] = []; // TODO Update w/ subject, masked sender
     return snarkjs.groth16.verify(this.vkey, publicSignals, proof);
   }
 
