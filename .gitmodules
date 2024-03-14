@@ -28,6 +28,6 @@
 [submodule "packages/plugins/lib/kernel"]
 	path = packages/plugins/lib/kernel
 	url = https://github.com/zerodevapp/kernel
-[submodule "packages/zkp/lib/email-wallet"]
-	path = packages/zkp/lib/email-wallet
-	url = https://github.com/zkemail/email-wallet
+[submodule "packages/zkp/lib/ether-email-auth"]
+	path = packages/zkp/lib/ether-email-auth
+	url = https://github.com/zkemail/ether-email-auth

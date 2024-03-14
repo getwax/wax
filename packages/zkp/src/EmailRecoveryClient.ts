@@ -3,7 +3,8 @@ import { generateCircuitInputs } from "@zk-email/helpers";
 import { verifyDKIMSignature } from "@zk-email/helpers/dist/dkim";
 import path from "path";
 import * as snarkjs from "snarkjs";
-import buildCalculator from "../zk/circuits/EmailRecovery_js/witness_calculator";
+// @ts-ignore TODO Use artifact from package
+import buildCalculator from "../lib/ether-email-auth/packages/circuits/build/email_auth_js/witness_calculator.js";
 import { ContractProof, Groth16Proof } from "./types";
 
 /**
@@ -17,10 +18,12 @@ interface WitnessCalculator {
  * Client which can prove & verify the EmailRecovery circuit,
  */
 export class EmailRecoveryClient {
-  static readonly zkRoot = path.join(__dirname, "../zk");
-  static readonly circuitName = "EmailRecovery";
+  static readonly zkRoot = path.join(__dirname, "../lib/ether-email-auth/packages/circuits/build");
+  static readonly circuitName = "email_auth";
+  // TODO Ideally we would just get these zk artifacts from the npm package of ether-email-auth
   static readonly wasmFilePath = path.join(
-    this.zkRoot, `circuits/${this.circuitName}_js/${this.circuitName}.wasm`);
+    this.zkRoot, `${this.circuitName}_js/${this.circuitName}.wasm`);
+  // TODO These are currently not generated in ether-email-auth
   static readonly zkeyFilePath = path.join(
     this.zkRoot, `zkeys/${this.circuitName}.zkey`);
   static readonly vkeyFilePath = path.join(
@@ -68,17 +71,18 @@ export class EmailRecoveryClient {
     const emailInputs = generateCircuitInputs({
       rsaSignature: dkimResult.signature, // The RSA signature of the email
       rsaPublicKey: dkimResult.publicKey, // The RSA public key used for verification
-      // body: dkimResult.body, // body of the email
-      // bodyHash: dkimResult.bodyHash, // hash of the email body
-      body: Buffer.from(""),
-      bodyHash: "",
+      body: dkimResult.body, // body of the email
+      bodyHash: dkimResult.bodyHash, // hash of the email body
+      // body: Buffer.from(""),
+      // bodyHash: "",
       message: dkimResult.message, // the message that was signed (header + bodyHash)
       // TODO Check that these are correct values
       maxMessageLength: 1024, // Maximum allowed length of the message in circuit
-      maxBodyLength: 64, // Maximum allowed length of the body in circuit
+      maxBodyLength: 1024, // Maximum allowed length of the body in circuit
       ignoreBodyHashCheck: true, // To be used when ignore_body_hash_check is true in circuit
     });
 
+    // TODO Get these from a published utils package or somewhere else
     // const senderEmailIdxes = emailWalletUtils.extractFromAddrIdxes(parsedEmail.canonicalizedHeader)[0];
     // const fromEmailAddrPart = parsedEmail.canonicalizedHeader.slice(senderEmailIdxes[0], senderEmailIdxes[1]);
     // const domainIdx = emailWalletUtils.extractEmailDomainIdxes(fromEmailAddrPart)[0][0];
@@ -88,6 +92,7 @@ export class EmailRecoveryClient {
     const inputs = {
       ...emailInputs,
     };
+    console.log("inputs", inputs);
 
     const wtns = await this.calculator.calculateWTNSBin(inputs, 0);
     const { proof } = await snarkjs.groth16.prove(this.zkey, wtns);
