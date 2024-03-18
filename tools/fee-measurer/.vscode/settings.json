@@ -1,0 +1,14 @@
+{
+    "editor.rulers": [80],
+    "editor.codeActionsOnSave": {
+      "source.fixAll.eslint": "explicit"
+    },
+    "eslint.rules.customizations": [
+      {
+        "rule": "*",
+        "severity": "warn"
+      }
+    ],
+    "editor.tabSize": 2
+  }
+  
