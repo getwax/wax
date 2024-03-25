@@ -14,7 +14,7 @@ import {
   createUserOperation,
 } from "./utils/createUserOp";
 import { getSigners } from "./utils/getSigners";
-import DeterministicDeployer from "./utils/DeterministicDeployer";
+import DeterministicDeployer from "../../lib-ts/deterministic-deployer/DeterministicDeployer";
 import getBlsUserOpHash from "./utils/getBlsUserOpHash";
 import appendKeyToInitCode from "./utils/appendKeyToInitCode";
 

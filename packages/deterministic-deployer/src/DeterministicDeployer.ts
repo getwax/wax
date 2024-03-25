@@ -111,14 +111,20 @@ export default class DeterministicDeployer {
       throw new Error("Missing details for deploying deployer contract");
     }
 
-    // Fund the eoa account for the presigned transaction
-    await (
-      await signer.sendTransaction({
-        ...overrides,
-        to: deployment.signerAddress,
-        value: BigInt(deployment.gasPrice) * BigInt(deployment.gasLimit),
-      })
-    ).wait();
+    const requiredBalance = BigInt(deployment.gasPrice) * BigInt(deployment.gasLimit);
+    const currentBalance = await provider.getBalance(deployment.signerAddress);
+    const balanceDeficit = requiredBalance - currentBalance;
+
+    if (balanceDeficit > 0n) {
+      // Fund the eoa account for the presigned transaction
+      await (
+        await signer.sendTransaction({
+          ...overrides,
+          to: deployment.signerAddress,
+          value: BigInt(deployment.gasPrice) * BigInt(deployment.gasLimit),
+        })
+      ).wait();
+    }
 
     await (await provider.broadcastTransaction(deployment.transaction)).wait();
 

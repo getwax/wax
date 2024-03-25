@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import { JsonRpcProvider, NonceManager, Signer, ethers } from "ethers";
-import DeterministicDeployer from "../test/e2e/utils/DeterministicDeployer";
+import DeterministicDeployer from "../lib-ts/deterministic-deployer/DeterministicDeployer";
 import { createAndSendUserOpWithEcdsaSig } from "../test/e2e/utils/createUserOp";
 import { executeContractCallWithSigners } from "../test/e2e/utils/execution";
 import receiptOf from "../test/e2e/utils/receiptOf";

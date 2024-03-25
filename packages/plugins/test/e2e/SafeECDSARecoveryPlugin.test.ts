@@ -8,7 +8,7 @@ import {
 } from "ethers";
 
 import { executeContractCallWithSigners } from "./utils/execution";
-import DeterministicDeployer from "./utils/DeterministicDeployer";
+import DeterministicDeployer from "../../lib-ts/deterministic-deployer/DeterministicDeployer";
 import {
   Safe,
   SafeECDSAFactory__factory,

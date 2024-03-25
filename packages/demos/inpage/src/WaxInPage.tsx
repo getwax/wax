@@ -28,9 +28,6 @@ import {
   SimpleAccountFactory,
   SimpleAccountFactory__factory,
 } from '../hardhat/typechain-types';
-import SafeSingletonFactory, {
-  SafeSingletonFactoryViewer,
-} from './SafeSingletonFactory';
 import ReusablePopup from './ReusablePopup';
 import AdminPopup, { AdminPurpose } from './AdminPopup';
 import waxPrivate from './waxPrivate';
@@ -47,6 +44,9 @@ import SafeCompressionAccountWrapper from './accounts/SafeCompressionAccountWrap
 import { hexLen } from './helpers/encodeUtils';
 import JsonRpcError from './JsonRpcError';
 import measureCalldataGas from './measureCalldataGas';
+import DeterministicDeployer, {
+  DeterministicDeploymentViewer,
+} from '../lib-ts/deterministic-deployer/DeterministicDeployer';
 
 type Config = {
   logRequests?: boolean;
@@ -185,7 +185,10 @@ export default class WaxInPage {
       await this.ethereum.request({ method: 'eth_chainId' }),
     );
 
-    const viewer = new SafeSingletonFactoryViewer(this.ethersProvider, chainId);
+    const viewer = new DeterministicDeploymentViewer(
+      this.ethersProvider,
+      chainId,
+    );
 
     const assumedEntryPoint = viewer.connectAssume(EntryPoint__factory, []);
 
@@ -234,7 +237,7 @@ export default class WaxInPage {
 
     const wallet = await this.requestAdminAccount('deploy-contracts');
 
-    const factory = await SafeSingletonFactory.init(wallet);
+    const factory = await DeterministicDeployer.init(wallet);
 
     const entryPoint = await factory.connectOrDeploy(EntryPoint__factory, []);
 

@@ -2,7 +2,7 @@ import { expect } from "chai";
 import { JsonRpcProvider, NonceManager, Signer, ethers } from "ethers";
 
 import { executeContractCallWithSigners } from "./utils/execution";
-import DeterministicDeployer from "./utils/DeterministicDeployer";
+import DeterministicDeployer from "../../lib-ts/deterministic-deployer/DeterministicDeployer";
 import {
   MockDKIMRegsitry,
   MockDKIMRegsitry__factory,

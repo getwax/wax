@@ -1,5 +1,5 @@
 import { ethers } from "ethers";
-import DeterministicDeployer from "../test/e2e/utils/DeterministicDeployer";
+import DeterministicDeployer from "../lib-ts/deterministic-deployer/DeterministicDeployer";
 import {
   SimulateTxAccessor__factory,
   SafeProxyFactory__factory,
