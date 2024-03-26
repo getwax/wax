@@ -1,14 +1,20 @@
 import { expect } from "chai";
-import { ethers } from "ethers";
+import { AbiCoder, ethers, solidityPacked } from "ethers";
 import {
   AddressRegistry__factory,
+  EntryPoint__factory,
   FallbackDecompressor__factory,
   SafeCompressionFactory__factory,
   SafeCompressionPlugin__factory,
 } from "../../typechain-types";
 import receiptOf from "./utils/receiptOf";
 import { setupTests } from "./utils/setupTests";
-import { createAndSendUserOpWithEcdsaSig } from "./utils/createUserOp";
+import { createUserOperation } from "./utils/createUserOp";
+import setupBls from "./utils/setupBls";
+import getBlsUserOpHash from "./utils/getBlsUserOpHash";
+
+const BLS_PRIVATE_KEY =
+  "0xdbe3d601b1b25c42c50015a87855fdce00ea9b3a7e33c92d31c69aeb70708e08";
 
 describe("SafeCompressionPlugin", () => {
   it("should pass the ERC4337 validation", async () => {
@@ -21,6 +27,14 @@ describe("SafeCompressionPlugin", () => {
       deployer,
       safeSingleton,
     } = await setupTests();
+
+    const entryPoint = EntryPoint__factory.connect(entryPointAddress, admin);
+
+    const { blsSignatureAggregator, blsSigner } = await setupBls(
+      deployer,
+      entryPointAddress,
+      BLS_PRIVATE_KEY,
+    );
 
     // Deploy compression contracts and compression plugin
     const safeCompressionFactory = await deployer.connectOrDeploy(
@@ -42,6 +56,8 @@ describe("SafeCompressionPlugin", () => {
     const createArgs = [
       safeSingleton,
       entryPointAddress,
+      await blsSignatureAggregator.getAddress(),
+      blsSigner.pubkey,
       await fallbackDecompressor.getAddress(),
       await owner.getAddress(),
       0,
@@ -54,10 +70,8 @@ describe("SafeCompressionPlugin", () => {
     await receiptOf(safeCompressionFactory.create(...createArgs));
 
     // construct userOp
-    const compressionAccount = SafeCompressionPlugin__factory.connect(
-      accountAddress,
-      owner,
-    );
+    const compressionAccount =
+      SafeCompressionPlugin__factory.connect(accountAddress);
 
     const recipient = ethers.Wallet.createRandom();
     const transferAmount = ethers.parseEther("1");
@@ -84,8 +98,6 @@ describe("SafeCompressionPlugin", () => {
     // to do the whole create outside of 4337.
     const initCode = "0x";
 
-    const dummySignature = await owner.signMessage("dummy sig");
-
     // Native tokens for the pre-fund
     await receiptOf(
       admin.sendTransaction({
@@ -96,19 +108,60 @@ describe("SafeCompressionPlugin", () => {
 
     const recipientBalanceBefore = await provider.getBalance(recipient.address);
 
-    // send userOp
-    await createAndSendUserOpWithEcdsaSig(
+    const unsignedUserOperation = await createUserOperation(
       provider,
       bundlerProvider,
-      owner,
       accountAddress,
       initCode,
       userOpCallData,
       entryPointAddress,
-      dummySignature,
+      "0x",
     );
 
-    const recipientBalanceAfter = await provider.getBalance(recipient.address);
+    const blsUserOpHash = getBlsUserOpHash(
+      (await provider.getNetwork()).chainId,
+      await blsSignatureAggregator.getAddress(),
+      blsSigner.pubkey,
+      unsignedUserOperation,
+    );
+
+    const aggReportedUserOpHash = await blsSignatureAggregator.getUserOpHash(
+      unsignedUserOperation,
+    );
+
+    expect(blsUserOpHash).to.equal(aggReportedUserOpHash);
+
+    const userOperation = {
+      ...unsignedUserOperation,
+      signature: solidityPacked(
+        ["uint256[2]"],
+        [blsSigner.sign(blsUserOpHash)],
+      ),
+    };
+
+    // TODO: Ideally we would use the bundler here via `sendUserOpAndWait`.
+    // However, eth-infinitism's bundler doesn't appear to have any support for
+    // sending aggregated bundles, since handleAggregatedOps does not appear in
+    // its code.
+
+    // Send userOp
+    const receipt = await receiptOf(
+      entryPoint.connect(admin).handleAggregatedOps(
+        [
+          {
+            userOps: [{ ...userOperation, signature: "0x" }],
+            aggregator: await blsSignatureAggregator.getAddress(),
+            signature: userOperation.signature,
+          },
+        ],
+        await admin.getAddress(),
+      ),
+    );
+
+    const recipientBalanceAfter = await provider.getBalance(
+      recipient.address,
+      receipt.blockNumber,
+    );
 
     const expectedRecipientBalance = recipientBalanceBefore + transferAmount;
     expect(recipientBalanceAfter).to.equal(expectedRecipientBalance);
