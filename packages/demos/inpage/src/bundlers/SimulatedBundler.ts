@@ -25,6 +25,8 @@ import {
 } from '../helpers/encodeUtils';
 import windowDebug from '../../demo/windowDebug';
 
+// TODO: Aggregated ops.
+
 // This value is needed to account for the overheads of running the entry point
 // that are difficult to attribute directly to each user op. It should be
 // calibrated so that the bundler makes a small profit overall.

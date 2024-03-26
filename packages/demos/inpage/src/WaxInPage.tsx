@@ -9,6 +9,9 @@ import makeLocalWaxStorage, { WaxStorage } from './WaxStorage';
 import {
   AddressRegistry,
   AddressRegistry__factory,
+  BLSOpen__factory,
+  BLSSignatureAggregator,
+  BLSSignatureAggregator__factory,
   ERC20Mock,
   ERC20Mock__factory,
   EntryPoint,
@@ -82,6 +85,7 @@ export type Contracts = {
   addressRegistry: AddressRegistry;
   safeECDSARecoveryPlugin: SafeECDSARecoveryPlugin;
   testToken: ERC20Mock;
+  blsSignatureAggregator: BLSSignatureAggregator;
 };
 
 export default class WaxInPage {
@@ -197,6 +201,8 @@ export default class WaxInPage {
       [],
     );
 
+    const assumedBlsOpen = viewer.connectAssume(BLSOpen__factory, []);
+
     const contracts: Contracts = {
       greeter: viewer.connectAssume(Greeter__factory, ['']).connect(runner),
       entryPoint: assumedEntryPoint,
@@ -220,6 +226,15 @@ export default class WaxInPage {
         [],
       ),
       testToken: viewer.connectAssume(ERC20Mock__factory, []),
+      blsSignatureAggregator: viewer.connectAssume(
+        DeterministicDeployer.link(BLSSignatureAggregator__factory, [
+          {
+            'account-abstraction/contracts/samples/bls/lib/BLSOpen.sol:BLSOpen':
+              await assumedBlsOpen.getAddress(),
+          },
+        ]),
+        [],
+      ),
     };
 
     if (this.#contractsDeployed) {
@@ -246,6 +261,8 @@ export default class WaxInPage {
       [],
     );
 
+    const blsOpen = await factory.connectOrDeploy(BLSOpen__factory, []);
+
     const deployments: {
       [C in keyof Contracts]: () => Promise<Contracts[C]>;
     } = {
@@ -268,6 +285,16 @@ export default class WaxInPage {
       safeECDSARecoveryPlugin: () =>
         factory.connectOrDeploy(SafeECDSARecoveryPlugin__factory, []),
       testToken: () => factory.connectOrDeploy(ERC20Mock__factory, []),
+      blsSignatureAggregator: async () =>
+        factory.connectOrDeploy(
+          DeterministicDeployer.link(BLSSignatureAggregator__factory, [
+            {
+              'account-abstraction/contracts/samples/bls/lib/BLSOpen.sol:BLSOpen':
+                await blsOpen.getAddress(),
+            },
+          ]),
+          [],
+        ),
     };
 
     for (const deployment of Object.values(deployments)) {

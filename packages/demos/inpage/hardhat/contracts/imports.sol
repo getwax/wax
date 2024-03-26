@@ -3,6 +3,8 @@ pragma solidity ^0.8.0;
 
 import {EntryPoint} from "account-abstraction/contracts/core/EntryPoint.sol";
 import {SimpleAccountFactory} from "account-abstraction/contracts/samples/SimpleAccountFactory.sol";
+import {BLSSignatureAggregator} from "account-abstraction/contracts/samples/bls/BLSSignatureAggregator.sol";
+import {UserOperation} from "account-abstraction/contracts/interfaces/UserOperation.sol";
 
 import {Safe} from "../lib/plugins/lib/safe-contracts/contracts/Safe.sol";
 import {SafeECDSAFactory} from "../lib/plugins/src/safe/SafeECDSAFactory.sol";
