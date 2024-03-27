@@ -3,7 +3,7 @@ import {
   SafeProxyFactory__factory,
   Safe__factory,
 } from "../../../typechain-types";
-import DeterministicDeployer from "./DeterministicDeployer";
+import DeterministicDeployer from "../../../lib-ts/deterministic-deployer/DeterministicDeployer";
 import receiptOf from "./receiptOf";
 import makeDevFaster from "./makeDevFaster";
 import { getSigners } from "./getSigners";

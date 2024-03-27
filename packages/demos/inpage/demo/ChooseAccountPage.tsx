@@ -56,7 +56,7 @@ const ChooseAccountPage = () => {
                 <ul style={{ textAlign: 'left' }}>
                   <li>L2 Cost Savings</li>
                   <li>Multi-Action</li>
-                  <li>ECDSA (BLS Future)</li>
+                  <li>BLS</li>
                   <li>(Built in Safe)</li>
                 </ul>
               </div>

@@ -1,5 +1,6 @@
-import { ethers } from 'ethers';
+import { ethers, getBytes, keccak256, solidityPacked } from 'ethers';
 import { z } from 'zod';
+import { signer as hubbleBlsSigner } from '@thehubbleproject/bls';
 import {
   SafeCompressionPlugin,
   SafeCompressionPlugin__factory,
@@ -7,7 +8,7 @@ import {
 import EthereumRpc from '../EthereumRpc';
 import IAccount from './IAccount';
 import WaxInPage from '..';
-import { SafeCompressionFactory } from '../../hardhat/typechain-types/lib/packages/plugins/src/SafeCompressionFactory';
+import { SafeCompressionFactory } from '../../hardhat/typechain-types/lib/plugins/src/safe/SafeCompressionFactory';
 import receiptOf from '../helpers/receiptOf';
 import {
   encodeBitStack,
@@ -18,6 +19,7 @@ import {
   hexLen,
   lookupAddress,
 } from '../helpers/encodeUtils';
+import getBlsUserOpHash from '../helpers/getBlsUserOpHash';
 
 export const SafeCompressionAccountData = z.object({
   type: z.literal('SafeCompressionAccount'),
@@ -73,6 +75,8 @@ export default class SafeCompressionAccountWrapper implements IAccount {
     const createArgs = [
       contracts.safe,
       contracts.entryPoint,
+      contracts.blsSignatureAggregator,
+      (await getBlsSigner(wallet.privateKey)).pubkey,
       contracts.fallbackDecompressor,
       wallet,
       0,
@@ -175,11 +179,36 @@ export default class SafeCompressionAccountWrapper implements IAccount {
   }
 
   async sign(
-    _userOp: EthereumRpc.UserOperation,
-    userOpHash: string,
+    userOp: EthereumRpc.UserOperation,
+    _userOpHash: string,
   ): Promise<string> {
-    const ownerWallet = new ethers.Wallet(this.privateKey);
+    const blsSigner = await getBlsSigner(this.privateKey);
+    const provider = this.waxInPage.ethersProvider;
+    const contracts = await this.waxInPage.getContracts();
 
-    return await ownerWallet.signMessage(ethers.getBytes(userOpHash));
+    const blsUserOpHash = getBlsUserOpHash(
+      (await provider.getNetwork()).chainId,
+      await contracts.blsSignatureAggregator.getAddress(),
+      blsSigner.pubkey,
+      userOp,
+    );
+
+    return solidityPacked(['uint256[2]'], [blsSigner.sign(blsUserOpHash)]);
   }
+}
+
+async function getBlsSigner(ecdsaPrivateKey: string) {
+  // Note: The BLS library we use implements key derivation that allows this
+  // to work, so it's the simplest way to get a BLS private key in our
+  // context, but there should be a standard around this.
+  const blsPrivateKey = ecdsaPrivateKey;
+
+  const domain = getBytes(
+    keccak256(new TextEncoder().encode('eip4337.bls.domain')),
+  );
+
+  const signerFactory = await hubbleBlsSigner.BlsSignerFactory.new();
+  const blsSigner = signerFactory.getSigner(domain, blsPrivateKey);
+
+  return blsSigner;
 }

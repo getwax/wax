@@ -1,4 +1,4 @@
-import { ethers, Signer } from "ethers";
+import { ethers, Overrides, Signer } from "ethers";
 import SignerOrProvider from "./SignerOrProvider";
 import assert from "./assert";
 
@@ -70,6 +70,7 @@ export default class DeterministicDeployer {
     public signer: ethers.Signer,
     public chainId: bigint,
     public deployment: DDDeployment,
+    public overrides: Overrides,
   ) {
     if (!signer.provider) {
       throw new Error("Expected signer with provider");
@@ -86,6 +87,7 @@ export default class DeterministicDeployer {
 
   static async init(
     signer: ethers.Signer,
+    overrides: Overrides = {},
     deployment = DeterministicDeployer.defaultDeployment,
   ): Promise<DeterministicDeployer> {
     const { provider } = signer;
@@ -98,7 +100,7 @@ export default class DeterministicDeployer {
     const existingCode = await provider.getCode(address);
 
     if (existingCode !== "0x") {
-      return new DeterministicDeployer(signer, chainId, deployment);
+      return new DeterministicDeployer(signer, chainId, deployment, overrides);
     }
 
     if (
@@ -109,20 +111,27 @@ export default class DeterministicDeployer {
       throw new Error("Missing details for deploying deployer contract");
     }
 
-    // Fund the eoa account for the presigned transaction
-    await (
-      await signer.sendTransaction({
-        to: deployment.signerAddress,
-        value: BigInt(deployment.gasPrice) * BigInt(deployment.gasLimit),
-      })
-    ).wait();
+    const requiredBalance = BigInt(deployment.gasPrice) * BigInt(deployment.gasLimit);
+    const currentBalance = await provider.getBalance(deployment.signerAddress);
+    const balanceDeficit = requiredBalance - currentBalance;
+
+    if (balanceDeficit > 0n) {
+      // Fund the eoa account for the presigned transaction
+      await (
+        await signer.sendTransaction({
+          ...overrides,
+          to: deployment.signerAddress,
+          value: BigInt(deployment.gasPrice) * BigInt(deployment.gasLimit),
+        })
+      ).wait();
+    }
 
     await (await provider.broadcastTransaction(deployment.transaction)).wait();
 
     const deployedCode = await provider.getCode(deployment.address);
     assert(deployedCode !== "0x", "Failed to deploy safe singleton factory");
 
-    return new DeterministicDeployer(signer, chainId, deployment);
+    return new DeterministicDeployer(signer, chainId, deployment, overrides);
   }
 
   /**
@@ -142,6 +151,7 @@ export default class DeterministicDeployer {
    */
   static async initSafeVersion(
     signer: ethers.Signer,
+    overrides: Overrides = {},
   ): Promise<DeterministicDeployer> {
     const { provider } = signer;
     assert(provider, "Expected signer with provider");
@@ -156,13 +166,13 @@ export default class DeterministicDeployer {
       return new DeterministicDeployer(signer, chainId, {
         signerAddress,
         address,
-      });
+      }, overrides);
     }
 
     const { chainId } = await provider.getNetwork();
 
     if (chainId === 1337n) {
-      const deployer = await DeterministicDeployer.init(signer, {
+      const deployer = await DeterministicDeployer.init(signer, overrides, {
         transaction: [
           "0x",
           "f8a78085174876e800830186a08080b853604580600e600039806000f350fe7fff",
@@ -182,7 +192,7 @@ export default class DeterministicDeployer {
     }
 
     if (chainId === 31337n) {
-      const deployer = await DeterministicDeployer.init(signer, {
+      const deployer = await DeterministicDeployer.init(signer, overrides, {
         transaction: [
           "0x",
           "f8a78085174876e800830186a08080b853604580600e600039806000f350fe7fff",
@@ -335,6 +345,7 @@ export default class DeterministicDeployer {
     }
 
     const deployTx = {
+      ...this.overrides,
       to: this.deployment.address,
       data: ethers.solidityPacked(["uint256", "bytes"], [salt, initCode]),
     };

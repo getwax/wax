@@ -15,6 +15,8 @@ contract SafeCompressionFactory {
     function create(
         Safe safeSingleton,
         EntryPoint entryPoint,
+        address aggregatorAddress,
+        uint256[4] memory blsPublicKey,
         IDecompressor defaultDecompressor,
         address owner,
         uint256 saltNonce
@@ -30,6 +32,8 @@ contract SafeCompressionFactory {
 
         SafeCompressionPlugin plugin = new SafeCompressionPlugin{salt: salt}(
             address(entryPoint),
+            aggregatorAddress,
+            blsPublicKey,
             defaultDecompressor
         );
 
@@ -37,7 +41,7 @@ contract SafeCompressionFactory {
             owners,
             1,
             address(plugin),
-            abi.encodeCall(SafeCompressionPlugin.enableMyself, (owner)),
+            abi.encodeCall(SafeCompressionPlugin.enableMyself, ()),
             address(plugin),
             address(0),
             0,

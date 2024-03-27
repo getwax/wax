@@ -2,34 +2,40 @@
 pragma solidity >=0.7.0 <0.9.0;
 pragma abicoder v2;
 
-import {ECDSA} from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
 import {HandlerContext} from "safe-contracts/contracts/handler/HandlerContext.sol";
+
 import {IEntryPoint, UserOperation} from "account-abstraction/contracts/interfaces/IEntryPoint.sol";
+import {BLS} from "account-abstraction/contracts/samples/bls/lib/hubble-contracts/contracts/libs/BLS.sol";
+import {IBLSAccount} from "account-abstraction/contracts/samples/bls/IBLSAccount.sol";
 
 import {Safe4337Base, ISafe} from "./utils/Safe4337Base.sol";
 import {WaxLib as W} from "../compression/WaxLib.sol";
 import {IDecompressor} from "../compression/decompressors/IDecompressor.sol";
 
-struct ECDSAOwnerStorage {
-    address owner;
-}
+error IncorrectSignatureLength(uint256 length);
 
-contract SafeCompressionPlugin is Safe4337Base {
-    using ECDSA for bytes32;
-
-    mapping(address => ECDSAOwnerStorage) public ecdsaOwnerStorage;
+contract SafeCompressionPlugin is Safe4337Base, IBLSAccount {
+    // TODO: Use EIP 712 for domain separation
+    bytes32 public constant BLS_DOMAIN = keccak256("eip4337.bls.domain");
     address public immutable myAddress;
+    uint256[4] private _blsPublicKey;
     address private immutable _entryPoint;
-    IDecompressor public decompressor;
+    address private immutable _aggregator;
+    IDecompressor public _decompressor;
 
     address internal constant _SENTINEL_MODULES = address(0x1);
 
-    event OWNER_UPDATED(address indexed safe, address indexed oldOwner, address indexed newOwner);
-
-    constructor(address entryPointParam, IDecompressor decompressorParam) {
+    constructor(
+        address entryPointAddress,
+        address aggregatorAddress,
+        uint256[4] memory blsPublicKey,
+        IDecompressor decompressorParam
+    ) {
         myAddress = address(this);
-        _entryPoint = entryPointParam;
-        decompressor = decompressorParam;
+        _blsPublicKey = blsPublicKey;
+        _entryPoint = entryPointAddress;
+        _aggregator = aggregatorAddress;
+        _decompressor = decompressorParam;
     }
 
     function decompressAndPerform(
@@ -37,7 +43,7 @@ contract SafeCompressionPlugin is Safe4337Base {
     ) public {
         _requireFromEntryPoint();
 
-        (W.Action[] memory actions,) = decompressor.decompress(stream);
+        (W.Action[] memory actions,) = _decompressor.decompress(stream);
 
         ISafe safe = _currentSafe();
 
@@ -55,39 +61,38 @@ contract SafeCompressionPlugin is Safe4337Base {
         IDecompressor decompressorParam
     ) public {
         _requireFromCurrentSafeOrEntryPoint();
-        decompressor = decompressorParam;
+        _decompressor = decompressorParam;
     }
 
-    function enableMyself(address ownerKey) public {
+    function enableMyself() public {
         ISafe(address(this)).enableModule(myAddress);
-
-        // Enable the safe address with the defined key
-        bytes memory _data = abi.encodePacked(ownerKey);
-        SafeCompressionPlugin(myAddress).enable(_data);
     }
 
     function entryPoint() public view override returns (IEntryPoint) {
         return IEntryPoint(_entryPoint);
     }
 
-    function enable(bytes calldata _data) external payable {
-        address newOwner = address(bytes20(_data[0:20]));
-        address oldOwner = ecdsaOwnerStorage[msg.sender].owner;
-        ecdsaOwnerStorage[msg.sender].owner = newOwner;
-        emit OWNER_UPDATED(msg.sender, oldOwner, newOwner);
+    function getBlsPublicKey() public view returns (uint256[4] memory) {
+        return _blsPublicKey;
     }
 
     function _validateSignature(
         UserOperation calldata userOp,
-        bytes32 userOpHash
-    ) internal view override returns (uint256 validationData) {
-        address keyOwner = ecdsaOwnerStorage[msg.sender].owner;
-        bytes32 hash = userOpHash.toEthSignedMessageHash();
+        bytes32 /* userOpHash */
+    ) internal view override returns (uint256) {
+        uint256 initCodeLen = userOp.initCode.length;
 
-        if (keyOwner != hash.recover(userOp.signature)) {
-            return SIG_VALIDATION_FAILED;
+        if (initCodeLen > 0) {
+            bytes32 claimedKeyHash =
+                keccak256(userOp.initCode[initCodeLen - 128:]);
+
+            // See appendKeyToInitCode.ts for a detailed explanation.
+            require(
+                claimedKeyHash == keccak256(abi.encode(getBlsPublicKey())),
+                "Trailing bytes of initCode do not match the public key"
+            );
         }
 
-        return 0;
+        return uint256(uint160(_aggregator));
     }
 }

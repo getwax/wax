@@ -1,9 +1,6 @@
 import { expect } from "chai";
-import { ethers, getBytes, keccak256, solidityPacked } from "ethers";
-import { signer as hubbleBlsSigner } from "@thehubbleproject/bls";
+import { ethers, solidityPacked } from "ethers";
 import {
-  BLSOpen__factory,
-  BLSSignatureAggregator__factory,
   EntryPoint__factory,
   SafeBlsPlugin__factory,
 } from "../../typechain-types";
@@ -14,9 +11,9 @@ import {
   createUserOperation,
 } from "./utils/createUserOp";
 import { getSigners } from "./utils/getSigners";
-import DeterministicDeployer from "./utils/DeterministicDeployer";
 import getBlsUserOpHash from "./utils/getBlsUserOpHash";
 import appendKeyToInitCode from "./utils/appendKeyToInitCode";
+import setupBls from "./utils/setupBls";
 
 const BLS_PRIVATE_KEY =
   "0xdbe3d601b1b25c42c50015a87855fdce00ea9b3a7e33c92d31c69aeb70708e08";
@@ -36,27 +33,10 @@ describe("SafeBlsPlugin", () => {
 
     const entryPoint = EntryPoint__factory.connect(entryPointAddress, admin);
 
-    // Deploy bls plugin
-    const domain = getBytes(keccak256(Buffer.from("eip4337.bls.domain")));
-    const signerFactory = await hubbleBlsSigner.BlsSignerFactory.new();
-    const blsSigner = signerFactory.getSigner(domain, BLS_PRIVATE_KEY);
-
-    const blsOpen = await deployer.connectOrDeploy(BLSOpen__factory, []);
-
-    const blsSignatureAggregator = await deployer.connectOrDeploy(
-      DeterministicDeployer.link(BLSSignatureAggregator__factory, [
-        {
-          "lib/account-abstraction/contracts/samples/bls/lib/BLSOpen.sol:BLSOpen":
-            await blsOpen.getAddress(),
-        },
-      ]),
-      [],
-    );
-
-    await receiptOf(
-      blsSignatureAggregator.addStake(entryPointAddress, 100n * 86_400n, {
-        value: ethers.parseEther("1"),
-      }),
+    const { blsSignatureAggregator, blsSigner } = await setupBls(
+      deployer,
+      entryPointAddress,
+      BLS_PRIVATE_KEY,
     );
 
     const safeBlsPlugin = await deployer.connectOrDeploy(
