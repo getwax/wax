@@ -18,7 +18,7 @@ contract SafeAnonAadhaarFactory {
         uint256 saltNonce,
         address _anonAadhaarAddr,
         uint _userDataHash
-    ) external returns (SafeECDSAPlugin) {
+    ) external returns (SafeAnonAadhaarPlugin) {
         bytes32 salt = keccak256(abi.encodePacked(owner, saltNonce));
 
         Safe safe = Safe(

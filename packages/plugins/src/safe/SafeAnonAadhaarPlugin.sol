@@ -37,10 +37,11 @@ contract SafeAnonAadhaarPlugin is Safe4337Base {
     address public immutable myAddress; // Module address
     address private immutable _entryPoint;
 
+    address internal constant _SENTINEL_MODULES = address(0x1);
+
     address public anonAadhaarAddr; // external contract managed by AnonAadhaar. it has verifyAnonAadhaarProof() method
     uint public userDataHash; // the hash of unique and private user data extracted from Aadhaar QR code
-
-    address internal constant _SENTINEL_MODULES = address(0x1);
+    mapping(uint => bool) public signalNullifiers;
 
     event OWNER_UPDATED(
         address indexed safe,
@@ -112,13 +113,12 @@ contract SafeAnonAadhaarPlugin is Safe4337Base {
     function _validateSignature(
         UserOperation calldata userOp,
         bytes32 userOpHash
-    ) internal view override returns (uint256 validationData) {
+    ) internal override returns (uint256 validationData) {
         (
             uint identityNullifier,
             uint timestamp,
             uint signal,
-            uint[8] memory groth16Proof,
-
+            uint[8] memory groth16Proof
         ) = abi.decode(userOp.signature, (uint, uint, uint, uint[8]));
 
         // see if the proof is fresh enough
@@ -145,7 +145,6 @@ contract SafeAnonAadhaarPlugin is Safe4337Base {
 
         // store nullifier
         signalNullifiers[signal] = true;
-        lastTimestamp = timestamp;
         return 0;
     }
 }
