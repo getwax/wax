@@ -1,6 +1,7 @@
 /* eslint-disable no-console */
 
 import { ethers } from 'ethers';
+import { signer as hubbleBlsSigner } from '@thehubbleproject/bls';
 import WaxInPage from '..';
 import EthereumRpc from '../EthereumRpc';
 import measureCalldataGas from '../measureCalldataGas';
@@ -8,6 +9,7 @@ import waxPrivate from '../waxPrivate';
 import IBundler from './IBundler';
 import {
   AddressRegistry,
+  HandleAggregatedOpsCaller__factory,
   HandleOpsCaller,
   HandleOpsCaller__factory,
 } from '../../hardhat/typechain-types';
@@ -24,8 +26,7 @@ import {
   roundUpPseudoFloat,
 } from '../helpers/encodeUtils';
 import windowDebug from '../../demo/windowDebug';
-
-// TODO: Aggregated ops.
+import simulateValidation from '../helpers/simulateValidation';
 
 // This value is needed to account for the overheads of running the entry point
 // that are difficult to attribute directly to each user op. It should be
@@ -87,30 +88,25 @@ export default class SimulatedBundler implements IBundler {
   async eth_sendUserOperation(
     userOp: EthereumRpc.UserOperation,
   ): Promise<string> {
-    const adminAccount = await this.#waxInPage.requestAdminAccount(
-      'simulate-bundler',
-    );
-
     const contracts = await this.#waxInPage.getContracts();
 
     // *not* the confirmation, just the response (don't add .wait(), that's
     // wrong).
     let txResponse;
 
-    if (this.#waxInPage.getConfig('useTopLevelCompression')) {
-      const handleOpsCaller = await this.#getHandleOpsCaller();
+    const validation = await simulateValidation(contracts.entryPoint, userOp);
 
-      txResponse = await adminAccount.sendTransaction({
-        to: handleOpsCaller.getAddress(),
-        data: await SimulatedBundler.encodeHandleOps(
-          contracts.addressRegistry,
-          [userOp],
-        ),
-      });
+    if (validation.returnInfo.sigFailed) {
+      throw new Error('Signature check failed');
+    }
+
+    if ('aggregatorInfo' in validation) {
+      txResponse = await this.#sendAggregatingUserOp(
+        userOp,
+        validation.aggregatorInfo.aggregator,
+      );
     } else {
-      txResponse = await contracts.entryPoint
-        .connect(adminAccount)
-        .handleOps([userOp], adminAccount.getAddress());
+      txResponse = await this.#sendOrdinaryUserOp(userOp);
     }
 
     const tx = ethers.Transaction.from(txResponse);
@@ -248,6 +244,30 @@ export default class SimulatedBundler implements IBundler {
     return this.#handleOpsCaller;
   }
 
+  async #getHandleAggregatedOpsCaller(): Promise<HandleOpsCaller> {
+    if (this.#handleOpsCaller === undefined) {
+      const wallet = await this.#waxInPage.requestAdminAccount(
+        'deploy-contracts',
+      );
+
+      const contracts = await this.#waxInPage.getContracts();
+
+      const factory = await SafeSingletonFactory.init(wallet);
+
+      this.#handleOpsCaller = await factory.connectOrDeploy(
+        HandleAggregatedOpsCaller__factory,
+        [
+          await contracts.entryPoint.getAddress(),
+          wallet.address,
+          await contracts.blsSignatureAggregator.getAddress(),
+          await contracts.addressRegistry.getAddress(),
+        ],
+      );
+    }
+
+    return this.#handleOpsCaller;
+  }
+
   async #calculateCalldataGas(
     userOp: EthereumRpc.UserOperation,
   ): Promise<bigint> {
@@ -284,6 +304,71 @@ export default class SimulatedBundler implements IBundler {
     return measureCalldataGas(data) - measureCalldataGas(baselineData);
   }
 
+  async #sendAggregatingUserOp(
+    userOp: EthereumRpc.UserOperation,
+    aggregator: string,
+  ) {
+    const adminAccount = await this.#waxInPage.requestAdminAccount(
+      'simulate-bundler',
+    );
+
+    const contracts = await this.#waxInPage.getContracts();
+
+    if (this.#waxInPage.getConfig('useTopLevelCompression')) {
+      if (
+        aggregator !== (await contracts.blsSignatureAggregator.getAddress())
+      ) {
+        throw new Error(`Unsupported aggregator: ${aggregator}`);
+      }
+
+      const handleAggregatedOpsCaller =
+        await this.#getHandleAggregatedOpsCaller();
+
+      return await adminAccount.sendTransaction({
+        to: handleAggregatedOpsCaller.getAddress(),
+        data: await SimulatedBundler.encodeHandleAggregatedOps(
+          contracts.addressRegistry,
+          [userOp],
+        ),
+      });
+    }
+
+    return await contracts.entryPoint.connect(adminAccount).handleAggregatedOps(
+      [
+        {
+          userOps: [{ ...userOp, signature: '0x' }],
+          aggregator,
+          signature: userOp.signature,
+        },
+      ],
+      adminAccount.getAddress(),
+    );
+  }
+
+  async #sendOrdinaryUserOp(userOp: EthereumRpc.UserOperation) {
+    const adminAccount = await this.#waxInPage.requestAdminAccount(
+      'simulate-bundler',
+    );
+
+    const contracts = await this.#waxInPage.getContracts();
+
+    if (this.#waxInPage.getConfig('useTopLevelCompression')) {
+      const handleOpsCaller = await this.#getHandleOpsCaller();
+
+      return await adminAccount.sendTransaction({
+        to: handleOpsCaller.getAddress(),
+        data: await SimulatedBundler.encodeHandleOps(
+          contracts.addressRegistry,
+          [userOp],
+        ),
+      });
+    }
+
+    return await contracts.entryPoint
+      .connect(adminAccount)
+      .handleOps([userOp], adminAccount.getAddress());
+  }
+
   static async encodeHandleOps(
     registry: AddressRegistry,
     ops: EthereumRpc.UserOperation[],
@@ -294,48 +379,101 @@ export default class SimulatedBundler implements IBundler {
     const encodedOps: string[] = [];
 
     for (const op of ops) {
-      const parts: string[] = [];
+      const encodeResult = await SimulatedBundler.encodeOpWithoutSignature(
+        registry,
+        op,
+      );
 
-      const senderIndex = await lookupAddress(registry, op.sender);
+      bits.push(...encodeResult.bits);
 
-      if (senderIndex === undefined) {
-        bits.push(false);
-        parts.push(op.sender);
-      } else {
-        bits.push(true);
-        parts.push(encodeRegIndex(senderIndex));
-      }
-
-      parts.push(encodeVLQ(BigInt(op.nonce)));
-
-      if (hexLen(op.initCode) === 0) {
-        bits.push(false);
-      } else {
-        bits.push(true);
-        parts.push(encodeBytes(op.initCode));
-      }
-
-      SimulatedBundler.encodeUserOpCalldata(bits, parts, op.callData);
-
-      parts.push(encodePseudoFloat(BigInt(op.callGasLimit)));
-      parts.push(encodePseudoFloat(BigInt(op.verificationGasLimit)));
-      parts.push(encodePseudoFloat(BigInt(op.preVerificationGas)));
-      parts.push(encodePseudoFloat(BigInt(op.maxFeePerGas)));
-      parts.push(encodePseudoFloat(BigInt(op.maxPriorityFeePerGas)));
-
-      if (hexLen(op.paymasterAndData) === 0) {
-        bits.push(false);
-      } else {
-        bits.push(true);
-        parts.push(encodeBytes(op.paymasterAndData));
-      }
-
-      parts.push(encodeBytes(op.signature));
-
-      encodedOps.push(hexJoin(parts));
+      encodedOps.push(
+        hexJoin([encodeResult.encodedOp, encodeBytes(op.signature)]),
+      );
     }
 
     return hexJoin([encodedLen, encodeBitStack(bits), ...encodedOps]);
+  }
+
+  static async encodeHandleAggregatedOps(
+    registry: AddressRegistry,
+    ops: EthereumRpc.UserOperation[],
+  ): Promise<string> {
+    const encodedLen = encodeVLQ(BigInt(ops.length));
+
+    const bits: boolean[] = [];
+    const encodedOps: string[] = [];
+
+    for (const op of ops) {
+      const encodeResult = await SimulatedBundler.encodeOpWithoutSignature(
+        registry,
+        op,
+      );
+
+      bits.push(...encodeResult.bits);
+      encodedOps.push(encodeResult.encodedOp);
+    }
+
+    const abiCoder = ethers.AbiCoder.defaultAbiCoder();
+
+    const aggregatedSignature = hubbleBlsSigner.aggregate(
+      // Using bytes32[2] here to get the uint256 values as strings, which is
+      // required by hubbleBlsSigner.aggregate
+      ops.map((op) => abiCoder.decode(['bytes32[2]'], op.signature)[0]),
+    );
+
+    return hexJoin([
+      encodedLen,
+      encodeBitStack(bits),
+      ...encodedOps,
+      abiCoder.encode(['uint256[2]'], [aggregatedSignature]),
+    ]);
+  }
+
+  static async encodeOpWithoutSignature(
+    registry: AddressRegistry,
+    op: EthereumRpc.UserOperation,
+  ) {
+    const bits: boolean[] = [];
+    const parts: string[] = [];
+
+    const senderIndex = await lookupAddress(registry, op.sender);
+
+    if (senderIndex === undefined) {
+      bits.push(false);
+      parts.push(op.sender);
+    } else {
+      bits.push(true);
+      parts.push(encodeRegIndex(senderIndex));
+    }
+
+    parts.push(encodeVLQ(BigInt(op.nonce)));
+
+    if (hexLen(op.initCode) === 0) {
+      bits.push(false);
+    } else {
+      bits.push(true);
+      parts.push(encodeBytes(op.initCode));
+    }
+
+    SimulatedBundler.encodeUserOpCalldata(bits, parts, op.callData);
+
+    parts.push(encodePseudoFloat(BigInt(op.callGasLimit)));
+    parts.push(encodePseudoFloat(BigInt(op.verificationGasLimit)));
+    parts.push(encodePseudoFloat(BigInt(op.preVerificationGas)));
+    parts.push(encodePseudoFloat(BigInt(op.maxFeePerGas)));
+    parts.push(encodePseudoFloat(BigInt(op.maxPriorityFeePerGas)));
+
+    if (hexLen(op.paymasterAndData) === 0) {
+      bits.push(false);
+    } else {
+      bits.push(true);
+      parts.push(encodeBytes(op.paymasterAndData));
+    }
+
+    return {
+      bits,
+      encodedOp: hexJoin(parts),
+    };
   }
 
   static encodeUserOpCalldata(

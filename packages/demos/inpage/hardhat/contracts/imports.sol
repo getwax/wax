@@ -14,4 +14,5 @@ import {SafeCompressionPlugin} from "../lib/plugins/src/safe/SafeCompressionPlug
 import {FallbackDecompressor} from "../lib/compression/src/decompressors/FallbackDecompressor.sol";
 import {AddressRegistry} from "../lib/compression/src/AddressRegistry.sol";
 import {HandleOpsCaller} from "../lib/compression/src/HandleOpsCaller.sol";
+import {HandleAggregatedOpsCaller} from "../lib/compression/src/HandleAggregatedOpsCaller.sol";
 import {SafeECDSARecoveryPlugin} from "../lib/plugins/src/safe/SafeECDSARecoveryPlugin.sol";

@@ -123,5 +123,8 @@ module.exports = {
     'consistent-return': 'off',
     'no-plusplus': 'off',
     'no-bitwise': 'off',
+    '@typescript-eslint/no-unsafe-argument': 'off',
+    '@typescript-eslint/no-unsafe-assignment': 'off',
+    '@typescript-eslint/no-unsafe-return': 'off',
   },
 };

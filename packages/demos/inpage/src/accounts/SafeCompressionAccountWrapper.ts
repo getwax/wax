@@ -203,7 +203,10 @@ async function getBlsSigner(ecdsaPrivateKey: string) {
   // context, but there should be a standard around this.
   const blsPrivateKey = ecdsaPrivateKey;
 
-  const domain = getBytes(keccak256(Buffer.from('eip4337.bls.domain')));
+  const domain = getBytes(
+    keccak256(new TextEncoder().encode('eip4337.bls.domain')),
+  );
+
   const signerFactory = await hubbleBlsSigner.BlsSignerFactory.new();
   const blsSigner = signerFactory.getSigner(domain, blsPrivateKey);
 
