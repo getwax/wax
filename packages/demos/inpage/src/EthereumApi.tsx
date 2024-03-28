@@ -13,7 +13,7 @@ import { roundUpPseudoFloat } from './helpers/encodeUtils';
 
 // We need a UserOperation in order to estimate the gas fields of a
 // UserOperation, so we use these values as placeholders.
-const temporaryEstimationGas = '0x012345';
+const temporaryEstimationGas = '0x01234567';
 const temporarySignature = [
   '0x',
   '123456fe2807660c417ca1a38760342fa70135fcab89a8c7c879a77da8ce7a0b5a3805735e',

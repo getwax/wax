@@ -58,6 +58,7 @@ type Config = {
   deployContractsIfNeeded: boolean;
   ethersPollingInterval?: number;
   useTopLevelCompression?: boolean;
+  entryPointAddress?: string;
 };
 
 const defaultConfig: Config = {
@@ -71,6 +72,7 @@ let ethersDefaultPollingInterval = 4000;
 type ConstructorOptions = {
   rpcUrl: string;
   bundlerRpcUrl?: string;
+  entryPointAddress?: string;
   storage?: WaxStorage;
 };
 
@@ -103,6 +105,7 @@ export default class WaxInPage {
   constructor({
     rpcUrl,
     bundlerRpcUrl,
+    entryPointAddress,
     storage = makeLocalWaxStorage(),
   }: ConstructorOptions) {
     let bundler: IBundler;
@@ -113,6 +116,8 @@ export default class WaxInPage {
       bundler = new NetworkBundler(bundlerRpcUrl);
     }
 
+    this.#config.entryPointAddress =
+      entryPointAddress ?? this.#config.entryPointAddress;
     this.ethereum = new EthereumApi(rpcUrl, this, bundler);
     this.storage = storage;
     this.ethersProvider = new ethers.BrowserProvider(this.ethereum);
@@ -194,7 +199,11 @@ export default class WaxInPage {
       chainId,
     );
 
-    const assumedEntryPoint = viewer.connectAssume(EntryPoint__factory, []);
+    const wallet = await this.requestAdminAccount('deploy-contracts');
+
+    const assumedEntryPoint = this.#config.entryPointAddress
+      ? EntryPoint__factory.connect(this.#config.entryPointAddress, wallet)
+      : viewer.connectAssume(EntryPoint__factory, []);
 
     const assumedAddressRegistry = viewer.connectAssume(
       AddressRegistry__factory,
@@ -250,11 +259,11 @@ export default class WaxInPage {
       throw new Error('Contracts not deployed');
     }
 
-    const wallet = await this.requestAdminAccount('deploy-contracts');
-
     const factory = await DeterministicDeployer.init(wallet);
 
-    const entryPoint = await factory.connectOrDeploy(EntryPoint__factory, []);
+    const entryPoint = this.#config.entryPointAddress
+      ? EntryPoint__factory.connect(this.#config.entryPointAddress, wallet)
+      : await factory.connectOrDeploy(EntryPoint__factory, []);
 
     const addressRegistry = await factory.connectOrDeploy(
       AddressRegistry__factory,

@@ -15,11 +15,18 @@ const config: ConfigType = {
   rpcUrl: 'http://127.0.0.1:8545',
   deployerSeedPhrase:
     'test test test test test test test test test test test junk',
+
   // Uncomment this with the url of a bundler to enable using an external
   // bundler (sometimes this is the same as rpcUrl). Otherwise, a bundler will
   // be simulated inside the library.
   // bundlerRpcUrl: '',
+
   requirePermission: false,
+
+  // The EntryPoint will be deployed deterministically by default. However,
+  // if you need to interop with a specific existing deployment, specify it
+  // here.
+  // entryPointAddress: '0x...',
 };
 
 export default config;

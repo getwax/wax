@@ -14,6 +14,9 @@ import {
   EntryPoint__factory,
   BLSSignatureAggregator__factory,
   BLSOpen__factory,
+  HandleOpsCaller__factory,
+  HandleAggregatedOpsCaller__factory,
+  AddressRegistry__factory,
 } from "../typechain-types";
 import makeDevFaster from "../test/e2e/utils/makeDevFaster";
 
@@ -26,6 +29,16 @@ async function deploy() {
 
   const deployer = await DeterministicDeployer.init(wallet);
 
+  const linkedAggregator = DeterministicDeployer.link(
+    BLSSignatureAggregator__factory,
+    [
+      {
+        "lib/account-abstraction/contracts/samples/bls/lib/BLSOpen.sol:BLSOpen":
+          deployer.calculateAddress(BLSOpen__factory, []),
+      },
+    ],
+  );
+
   const contractFactories = [
     SimulateTxAccessor__factory,
     TokenCallbackHandler__factory,
@@ -36,12 +49,8 @@ async function deploy() {
     MultiSendCallOnly__factory,
     SignMessageLib__factory,
     BLSOpen__factory,
-    DeterministicDeployer.link(BLSSignatureAggregator__factory, [
-      {
-        "lib/account-abstraction/contracts/samples/bls/lib/BLSOpen.sol:BLSOpen":
-          deployer.calculateAddress(BLSOpen__factory, []),
-      },
-    ]),
+    linkedAggregator,
+    AddressRegistry__factory,
   ];
 
   for (const contractFactory of contractFactories) {
@@ -50,6 +59,33 @@ async function deploy() {
     const contractName = contractFactory.name.split("_")[0];
     console.log(`deployed ${contractName} to ${await contract.getAddress()}`);
   }
+
+  const handleOpsCaller = await deployer.connectOrDeploy(
+    HandleOpsCaller__factory,
+    [
+      deployer.calculateAddress(EntryPoint__factory, []),
+      testAbsentAddress,
+      deployer.calculateAddress(AddressRegistry__factory, []),
+    ],
+  );
+
+  console.log(
+    `deployed HandleOpsCaller to ${await handleOpsCaller.getAddress()}`,
+  );
+
+  const handleAggregatedOpsCaller = await deployer.connectOrDeploy(
+    HandleAggregatedOpsCaller__factory,
+    [
+      deployer.calculateAddress(EntryPoint__factory, []),
+      testAbsentAddress,
+      deployer.calculateAddress(linkedAggregator, []),
+      deployer.calculateAddress(AddressRegistry__factory, []),
+    ],
+  );
+
+  console.log(
+    `deployed HandleAggregatedOpsCaller to ${await handleAggregatedOpsCaller.getAddress()}`,
+  );
 
   const safeDeployer = await DeterministicDeployer.initSafeVersion(wallet);
 
@@ -71,3 +107,6 @@ deploy().catch((error: Error) => {
   console.error(error);
   process.exitCode = 1;
 });
+
+// 'test '.repeat(11) + 'absent'
+const testAbsentAddress = "0xe8250207B79D7396631bb3aE38a7b457261ae0B6";

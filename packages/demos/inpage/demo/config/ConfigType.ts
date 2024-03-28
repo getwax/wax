@@ -7,6 +7,7 @@ type ConfigType = {
   addFundsEthAmount?: string;
   deployerSeedPhrase: string;
   requirePermission?: boolean;
+  entryPointAddress?: string;
 };
 
 export default ConfigType;
