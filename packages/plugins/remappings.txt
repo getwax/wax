@@ -8,3 +8,4 @@ kernel/=lib/kernel/
 I4337/=lib/kernel/lib/I4337/src/
 solady/=lib/kernel/lib/solady/src/
 erc7579-implementation/=lib/erc7579-implementation/
+erc6900-reference-implementation/=lib/reference-implementation/src/
