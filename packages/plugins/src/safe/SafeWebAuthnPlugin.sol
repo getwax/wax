@@ -8,6 +8,10 @@ import {WebAuthn} from "../primitives/WebAuthn.sol";
 
 import {Safe4337Base, SIG_VALIDATION_FAILED} from "./utils/Safe4337Base.sol";
 
+/*//////////////////////////////////////////////////////////////////////////
+    THIS CONTRACT IS STILL IN ACTIVE DEVELOPMENT. NOT FOR PRODUCTION USE        
+//////////////////////////////////////////////////////////////////////////*/
+
 interface ISafe {
     function enableModule(address module) external;
 

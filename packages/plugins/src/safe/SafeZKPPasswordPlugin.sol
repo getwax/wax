@@ -7,6 +7,10 @@ import {ISafe} from "./interface/ISafe.sol";
 import {Safe4337Base, SIG_VALIDATION_FAILED} from "./utils/Safe4337Base.sol";
 import {IEntryPoint, PackedUserOperation} from "account-abstraction/interfaces/IEntryPoint.sol";
 
+/*//////////////////////////////////////////////////////////////////////////
+    THIS CONTRACT IS STILL IN ACTIVE DEVELOPMENT. NOT FOR PRODUCTION USE        
+//////////////////////////////////////////////////////////////////////////*/
+
 struct ZKPPasswordOwnerStorage {
     address owner;
 }

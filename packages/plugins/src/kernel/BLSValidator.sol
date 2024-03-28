@@ -7,6 +7,10 @@ import {ValidationData} from "kernel/src/common/Types.sol";
 import {SIG_VALIDATION_FAILED, ValidationData} from "kernel/src/common/Constants.sol";
 import {BLS} from "account-abstraction/samples/bls/lib/hubble-contracts/contracts/libs/BLS.sol";
 
+/*//////////////////////////////////////////////////////////////////////////
+    THIS CONTRACT IS STILL IN ACTIVE DEVELOPMENT. NOT FOR PRODUCTION USE        
+//////////////////////////////////////////////////////////////////////////*/
+
 // BLSValidator is a validator that uses BLS signatures to validate transactions.
 // TODO: Consider account recovery, aggregate signatures, and use EIP 712.
 // Note: This is not audited and should not be used in production.

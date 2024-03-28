@@ -10,6 +10,10 @@ import {IBLSAccount} from "account-abstraction/samples/bls/IBLSAccount.sol";
 
 import {Safe4337Base, ISafe} from "./utils/Safe4337Base.sol";
 
+/*//////////////////////////////////////////////////////////////////////////
+    THIS CONTRACT IS STILL IN ACTIVE DEVELOPMENT. NOT FOR PRODUCTION USE        
+//////////////////////////////////////////////////////////////////////////*/
+
 error IncorrectSignatureLength(uint256 length);
 
 contract SafeBlsPlugin is Safe4337Base, IBLSAccount {

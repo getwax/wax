@@ -11,6 +11,10 @@ import {EntryPoint} from "account-abstraction/core/EntryPoint.sol";
 import {SafeCompressionPlugin} from "./SafeCompressionPlugin.sol";
 import {IDecompressor} from "../compression/decompressors/IDecompressor.sol";
 
+/*//////////////////////////////////////////////////////////////////////////
+    THIS CONTRACT IS STILL IN ACTIVE DEVELOPMENT. NOT FOR PRODUCTION USE        
+//////////////////////////////////////////////////////////////////////////*/
+
 contract SafeCompressionFactory {
     function create(
         Safe safeSingleton,

@@ -11,6 +11,10 @@ import {EntryPoint} from "account-abstraction/core/EntryPoint.sol";
 import {SafeZKPPasswordPlugin} from "./SafeZKPPasswordPlugin.sol";
 import {IGroth16Verifier} from "./interface/IGroth16Verifier.sol";
 
+/*//////////////////////////////////////////////////////////////////////////
+    THIS CONTRACT IS STILL IN ACTIVE DEVELOPMENT. NOT FOR PRODUCTION USE        
+//////////////////////////////////////////////////////////////////////////*/
+
 contract SafeZKPPasswordFactory {
     function create(
         Safe safeSingleton,

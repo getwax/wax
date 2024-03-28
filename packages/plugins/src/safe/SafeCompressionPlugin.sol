@@ -13,6 +13,10 @@ import {Safe4337Base, ISafe, SIG_VALIDATION_FAILED} from "./utils/Safe4337Base.s
 import {WaxLib as W} from "../compression/WaxLib.sol";
 import {IDecompressor} from "../compression/decompressors/IDecompressor.sol";
 
+/*//////////////////////////////////////////////////////////////////////////
+    THIS CONTRACT IS STILL IN ACTIVE DEVELOPMENT. NOT FOR PRODUCTION USE        
+//////////////////////////////////////////////////////////////////////////*/
+
 error IncorrectSignatureLength(uint256 length);
 
 contract SafeCompressionPlugin is Safe4337Base, IBLSAccount {

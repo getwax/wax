@@ -10,6 +10,10 @@ import {EntryPoint} from "account-abstraction/core/EntryPoint.sol";
 
 import {SafeECDSAPlugin} from "./SafeECDSAPlugin.sol";
 
+/*//////////////////////////////////////////////////////////////////////////
+    THIS CONTRACT IS STILL IN ACTIVE DEVELOPMENT. NOT FOR PRODUCTION USE        
+//////////////////////////////////////////////////////////////////////////*/
+
 contract SafeECDSAFactory {
     function create(
         Safe safeSingleton,

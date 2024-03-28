@@ -11,6 +11,10 @@ import {MockGroth16Verifier} from "../safe/utils/MockGroth16Verifier.sol";
 import {MockDKIMRegsitry} from "../safe/utils/MockDKIMRegsitry.sol";
 import {IDKIMRegsitry} from "../safe/interface/IDKIMRegsitry.sol";
 
+/*//////////////////////////////////////////////////////////////////////////
+    THIS CONTRACT IS STILL IN ACTIVE DEVELOPMENT. NOT FOR PRODUCTION USE        
+//////////////////////////////////////////////////////////////////////////*/
+
 struct RecoveryRequest {
     bytes32 recoveryHash;
     bytes32 dkimPublicKeyHash;
@@ -83,7 +87,6 @@ contract ERC7579ZkEmailRecoveryModule is IValidator {
     function onInstall(bytes calldata data) external override {
         if (isInitialized(msg.sender)) revert AlreadyInitialized(msg.sender);
 
-        // Get the threshold and guardians from the data
         (
             bytes32 recoveryHash,
             bytes32 dkimPublicKeyHash,

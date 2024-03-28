@@ -12,6 +12,10 @@ import {MockGroth16Verifier} from "./safe/utils/MockGroth16Verifier.sol";
 import {MockDKIMRegsitry} from "./safe/utils/MockDKIMRegsitry.sol";
 import {IDKIMRegsitry} from "./safe/interface/IDKIMRegsitry.sol";
 
+/*//////////////////////////////////////////////////////////////////////////
+    THIS CONTRACT IS STILL IN ACTIVE DEVELOPMENT. NOT FOR PRODUCTION USE        
+//////////////////////////////////////////////////////////////////////////*/
+
 struct RecoveryRequest {
     bytes32 recoveryHash;
     bytes32 dkimPublicKeyHash;
@@ -110,7 +114,7 @@ contract SimpleAccountWithRecovery is SimpleAccount {
         address _dkimRegistry,
         uint256 customDelay
     ) external onlyOwner {
-        address account = msg.sender;
+        address account = address(this);
 
         if (recoveryRequest.executeAfter > 0) {
             revert RECOVERY_ALREADY_INITIATED();
@@ -230,7 +234,7 @@ contract SimpleAccountWithRecovery is SimpleAccount {
      *      the msg.sender is the account that the recovery request is being deleted for
      */
     function cancelRecovery() external {
-        address account = msg.sender;
+        address account = address(this);
         delete recoveryRequest;
         emit RecoveryCancelled(account);
     }
@@ -243,7 +247,7 @@ contract SimpleAccountWithRecovery is SimpleAccount {
      * @param delay The custom delay to be used when recovering the account
      */
     function setRecoveryDelay(uint256 delay) external {
-        address account = msg.sender;
+        address account = address(this);
         recoveryDelay = delay;
         emit RecoveryDelaySet(account, delay);
     }
