@@ -5,7 +5,7 @@ pragma abicoder v2;
 import {IGroth16Verifier} from "./interface/IGroth16Verifier.sol";
 import {ISafe} from "./interface/ISafe.sol";
 import {Safe4337Base, SIG_VALIDATION_FAILED} from "./utils/Safe4337Base.sol";
-import {IEntryPoint, PackedUserOperation} from "account-abstraction/contracts/interfaces/IEntryPoint.sol";
+import {IEntryPoint, PackedUserOperation} from "account-abstraction/interfaces/IEntryPoint.sol";
 
 struct ZKPPasswordOwnerStorage {
     address owner;

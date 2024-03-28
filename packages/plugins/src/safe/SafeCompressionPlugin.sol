@@ -4,9 +4,9 @@ pragma abicoder v2;
 
 import {HandlerContext} from "safe-contracts/contracts/handler/HandlerContext.sol";
 
-import {IEntryPoint, PackedUserOperation} from "account-abstraction/contracts/interfaces/IEntryPoint.sol";
-import {BLS} from "account-abstraction/contracts/samples/bls/lib/hubble-contracts/contracts/libs/BLS.sol";
-import {IBLSAccount} from "account-abstraction/contracts/samples/bls/IBLSAccount.sol";
+import {IEntryPoint, PackedUserOperation} from "account-abstraction/interfaces/IEntryPoint.sol";
+import {BLS} from "account-abstraction/samples/bls/lib/hubble-contracts/contracts/libs/BLS.sol";
+import {IBLSAccount} from "account-abstraction/samples/bls/IBLSAccount.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
 import {Safe4337Base, ISafe, SIG_VALIDATION_FAILED} from "./utils/Safe4337Base.sol";

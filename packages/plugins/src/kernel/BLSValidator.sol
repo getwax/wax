@@ -5,7 +5,7 @@ pragma solidity >=0.8.4 <0.9.0;
 import {IKernelValidator, UserOperation} from "kernel/src/interfaces/IKernelValidator.sol";
 import {ValidationData} from "kernel/src/common/Types.sol";
 import {SIG_VALIDATION_FAILED, ValidationData} from "kernel/src/common/Constants.sol";
-import {BLS} from "account-abstraction/contracts/samples/bls/lib/hubble-contracts/contracts/libs/BLS.sol";
+import {BLS} from "account-abstraction/samples/bls/lib/hubble-contracts/contracts/libs/BLS.sol";
 
 // BLSValidator is a validator that uses BLS signatures to validate transactions.
 // TODO: Consider account recovery, aggregate signatures, and use EIP 712.

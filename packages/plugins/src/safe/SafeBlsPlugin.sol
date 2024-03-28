@@ -4,9 +4,9 @@ pragma abicoder v2;
 
 import {HandlerContext} from "safe-contracts/contracts/handler/HandlerContext.sol";
 
-import {IEntryPoint, PackedUserOperation} from "account-abstraction/contracts/interfaces/IEntryPoint.sol";
-import {BLS} from "account-abstraction/contracts/samples/bls/lib/hubble-contracts/contracts/libs/BLS.sol";
-import {IBLSAccount} from "account-abstraction/contracts/samples/bls/IBLSAccount.sol";
+import {IEntryPoint, PackedUserOperation} from "account-abstraction/interfaces/IEntryPoint.sol";
+import {BLS} from "account-abstraction/samples/bls/lib/hubble-contracts/contracts/libs/BLS.sol";
+import {IBLSAccount} from "account-abstraction/samples/bls/IBLSAccount.sol";
 
 import {Safe4337Base, ISafe} from "./utils/Safe4337Base.sol";
 
@@ -65,8 +65,9 @@ contract SafeBlsPlugin is Safe4337Base, IBLSAccount {
         uint256 initCodeLen = userOp.initCode.length;
 
         if (initCodeLen > 0) {
-            bytes32 claimedKeyHash =
-                keccak256(userOp.initCode[initCodeLen - 128:]);
+            bytes32 claimedKeyHash = keccak256(
+                userOp.initCode[initCodeLen - 128:]
+            );
 
             // See appendKeyToInitCode.ts for a detailed explanation.
             require(

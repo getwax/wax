@@ -2,7 +2,7 @@
 pragma solidity ^0.8.12;
 
 import "forge-std/Test.sol";
-import {EntryPoint, PackedUserOperation} from "account-abstraction/contracts/core/EntryPoint.sol";
+import {EntryPoint, PackedUserOperation} from "account-abstraction/core/EntryPoint.sol";
 
 /* solhint-disable private-vars-leading-underscore */
 /* solhint-disable var-name-mixedcase */

@@ -5,8 +5,8 @@ pragma solidity ^0.8.0;
 /* solhint-disable no-inline-assembly */
 /* solhint-disable reason-string */
 
-import {SimpleAccount} from "account-abstraction/contracts/samples/SimpleAccount.sol";
-import {IEntryPoint} from "account-abstraction/contracts/interfaces/IEntryPoint.sol";
+import {SimpleAccount} from "account-abstraction/samples/SimpleAccount.sol";
+import {IEntryPoint} from "account-abstraction/interfaces/IEntryPoint.sol";
 
 import {MockGroth16Verifier} from "./safe/utils/MockGroth16Verifier.sol";
 import {MockDKIMRegsitry} from "./safe/utils/MockDKIMRegsitry.sol";

@@ -13,7 +13,7 @@ import {ERC4337Utils} from "kernel/test/foundry/utils/ERC4337Utils.sol";
 
 import {IEntryPoint} from "I4337/interfaces/IEntryPoint.sol";
 import {ENTRYPOINT_0_6_ADDRESS, ENTRYPOINT_0_6_BYTECODE, CREATOR_0_6_BYTECODE, CREATOR_0_6_ADDRESS} from "I4337/artifacts/EntryPoint_0_6.sol";
-import {EntryPoint} from "account-abstraction/contracts/core/EntryPoint.sol";
+import {EntryPoint} from "account-abstraction/core/EntryPoint.sol";
 
 import {BLSValidator} from "../../../src/kernel/BLSValidator.sol";
 import "forge-std/Test.sol";

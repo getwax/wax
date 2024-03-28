@@ -7,7 +7,7 @@ import {TestHelper} from "../utils/TestHelper.sol";
 import {SafeWebAuthnPluginHarness} from "../utils/SafeWebAuthnPluginHarness.sol";
 import {SafeWebAuthnPlugin} from "../../../src/safe/SafeWebAuthnPlugin.sol";
 import {Safe4337Base} from "../../../src/safe/utils/Safe4337Base.sol";
-import {PackedUserOperation} from "account-abstraction/contracts/interfaces/IEntryPoint.sol";
+import {PackedUserOperation} from "account-abstraction/interfaces/IEntryPoint.sol";
 
 /* solhint-disable func-name-mixedcase */
 

@@ -7,7 +7,7 @@ import {TestHelper} from "../utils/TestHelper.sol";
 import {SafeBlsPluginHarness} from "../utils/SafeBlsPluginHarness.sol";
 import {SafeBlsPlugin} from "../../../src/safe/SafeBlsPlugin.sol";
 import {Safe4337Base} from "../../../src/safe/utils/Safe4337Base.sol";
-import {BLSSignatureAggregator} from "account-abstraction/contracts/samples/bls/BLSSignatureAggregator.sol";
+import {BLSSignatureAggregator} from "account-abstraction/samples/bls/BLSSignatureAggregator.sol";
 
 /* solhint-disable func-name-mixedcase */
 

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.12;
 
-import {PackedUserOperation} from "account-abstraction/contracts/interfaces/IEntryPoint.sol";
+import {PackedUserOperation} from "account-abstraction/interfaces/IEntryPoint.sol";
 import {SafeWebAuthnPlugin} from "../../../src/safe/SafeWebAuthnPlugin.sol";
 
 /** Helper contract to expose internal functions for testing */
