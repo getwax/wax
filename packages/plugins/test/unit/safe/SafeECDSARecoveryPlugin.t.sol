@@ -9,6 +9,7 @@ import {SafeECDSAPlugin} from "../../../src/safe/SafeECDSAPlugin.sol";
 import {Safe} from "safe-contracts/contracts/Safe.sol";
 import {SafeProxy} from "safe-contracts/contracts/proxies/SafeProxy.sol";
 import {ECDSA} from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
+import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
 /* solhint-disable func-name-mixedcase */
 /* solhint-disable private-vars-leading-underscore */
@@ -292,7 +293,10 @@ contract SafeECDSARecoveryPluginTest is TestHelper {
         bytes32 invalidOwnerHash = keccak256(
             abi.encodePacked("invalid address hash")
         );
-        bytes32 ethSignedHash = invalidOwnerHash.toEthSignedMessageHash();
+        bytes32 ethSignedHash = MessageHashUtils.toEthSignedMessageHash(
+            invalidOwnerHash
+        );
+
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(newOwner, ethSignedHash);
         bytes memory newOwnerSignature = abi.encodePacked(r, s, v); // note the order here is different from the tuple above.
 
@@ -331,7 +335,9 @@ contract SafeECDSARecoveryPluginTest is TestHelper {
         Vm.Wallet memory newOwner = Carol;
 
         bytes32 currentOwnerHash = keccak256(abi.encodePacked(owner));
-        bytes32 ethSignedHash = currentOwnerHash.toEthSignedMessageHash();
+        bytes32 ethSignedHash = MessageHashUtils.toEthSignedMessageHash(
+            currentOwnerHash
+        );
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(newOwner, ethSignedHash);
         bytes memory newOwnerSignature = abi.encodePacked(r, s, v); // note the order here is different from the tuple above.
 

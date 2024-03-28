@@ -4,8 +4,8 @@ pragma abicoder v2;
 
 import {IGroth16Verifier} from "./interface/IGroth16Verifier.sol";
 import {ISafe} from "./interface/ISafe.sol";
-import {Safe4337Base} from "./utils/Safe4337Base.sol";
-import {IEntryPoint, UserOperation} from "account-abstraction/contracts/interfaces/IEntryPoint.sol";
+import {Safe4337Base, SIG_VALIDATION_FAILED} from "./utils/Safe4337Base.sol";
+import {IEntryPoint, PackedUserOperation} from "account-abstraction/contracts/interfaces/IEntryPoint.sol";
 
 struct ZKPPasswordOwnerStorage {
     address owner;
@@ -76,7 +76,7 @@ contract SafeZKPPasswordPlugin is Safe4337Base {
     }
 
     function _validateSignature(
-        UserOperation calldata userOp,
+        PackedUserOperation calldata userOp,
         bytes32 userOpHash
     ) internal view override returns (uint256 validationData) {
         // TODO (merge-ok) There is likely a more efficient way to encode this

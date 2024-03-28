@@ -1,4 +1,3 @@
-import { getUserOpHash } from "@account-abstraction/utils";
 import { ERC4337ZKPPasswordClient } from "@getwax/circuits";
 import { expect } from "chai";
 import { resolveProperties, ethers } from "ethers";
@@ -11,6 +10,7 @@ import {
 } from "../../typechain-types";
 import { setupTests } from "./utils/setupTests";
 import { createUserOperation } from "./utils/createUserOp";
+import { getUserOpHash } from "./utils/userOpUtils";
 
 describe("SafeZKPPasswordPlugin", () => {
   it("should pass the ERC4337 validation", async () => {
@@ -85,17 +85,20 @@ describe("SafeZKPPasswordPlugin", () => {
       ],
     );
 
-    // Note: initCode is not used because we need to create both the safe
+    // Note: factoryParams is not used because we need to create both the safe
     // proxy and the plugin, and 4337 currently only allows one contract
     // creation in this step. Since we need an extra step anyway, it's simpler
     // to do the whole create outside of 4337.
-    const initCode = "0x";
+    const factoryParams = {
+      factory: "0x",
+      factoryData: "0x",
+    };
 
     const unsignedUserOperation = await createUserOperation(
       provider,
       bundlerProvider,
       accountAddress,
-      initCode,
+      factoryParams,
       userOpCallData,
       entryPointAddress,
       dummySignature,

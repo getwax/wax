@@ -170,7 +170,10 @@ describe("SafeECDSARecoveryPlugin", () => {
       [await recoveryPlugin.getAddress(), "0x00", addRecoveryAccountCalldata],
     );
 
-    const initCode = "0x";
+    const factoryParams = {
+      factory: "0x",
+      factoryData: "0x",
+    };
     const dummySignature = await owner.signMessage("dummy sig");
 
     // Send userOp to add recovery account
@@ -179,7 +182,7 @@ describe("SafeECDSARecoveryPlugin", () => {
       bundlerProvider,
       owner,
       safeProxyAddress,
-      initCode,
+      factoryParams,
       userOpCallData,
       entryPointAddress,
       dummySignature,
@@ -236,7 +239,7 @@ describe("SafeECDSARecoveryPlugin", () => {
       bundlerProvider,
       newEcdsaPluginSigner,
       safeProxyAddress,
-      initCode,
+      factoryParams,
       userOpCallData,
       entryPointAddress,
       dummySignature,
@@ -317,7 +320,10 @@ describe("SafeECDSARecoveryPlugin", () => {
       [await recoveryPlugin.getAddress(), "0x00", addRecoveryAccountCalldata],
     );
 
-    const initCode = "0x";
+    const factoryParams = {
+      factory: "0x",
+      factoryData: "0x",
+    };
     const dummySignature = await owner.signMessage("dummy sig");
 
     // Send userOp to add recovery account
@@ -326,7 +332,7 @@ describe("SafeECDSARecoveryPlugin", () => {
       bundlerProvider,
       owner,
       safeProxyAddress,
-      initCode,
+      factoryParams,
       userOpCallData,
       entryPointAddress,
       dummySignature,
@@ -380,7 +386,7 @@ describe("SafeECDSARecoveryPlugin", () => {
       bundlerProvider,
       guardianSigner,
       guardianSimpleAccountAddress,
-      initCode,
+      factoryParams,
       userOpCallData,
       entryPointAddress,
       dummySignature,
@@ -403,7 +409,7 @@ describe("SafeECDSARecoveryPlugin", () => {
       bundlerProvider,
       newEcdsaPluginSigner,
       safeProxyAddress,
-      initCode,
+      factoryParams,
       userOpCallData,
       entryPointAddress,
       dummySignature,

@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {ECDSA} from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
+import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
 contract Enum {
     enum Operation {
@@ -114,7 +115,9 @@ contract SafeECDSARecoveryPlugin {
         }
 
         bytes32 currentOwnerHash = keccak256(abi.encodePacked(currentOwner));
-        bytes32 ethSignedHash = currentOwnerHash.toEthSignedMessageHash();
+        bytes32 ethSignedHash = MessageHashUtils.toEthSignedMessageHash(
+            currentOwnerHash
+        );
 
         if (newOwner != ethSignedHash.recover(newOwnerSignature))
             revert INVALID_NEW_OWNER_SIGNATURE();

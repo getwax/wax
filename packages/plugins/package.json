@@ -13,7 +13,7 @@
     "@getwax/circuits": "../zkp"
   },
   "devDependencies": {
-    "@account-abstraction/contracts": "^0.6.0",
+    "@account-abstraction/contracts": "0.7.0",
     "@account-abstraction/utils": "^0.6.0",
     "@nomicfoundation/hardhat-chai-matchers": "^2.0.0",
     "@nomicfoundation/hardhat-ethers": "^3.0.0",
