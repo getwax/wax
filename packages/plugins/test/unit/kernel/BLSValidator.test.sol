@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.19;
+pragma solidity ^0.8.19;
 
 import {KernelFactory} from "kernel/src/factory/KernelFactory.sol";
 import {Kernel, UserOperation, ECDSA} from "kernel/src/Kernel.sol";

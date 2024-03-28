@@ -7,13 +7,14 @@ import {
 import { setupTests } from "./utils/setupTests";
 import receiptOf from "./utils/receiptOf";
 import {
-  generateInitCodeAndAddress,
+  generateFactoryParamsAndAddress,
   createUserOperation,
 } from "./utils/createUserOp";
 import { getSigners } from "./utils/getSigners";
 import getBlsUserOpHash from "./utils/getBlsUserOpHash";
 import appendKeyToInitCode from "./utils/appendKeyToInitCode";
 import setupBls from "./utils/setupBls";
+import { packUserOp } from "./utils/userOpUtils";
 
 const BLS_PRIVATE_KEY =
   "0xdbe3d601b1b25c42c50015a87855fdce00ea9b3a7e33c92d31c69aeb70708e08";
@@ -58,41 +59,46 @@ describe("SafeBlsPlugin", () => {
       [recipientAddress, transferAmount, "0x"],
     );
 
-    let { initCode, deployedAddress } = await generateInitCodeAndAddress(
-      admin,
-      owner,
-      safeBlsPlugin,
-      safeSingleton,
-      safeProxyFactory,
-    );
+    let { factoryParams, deployedAddress } =
+      await generateFactoryParamsAndAddress(
+        admin,
+        owner,
+        safeBlsPlugin,
+        safeSingleton,
+        safeProxyFactory,
+      );
 
-    initCode = appendKeyToInitCode(initCode, blsSigner.pubkey);
+    factoryParams.factoryData = appendKeyToInitCode(
+      factoryParams.factoryData,
+      blsSigner.pubkey,
+    );
 
     const unsignedUserOperation = await createUserOperation(
       provider,
       bundlerProvider,
       deployedAddress,
-      initCode,
+      factoryParams,
       userOpCallData,
       entryPointAddress,
       "0x",
     );
+    const packedUserOperation = packUserOp(unsignedUserOperation);
 
     const blsUserOpHash = getBlsUserOpHash(
       (await provider.getNetwork()).chainId,
       await blsSignatureAggregator.getAddress(),
       blsSigner.pubkey,
-      unsignedUserOperation,
+      packedUserOperation,
+      entryPointAddress,
     );
 
-    const aggReportedUserOpHash = await blsSignatureAggregator.getUserOpHash(
-      unsignedUserOperation,
-    );
+    const aggReportedUserOpHash =
+      await blsSignatureAggregator.getUserOpHash(packedUserOperation);
 
     expect(blsUserOpHash).to.equal(aggReportedUserOpHash);
 
     const userOperation = {
-      ...unsignedUserOperation,
+      ...packedUserOperation,
       signature: solidityPacked(
         ["uint256[2]"],
         [blsSigner.sign(blsUserOpHash)],

@@ -7,7 +7,6 @@ import {TestHelper} from "../utils/TestHelper.sol";
 import {SafeECDSAPluginHarness} from "../utils/SafeECDSAPluginHarness.sol";
 import {SafeECDSAPlugin} from "../../../src/safe/SafeECDSAPlugin.sol";
 import {Safe4337Base} from "../../../src/safe/utils/Safe4337Base.sol";
-import {UserOperation, UserOperationLib} from "account-abstraction/contracts/interfaces/IEntryPoint.sol";
 
 /* solhint-disable func-name-mixedcase */
 

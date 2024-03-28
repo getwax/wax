@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { AbiCoder, ethers, solidityPacked } from "ethers";
+import { ethers, solidityPacked } from "ethers";
 import {
   AddressRegistry__factory,
   EntryPoint__factory,
@@ -12,6 +12,7 @@ import { setupTests } from "./utils/setupTests";
 import { createUserOperation } from "./utils/createUserOp";
 import setupBls from "./utils/setupBls";
 import getBlsUserOpHash from "./utils/getBlsUserOpHash";
+import { packUserOp } from "./utils/userOpUtils";
 
 const BLS_PRIVATE_KEY =
   "0xdbe3d601b1b25c42c50015a87855fdce00ea9b3a7e33c92d31c69aeb70708e08";
@@ -41,7 +42,6 @@ describe("SafeCompressionPlugin", () => {
       SafeCompressionFactory__factory,
       [],
     );
-    await safeCompressionFactory.waitForDeployment();
 
     const addressRegistry = await deployer.connectOrDeploy(
       AddressRegistry__factory,
@@ -92,11 +92,14 @@ describe("SafeCompressionPlugin", () => {
       [compressedActions],
     );
 
-    // Note: initCode is not used because we need to create both the safe
+    // Note: factoryParams is not used because we need to create both the safe
     // proxy and the plugin, and 4337 currently only allows one contract
     // creation in this step. Since we need an extra step anyway, it's simpler
     // to do the whole create outside of 4337.
-    const initCode = "0x";
+    const factoryParams = {
+      factory: "0x",
+      factoryData: "0x",
+    };
 
     // Native tokens for the pre-fund
     await receiptOf(
@@ -112,27 +115,28 @@ describe("SafeCompressionPlugin", () => {
       provider,
       bundlerProvider,
       accountAddress,
-      initCode,
+      factoryParams,
       userOpCallData,
       entryPointAddress,
       "0x",
     );
+    const packedUserOperation = packUserOp(unsignedUserOperation);
 
     const blsUserOpHash = getBlsUserOpHash(
       (await provider.getNetwork()).chainId,
       await blsSignatureAggregator.getAddress(),
       blsSigner.pubkey,
-      unsignedUserOperation,
+      packedUserOperation,
+      entryPointAddress,
     );
 
-    const aggReportedUserOpHash = await blsSignatureAggregator.getUserOpHash(
-      unsignedUserOperation,
-    );
+    const aggReportedUserOpHash =
+      await blsSignatureAggregator.getUserOpHash(packedUserOperation);
 
     expect(blsUserOpHash).to.equal(aggReportedUserOpHash);
 
     const userOperation = {
-      ...unsignedUserOperation,
+      ...packedUserOperation,
       signature: solidityPacked(
         ["uint256[2]"],
         [blsSigner.sign(blsUserOpHash)],

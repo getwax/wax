@@ -1,9 +1,9 @@
-import { UserOperationStruct } from "@account-abstraction/contracts";
+import { UserOperation } from "./userOpUtils";
 import { ethers } from "ethers";
 import sleep from "./sleep";
 
 export default async function sendUserOpAndWait(
-  userOp: UserOperationStruct,
+  userOp: UserOperation,
   entryPoint: string,
   bundlerProvider: ethers.JsonRpcProvider,
   pollingDelay = 100,

@@ -3,10 +3,10 @@ pragma solidity >=0.8.0 <0.9.0;
 
 import {HandlerContext} from "safe-contracts/contracts/handler/HandlerContext.sol";
 import {BaseAccount} from "account-abstraction/contracts/core/BaseAccount.sol";
-import {IEntryPoint, UserOperation} from "account-abstraction/contracts/interfaces/IEntryPoint.sol";
+import {IEntryPoint, PackedUserOperation} from "account-abstraction/contracts/interfaces/IEntryPoint.sol";
 import {WebAuthn} from "../primitives/WebAuthn.sol";
 
-import {Safe4337Base} from "./utils/Safe4337Base.sol";
+import {Safe4337Base, SIG_VALIDATION_FAILED} from "./utils/Safe4337Base.sol";
 
 interface ISafe {
     function enableModule(address module) external;
@@ -66,7 +66,7 @@ contract SafeWebAuthnPlugin is Safe4337Base, WebAuthn {
     }
 
     function _validateSignature(
-        UserOperation calldata userOp,
+        PackedUserOperation calldata userOp,
         bytes32 /*userOpHash*/
     ) internal override returns (uint256 validationData) {
         bytes calldata authenticatorData;
