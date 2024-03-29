@@ -22,7 +22,7 @@ struct RecoveryRequest {
 /// @title ZK Email Recovery Plugin
 /// @author Wax
 /// @notice This plugin recovers a ERC 6900 account via zk email guardians
-contract CounterPlugin is BasePlugin {
+contract ERC6900ZkEmailRecoveryModule is BasePlugin {
     // metadata used by the pluginMetadata() method down below
     string public constant NAME = "ZK Email Recovery Plugin";
     string public constant VERSION = "1.0.0";
