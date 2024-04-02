@@ -1,7 +1,7 @@
 import z from 'zod';
 
 class JsonRpcError extends Error {
-  code: number;
+  code: number | string;
   data: unknown;
 
   constructor({ code, data, message }: RawJsonRpcError) {
@@ -17,7 +17,7 @@ class JsonRpcError extends Error {
 }
 
 const RawJsonRpcError = z.object({
-  code: z.number().int(),
+  code: z.union([z.number().int(), z.string()]),
   data: z.unknown(),
   message: z.string(),
 });
