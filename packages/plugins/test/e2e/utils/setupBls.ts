@@ -22,11 +22,11 @@ export default async function setupBls(
           await blsOpen.getAddress(),
       },
     ]),
-    [],
+    [entryPointAddress],
   );
 
   await receiptOf(
-    blsSignatureAggregator.addStake(entryPointAddress, 100n * 86_400n, {
+    blsSignatureAggregator.addStake(100n * 86_400n, {
       value: parseEther("1"),
     }),
   );

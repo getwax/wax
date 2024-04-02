@@ -3,8 +3,8 @@ pragma solidity >=0.7.0 <0.9.0;
 pragma abicoder v2;
 
 import {HandlerContext} from "safe-contracts/contracts/handler/HandlerContext.sol";
-
-import {BaseAccount} from "account-abstraction/contracts/core/BaseAccount.sol";
+import {SIG_VALIDATION_FAILED} from "account-abstraction/core/Helpers.sol";
+import {BaseAccount} from "account-abstraction/core/BaseAccount.sol";
 
 interface ISafe {
     /**
