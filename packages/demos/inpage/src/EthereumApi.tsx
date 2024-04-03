@@ -19,6 +19,7 @@ const temporarySignature = [
   '123456fe2807660c417ca1a38760342fa70135fcab89a8c7c879a77da8ce7a0b5a3805735e',
   '95170906b11c6f30dcc74e463e1e6990c68a3998a7271b728b123456',
 ].join('');
+const preVerificationGasBuffer = 1000n;
 
 type StrictUserOperation = {
   sender: string;
@@ -342,7 +343,7 @@ export default class EthereumApi {
         callData,
         callGasLimit: actions.map((a) => BigInt(a.gas)).reduce((a, b) => a + b),
         verificationGasLimit: temporaryEstimationGas,
-        preVerificationGas: temporaryEstimationGas,
+        preVerificationGas: '0x0',
         maxFeePerGas,
         maxPriorityFeePerGas,
         paymasterAndData: '0x',
@@ -361,7 +362,9 @@ export default class EthereumApi {
       });
 
       userOp.verificationGasLimit = verificationGasLimit;
-      userOp.preVerificationGas = preVerificationGas;
+      userOp.preVerificationGas = `0x${(
+        BigInt(preVerificationGas) + preVerificationGasBuffer
+      ).toString(16)}`;
 
       userOpHash = await this.#calculateUserOpHash(userOp);
 
