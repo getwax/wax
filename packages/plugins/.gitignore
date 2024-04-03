@@ -10,3 +10,4 @@ cache
 cache_hardhat
 artifacts
 
+deployedAddresses.json
