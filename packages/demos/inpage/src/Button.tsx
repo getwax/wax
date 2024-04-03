@@ -130,6 +130,10 @@ const Button = ({
         return;
       }
 
+      if ('key' in e && e.key !== 'Enter' && e.key !== ' ') {
+        return;
+      }
+
       runAsync(async () => {
         try {
           setLoading(true);
