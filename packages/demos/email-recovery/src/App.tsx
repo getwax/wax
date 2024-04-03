@@ -78,6 +78,8 @@ function App() {
   }, []);
 
   const completeRecovery = useCallback(async () => {
+    // TODO Instead, poll relayer.requestStatus until complete recovery is complete
+
     setRecoveryConfigured(false);
     setRecoveryInProgress(false);
     setRecoveryApproved(false);

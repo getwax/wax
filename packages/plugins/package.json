@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@getwax/circuits": "../zkp",
-    "@openzeppelin/contracts-upgradeable": "s"
+    "@openzeppelin/contracts-upgradeable": "^4.9.2"
   },
   "devDependencies": {
     "@account-abstraction/contracts": "0.7.0",
