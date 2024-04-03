@@ -37,3 +37,6 @@
 [submodule "packages/plugins/lib/ether-email-auth"]
 	path = packages/plugins/lib/ether-email-auth
 	url = https://github.com/zkemail/ether-email-auth
+[submodule "packages/plugins/lib/openzeppelin-contracts-upgradeable"]
+	path = packages/plugins/lib/openzeppelin-contracts-upgradeable
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable
