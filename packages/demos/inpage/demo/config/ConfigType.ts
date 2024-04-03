@@ -7,8 +7,11 @@ type ConfigType = {
   addFundsEthAmount?: string;
   deployerSeedPhrase: string;
   requirePermission?: boolean;
-  entryPointAddress?: string;
-  aggregatorAddress?: string;
+  externalContracts?: {
+    entryPoint: string;
+    aggregator: string;
+    addressRegistry: string;
+  };
 };
 
 export default ConfigType;
