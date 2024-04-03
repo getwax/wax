@@ -34,3 +34,6 @@
 [submodule "packages/plugins/lib/reference-implementation"]
 	path = packages/plugins/lib/reference-implementation
 	url = https://github.com/erc6900/reference-implementation
+[submodule "packages/plugins/lib/ether-email-auth"]
+	path = packages/plugins/lib/ether-email-auth
+	url = https://github.com/zkemail/ether-email-auth
