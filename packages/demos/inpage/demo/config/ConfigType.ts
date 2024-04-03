@@ -8,6 +8,7 @@ type ConfigType = {
   deployerSeedPhrase: string;
   requirePermission?: boolean;
   entryPointAddress?: string;
+  aggregatorAddress?: string;
 };
 
 export default ConfigType;

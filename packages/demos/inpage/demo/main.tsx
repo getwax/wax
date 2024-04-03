@@ -14,6 +14,7 @@ const waxInPage = new WaxInPage({
   rpcUrl: config.rpcUrl,
   bundlerRpcUrl: config.bundlerRpcUrl,
   entryPointAddress: config.entryPointAddress,
+  aggregatorAddress: config.aggregatorAddress,
 });
 
 waxInPage.attachGlobals();

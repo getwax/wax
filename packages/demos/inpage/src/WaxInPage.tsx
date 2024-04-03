@@ -59,6 +59,7 @@ type Config = {
   ethersPollingInterval?: number;
   useTopLevelCompression?: boolean;
   entryPointAddress?: string;
+  aggregatorAddress?: string;
 };
 
 const defaultConfig: Config = {
@@ -73,6 +74,7 @@ type ConstructorOptions = {
   rpcUrl: string;
   bundlerRpcUrl?: string;
   entryPointAddress?: string;
+  aggregatorAddress?: string;
   storage?: WaxStorage;
 };
 
@@ -106,6 +108,7 @@ export default class WaxInPage {
     rpcUrl,
     bundlerRpcUrl,
     entryPointAddress,
+    aggregatorAddress,
     storage = makeLocalWaxStorage(),
   }: ConstructorOptions) {
     let bundler: IBundler;
@@ -118,6 +121,8 @@ export default class WaxInPage {
 
     this.#config.entryPointAddress =
       entryPointAddress ?? this.#config.entryPointAddress;
+    this.#config.aggregatorAddress =
+      aggregatorAddress ?? this.#config.aggregatorAddress;
     this.ethereum = new EthereumApi(rpcUrl, this, bundler);
     this.storage = storage;
     this.ethersProvider = new ethers.BrowserProvider(this.ethereum);
@@ -201,9 +206,21 @@ export default class WaxInPage {
 
     const wallet = await this.requestAdminAccount('deploy-contracts');
 
-    const assumedEntryPoint = this.#config.entryPointAddress
+    const configuredEntryPoint = this.#config.entryPointAddress
       ? EntryPoint__factory.connect(this.#config.entryPointAddress, wallet)
-      : viewer.connectAssume(EntryPoint__factory, []);
+      : undefined;
+
+    let configuredAggregator;
+
+    if (this.#config.aggregatorAddress) {
+      configuredAggregator = BLSSignatureAggregator__factory.connect(
+        this.#config.aggregatorAddress,
+        wallet,
+      );
+    }
+
+    const assumedEntryPoint =
+      configuredEntryPoint ?? viewer.connectAssume(EntryPoint__factory, []);
 
     const assumedAddressRegistry = viewer.connectAssume(
       AddressRegistry__factory,
@@ -235,15 +252,17 @@ export default class WaxInPage {
         [],
       ),
       testToken: viewer.connectAssume(ERC20Mock__factory, []),
-      blsSignatureAggregator: viewer.connectAssume(
-        DeterministicDeployer.link(BLSSignatureAggregator__factory, [
-          {
-            'account-abstraction/contracts/samples/bls/lib/BLSOpen.sol:BLSOpen':
-              await assumedBlsOpen.getAddress(),
-          },
-        ]),
-        [],
-      ),
+      blsSignatureAggregator:
+        configuredAggregator ??
+        viewer.connectAssume(
+          DeterministicDeployer.link(BLSSignatureAggregator__factory, [
+            {
+              'account-abstraction/contracts/samples/bls/lib/BLSOpen.sol:BLSOpen':
+                await assumedBlsOpen.getAddress(),
+            },
+          ]),
+          [],
+        ),
     };
 
     if (this.#contractsDeployed) {
