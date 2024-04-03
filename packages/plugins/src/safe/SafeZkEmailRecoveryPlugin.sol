@@ -8,14 +8,10 @@ import {EmailAccountRecovery} from "ether-email-auth/packages/contracts/src/Emai
     THIS CONTRACT IS STILL IN ACTIVE DEVELOPMENT. NOT FOR PRODUCTION USE        
 //////////////////////////////////////////////////////////////////////////*/
 
-interface ISafeECDSAPlugin {
-    function getOwner(address safe) external view returns (address);
-}
-
 struct RecoveryRequest {
     address guardian;
-    address ecdsaPlugin;
     uint256 executeAfter;
+    address ownerToSwap;
     address pendingNewOwner;
     uint256 delay;
 }
@@ -26,7 +22,7 @@ struct GuardianRequest {
 }
 
 /**
- * A safe plugin that recovers a safe ecdsa plugin owner via a zkp of an email.
+ * A safe plugin that recovers a safe owner via a zkp of an email.
  * NOT FOR PRODUCTION USE
  */
 contract SafeZkEmailRecoveryPlugin is EmailAccountRecovery {
@@ -45,7 +41,8 @@ contract SafeZkEmailRecoveryPlugin is EmailAccountRecovery {
     // mapping(address => address) public dkimRegistryOfSafe;
 
     error MODULE_NOT_ENABLED();
-    error INVALID_OWNER(address expectedOwner, address owner);
+    error INVALID_OWNER(address owner);
+    error INVALID_NEW_OWNER();
     error RECOVERY_ALREADY_INITIATED();
     error RECOVERY_NOT_CONFIGURED();
     error RECOVERY_NOT_INITIATED();
@@ -53,7 +50,6 @@ contract SafeZkEmailRecoveryPlugin is EmailAccountRecovery {
 
     event RecoveryConfigured(
         address indexed safe,
-        address ecsdaPlugin,
         address indexed owner,
         uint256 customDelay
     );
@@ -62,9 +58,9 @@ contract SafeZkEmailRecoveryPlugin is EmailAccountRecovery {
         address newOwner,
         uint256 executeAfter
     );
-    event PluginRecovered(
+    event OwnerRecovered(
         address indexed safe,
-        address ecdsaPlugin,
+        address oldOwner,
         address newOwner
     );
     event RecoveryCancelled(address indexed safe);
@@ -188,12 +184,17 @@ contract SafeZkEmailRecoveryPlugin is EmailAccountRecovery {
             "invalid account in email"
         );
 
+        bool isExistingOwner = ISafe(safeInEmail).isOwner(newOwnerInEmail);
+        if (newOwnerInEmail == address(0) || isExistingOwner)
+            revert INVALID_NEW_OWNER();
+
         RecoveryRequest memory recoveryRequest = recoveryRequests[safeInEmail];
         if (recoveryRequest.executeAfter > 0) {
             revert RECOVERY_ALREADY_INITIATED();
         }
 
-        uint256 executeAfter = block.timestamp + recoveryRequests[safeInEmail].delay;
+        uint256 executeAfter = block.timestamp +
+            recoveryRequests[safeInEmail].delay;
 
         recoveryRequests[safeInEmail].executeAfter = executeAfter;
         recoveryRequests[safeInEmail].pendingNewOwner = newOwnerInEmail;
@@ -221,19 +222,17 @@ contract SafeZkEmailRecoveryPlugin is EmailAccountRecovery {
     }
 
     /**
-     * @notice Stores a recovery hash that can be used to recover a ecdsa plugin
+     * @notice Stores a recovery hash that can be used to recover a safe owner
      *         at a later stage.
      * @dev dkimRegistry can be a zero address if the user wants to use the
      *      defaultDkimRegistry. customDelay can be 0 if the user wants to use defaultDelay
      *      This function assumes it is being called from a safe - see how msg.sender
      *      is interpreted. This is the first function that must be called when setting up recovery.
-     * @param ecsdaPlugin Safe ecsda plugin address that this function will be adding a recovery option for
-     * @param owner Owner of the ecdsa plugin
+     * @param owner Owner on the safe being recovered
      * @param guardian TODO
      * @param customDelay A custom delay to set the recoveryDelay value that is associated with a safe.
      */
     function configureRecovery(
-        address ecsdaPlugin,
         address owner,
         address guardian,
         uint256 customDelay
@@ -243,8 +242,8 @@ contract SafeZkEmailRecoveryPlugin is EmailAccountRecovery {
         bool moduleEnabled = ISafe(safe).isModuleEnabled(address(this));
         if (!moduleEnabled) revert MODULE_NOT_ENABLED();
 
-        address expectedOwner = ISafeECDSAPlugin(ecsdaPlugin).getOwner(safe);
-        if (owner != expectedOwner) revert INVALID_OWNER(expectedOwner, owner);
+        bool isOwner = ISafe(safe).isOwner(owner);
+        if (!isOwner) revert INVALID_OWNER(owner);
 
         if (recoveryRequests[guardian].executeAfter > 0) {
             revert RECOVERY_ALREADY_INITIATED();
@@ -257,8 +256,8 @@ contract SafeZkEmailRecoveryPlugin is EmailAccountRecovery {
 
         recoveryRequests[safe] = RecoveryRequest({
             guardian: guardian,
-            ecsdaPlugin: ecsdaPlugin,
             executeAfter: 0,
+            ownerToSwap: owner,
             pendingNewOwner: address(0),
             delay: delay
         });
@@ -268,42 +267,40 @@ contract SafeZkEmailRecoveryPlugin is EmailAccountRecovery {
             accepted: false
         });
 
-        emit RecoveryConfigured(
-            safe,
-            ecsdaPlugin,
-            owner,
-            delay
-        );
+        emit RecoveryConfigured(safe, owner, delay);
     }
 
     /**
-     * @notice Recovers a safe ecdsa plugin using a zk email proof.
-     * @dev Rotates the safe ecdsa plugin owner address to a new address.
+     * @notice Recovers a safe owner using a zk email proof.
+     * @dev Rotates the safe owner address to a new address.
      *      This function is designed so it can be called from any account and account type.
      *      This function is the third and final function that needs to be called in the
      *      recovery process. After configureRecovery & initiateRecovery
-     * @param safe The safe that manages the safe ecdsa plugin being recovered
+     * @param safe The safe for the owner being rotated
+     * @param previousOwner The previous owner in the safe owners linked list // TODO: (merge-ok) retrieve this automatically
      */
-    function recoverPlugin(address safe) external {
+    function recoverPlugin(address safe, address previousOwner) external {
         RecoveryRequest memory recoveryRequest = recoveryRequests[safe];
 
         if (recoveryRequest.executeAfter == 0) {
             revert RECOVERY_NOT_INITIATED();
         }
 
-        if (block.timestamp > recoveryRequest.executeAfter) {
+        if (block.timestamp >= recoveryRequest.executeAfter) {
             delete recoveryRequests[safe];
 
             bytes memory data = abi.encodeWithSignature(
-                "enable(bytes)",
-                abi.encodePacked(recoveryRequest.pendingNewOwner)
+                "swapOwner(address,address,address)",
+                previousOwner,
+                recoveryRequest.ownerToSwap,
+                recoveryRequest.pendingNewOwner
             );
 
-            ISafe(safe).execTransactionFromModule(recoveryRequest.ecdsaPlugin, 0, data, 0);
+            ISafe(safe).execTransactionFromModule(safe, 0, data, 0);
 
-            emit PluginRecovered(
+            emit OwnerRecovered(
                 safe,
-                recoveryRequest.ecdsaPlugin,
+                recoveryRequest.ownerToSwap,
                 recoveryRequest.pendingNewOwner
             );
         } else {
@@ -323,11 +320,11 @@ contract SafeZkEmailRecoveryPlugin is EmailAccountRecovery {
     }
 
     /**
-     * @notice Sets a custom delay for recovering a plugin for a specific safe.
-     * @dev Custom delay is used instead of the default delay when recovering a
-     *      plugin. Custom delays should be configured with care as they can be
+     * @notice Sets a custom delay for recovering an owner for a specific safe.
+     * @dev Custom delay is used instead of the default delay when recovering an
+     *      owner. Custom delays should be configured with care as they can be
      *      used to bypass the default delay.
-     * @param delay The custom delay to be used when recovering a plugin for the safe
+     * @param delay The custom delay to be used when recovering an owner on the safe
      */
     function setRecoveryDelay(uint256 delay) external {
         address safe = msg.sender;

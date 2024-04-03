@@ -33,6 +33,12 @@ interface ISafe {
      * @return True if the module is enabled
      */
     function isModuleEnabled(address module) external view returns (bool);
+
+    /**
+     * @notice Returns if `owner` is an owner of the Safe.
+     * @return Boolean if owner is an owner of the Safe.
+     */
+    function isOwner(address owner) external view returns (bool);
 }
 
 /**
