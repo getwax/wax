@@ -34,9 +34,6 @@
 [submodule "packages/plugins/lib/reference-implementation"]
 	path = packages/plugins/lib/reference-implementation
 	url = https://github.com/erc6900/reference-implementation
-[submodule "packages/plugins/lib/openzeppelin-contracts-upgradeable"]
-	path = packages/plugins/lib/openzeppelin-contracts-upgradeable
-	url = https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable
 [submodule "packages/plugins/lib/zk-email-verify"]
 	path = packages/plugins/lib/zk-email-verify
 	url = https://github.com/zkemail/zk-email-verify
