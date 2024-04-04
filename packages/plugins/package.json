@@ -1,18 +1,17 @@
 {
-  "name": "@getwax/safe",
+  "name": "@getwax/plugins",
   "private": true,
   "version": "0.1.0",
-  "description": "Safe plugins for 4337 accounts",
+  "description": "Plugins for 4337 & SCA accounts",
   "repository": "https://github.com/getwax/wax",
   "license": "MIT",
   "scripts": {
-    "setup": "git submodule update --init --recursive",
+    "submodules": "git submodule update --init --recursive",
     "build": "hardhat compile",
     "lint": "eslint . --ext js,jsx,ts,tsx --report-unused-disable-directives --max-warnings 0"
   },
   "dependencies": {
-    "@getwax/circuits": "../zkp",
-    "@openzeppelin/contracts-upgradeable": "^4.9.2"
+    "@getwax/circuits": "../zkp"
   },
   "devDependencies": {
     "@account-abstraction/contracts": "0.7.0",
