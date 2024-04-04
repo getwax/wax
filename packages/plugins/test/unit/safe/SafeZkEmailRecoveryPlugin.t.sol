@@ -8,11 +8,10 @@ import {SafeZkEmailRecoveryPlugin, RecoveryRequest} from "../../../src/safe/Safe
 import {SafeZkEmailRecoveryPluginHarness} from "../utils/SafeZkEmailRecoveryPluginHarness.sol";
 import {Safe} from "safe-contracts/contracts/Safe.sol";
 import {SafeProxy} from "safe-contracts/contracts/proxies/SafeProxy.sol";
-// import {ECDSA} from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
 
-import {EmailAuth} from "../../../src/safe/temp-ethers-email-auth-dependencies/EmailAuth.sol";
-import {ECDSAOwnedDKIMRegistry} from "../../../src/safe/temp-ethers-email-auth-dependencies/utils/ECDSAOwnedDKIMRegistry.sol";
-import {Verifier} from "../../../src/safe/temp-ethers-email-auth-dependencies/utils/Verifier.sol";
+import {EmailAuth} from "ether-email-auth/packages/contracts/src/EmailAuth.sol";
+import {ECDSAOwnedDKIMRegistry} from "ether-email-auth/packages/contracts/src/utils/ECDSAOwnedDKIMRegistry.sol";
+import {Verifier} from "ether-email-auth/packages/contracts/src/utils/Verifier.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {ECDSA} from "@openzeppelin-v4/contracts/utils/cryptography/ECDSA.sol";
 

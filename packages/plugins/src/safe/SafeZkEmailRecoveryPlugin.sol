@@ -2,8 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {ISafe} from "./utils/Safe4337Base.sol";
-import {EmailAccountRecovery} from "ether-email-auth/packages/contracts/src/EmailAccountRecovery.sol"; // TODO: use this import once ethers-email-auth has been updated
-// import {EmailAccountRecovery} from "./temp-ethers-email-auth-dependencies/EmailAccountRecovery.sol";
+import {EmailAccountRecovery} from "ether-email-auth/packages/contracts/src/EmailAccountRecovery.sol";
 
 /*//////////////////////////////////////////////////////////////////////////
     THIS CONTRACT IS STILL IN ACTIVE DEVELOPMENT. NOT FOR PRODUCTION USE        
