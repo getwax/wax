@@ -185,9 +185,15 @@ export default class EthereumApi {
 
     return {
       ...userOp,
+      callGasLimit: roundUpPseudoFloat(userOp.callGasLimit),
+      verificationGasLimit: `0x${roundUpPseudoFloat(
+        BigInt(userOp.verificationGasLimit),
+      ).toString(16)}`,
+      preVerificationGas: `0x${roundUpPseudoFloat(
+        BigInt(userOp.preVerificationGas),
+      ).toString(16)}`,
       maxFeePerGas: roundUpPseudoFloat(userOp.maxFeePerGas),
       maxPriorityFeePerGas: roundUpPseudoFloat(userOp.maxPriorityFeePerGas),
-      callGasLimit: roundUpPseudoFloat(userOp.callGasLimit),
     };
   }
 
@@ -368,6 +374,8 @@ export default class EthereumApi {
       userOp.preVerificationGas = `0x${(
         BigInt(preVerificationGas) + preVerificationGasBuffer
       ).toString(16)}`;
+
+      userOp = this.#maybeRoundUpPseudoFloats(userOp);
 
       userOpHash = await this.#calculateUserOpHash(userOp);
 
