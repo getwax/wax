@@ -215,7 +215,7 @@ export default class WaxInPage {
       );
 
       assumedBlsSignatureAggregator = BLSSignatureAggregator__factory.connect(
-        this.#config.externalContracts.aggregator,
+        this.#config.externalContracts.blsSignatureAggregator,
         wallet,
       );
 

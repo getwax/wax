@@ -9,7 +9,7 @@ type ConfigType = {
   requirePermission?: boolean;
   externalContracts?: {
     entryPoint: string;
-    aggregator: string;
+    blsSignatureAggregator: string;
     addressRegistry: string;
   };
 };
