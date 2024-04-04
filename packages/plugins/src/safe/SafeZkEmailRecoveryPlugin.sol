@@ -2,7 +2,8 @@
 pragma solidity ^0.8.0;
 
 import {ISafe} from "./utils/Safe4337Base.sol";
-import {EmailAccountRecovery} from "ether-email-auth/packages/contracts/src/EmailAccountRecovery.sol";
+// import {EmailAccountRecovery} from "ether-email-auth/packages/contracts/src/EmailAccountRecovery.sol"; // TODO: use this import once ethers-email-auth has been updated
+import {EmailAccountRecovery} from "./temp-ethers-email-auth-dependencies/EmailAccountRecovery.sol";
 
 /*//////////////////////////////////////////////////////////////////////////
     THIS CONTRACT IS STILL IN ACTIVE DEVELOPMENT. NOT FOR PRODUCTION USE        
@@ -106,9 +107,6 @@ contract SafeZkEmailRecoveryPlugin is EmailAccountRecovery {
         templates[0][2] = "request";
         templates[0][3] = "for";
         templates[0][4] = "{ethAddr}";
-        templates[0][5] = "on";
-        templates[0][6] = "account";
-        templates[0][7] = "{ethAddr}";
         return templates;
     }
 
@@ -119,7 +117,7 @@ contract SafeZkEmailRecoveryPlugin is EmailAccountRecovery {
         returns (string[][] memory)
     {
         string[][] memory templates = new string[][](1);
-        templates[0] = new string[](8);
+        templates[0] = new string[](7);
         templates[0][0] = "Update";
         templates[0][1] = "owner";
         templates[0][2] = "to";
@@ -143,12 +141,9 @@ contract SafeZkEmailRecoveryPlugin is EmailAccountRecovery {
             "guardian not requested"
         );
         require(templateIdx == 0, "invalid template index");
-        require(subjectParams.length == 2, "invalid subject params");
+        require(subjectParams.length == 1, "invalid subject params");
 
-        address guardianInEmail = abi.decode(subjectParams[0], (address));
-        require(guardianInEmail == guardian, "invalid guardian in email");
-
-        address safeInEmail = abi.decode(subjectParams[1], (address));
+        address safeInEmail = abi.decode(subjectParams[0], (address));
         require(
             guardianRequests[guardian].safe == safeInEmail,
             "invalid account in email"
@@ -169,7 +164,7 @@ contract SafeZkEmailRecoveryPlugin is EmailAccountRecovery {
             "guardian not requested"
         );
         require(
-            guardianRequests[guardian].accepted != address(0),
+            guardianRequests[guardian].accepted,
             "guardian has not accepted"
         );
         require(templateIdx == 0, "invalid template index");
@@ -185,8 +180,7 @@ contract SafeZkEmailRecoveryPlugin is EmailAccountRecovery {
         );
 
         bool isExistingOwner = ISafe(safeInEmail).isOwner(newOwnerInEmail);
-        if (newOwnerInEmail == address(0) || isExistingOwner)
-            revert INVALID_NEW_OWNER();
+        if (isExistingOwner) revert INVALID_NEW_OWNER();
 
         RecoveryRequest memory recoveryRequest = recoveryRequests[safeInEmail];
         if (recoveryRequest.executeAfter > 0) {
