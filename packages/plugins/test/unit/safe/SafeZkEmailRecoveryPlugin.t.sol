@@ -13,15 +13,14 @@ import {EmailAuth} from "ether-email-auth/packages/contracts/src/EmailAuth.sol";
 import {ECDSAOwnedDKIMRegistry} from "ether-email-auth/packages/contracts/src/utils/ECDSAOwnedDKIMRegistry.sol";
 import {Verifier} from "ether-email-auth/packages/contracts/src/utils/Verifier.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {ECDSA} from "@openzeppelin-v4/contracts/utils/cryptography/ECDSA.sol";
+import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
 /* solhint-disable func-name-mixedcase */
 /* solhint-disable private-vars-leading-underscore */
 /* solhint-disable var-name-mixedcase */
 
 contract SafeZkEmailRecoveryPluginTest is TestHelper {
-    // using ECDSA for bytes32;
-    using ECDSA for *;
+    using MessageHashUtils for bytes;
 
     event RecoveryConfigured(
         address indexed safe,
