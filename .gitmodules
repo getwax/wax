@@ -43,3 +43,6 @@
 [submodule "packages/plugins/lib/openzeppelin-contracts-v4"]
 	path = packages/plugins/lib/openzeppelin-contracts-v4
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts
+[submodule "packages/plugins/lib/email-auth-oz5-branch"]
+	path = packages/plugins/lib/email-auth-oz5-branch
+	url = https://github.com/zkemail/ether-email-auth@feat/oz5
