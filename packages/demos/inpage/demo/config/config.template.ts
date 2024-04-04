@@ -23,10 +23,16 @@ const config: ConfigType = {
 
   requirePermission: false,
 
-  // The EntryPoint will be deployed deterministically by default. However,
-  // if you need to interop with a specific existing deployment, specify it
-  // here.
-  // entryPointAddress: '0x...',
+  // These contracts will be deployed deterministically by default. However,
+  // if you need to interop with a specific existing deployment, you'll need
+  // to specify the contracts here:
+  // externalContracts: {
+  //   entryPoint: '0x...',
+  //   blsSignatureAggregator: '0x...',
+  //   addressRegistry: '0x...',
+  // }
+  // (Other contracts will still be deterministically deployed, but they
+  // shouldn't be required for interop purposes.)
 };
 
 export default config;
