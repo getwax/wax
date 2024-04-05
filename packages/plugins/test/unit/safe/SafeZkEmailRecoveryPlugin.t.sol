@@ -162,6 +162,7 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
         // Arrange
         address guardian;
         uint256 customDelay = 0;
+        address previousOwnerInLinkedList = address(0x1);
 
         address prevModuleInLinkedList = address(0x1);
         address moduleToDisable = address(safeZkEmailRecoveryPlugin);
@@ -175,7 +176,8 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
         safeZkEmailRecoveryPlugin.configureRecovery(
             owner,
             guardian,
-            customDelay
+            customDelay,
+            previousOwnerInLinkedList
         );
     }
 
@@ -184,6 +186,7 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
         address invalidOwner = Dave.addr;
         address guardian;
         uint256 customDelay = 0;
+        address previousOwnerInLinkedList = address(0x1);
 
         // Act & Assert
         vm.startPrank(safeAddress);
@@ -197,7 +200,8 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
         safeZkEmailRecoveryPlugin.configureRecovery(
             invalidOwner,
             guardian,
-            customDelay
+            customDelay,
+            previousOwnerInLinkedList
         );
     }
 
@@ -207,6 +211,7 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
 
         address guardian;
         uint256 customDelay = 0;
+        address previousOwnerInLinkedList = address(0x1);
 
         uint templateIdx;
         bytes[] memory subjectParams;
@@ -215,7 +220,8 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
         safeZkEmailRecoveryPlugin.configureRecovery(
             owner,
             guardian,
-            customDelay
+            customDelay,
+            previousOwnerInLinkedList
         );
         vm.stopPrank();
 
@@ -236,7 +242,8 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
         safeZkEmailRecoveryPlugin.configureRecovery(
             owner,
             guardian,
-            customDelay
+            customDelay,
+            previousOwnerInLinkedList
         );
     }
 
@@ -246,6 +253,7 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
         // Arrange
         address guardian;
         uint256 customDelay = 0;
+        address previousOwnerInLinkedList = address(0x1);
 
         // Act
         vm.startPrank(safeAddress);
@@ -254,7 +262,8 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
         safeZkEmailRecoveryPlugin.configureRecovery(
             owner,
             guardian,
-            customDelay
+            customDelay,
+            previousOwnerInLinkedList
         );
 
         RecoveryRequest memory recoveryRequest = safeZkEmailRecoveryPlugin
@@ -275,6 +284,7 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
         // Arrange
         address guardian;
         uint256 customDelay = 48 hours;
+        address previousOwnerInLinkedList = address(0x1);
 
         // Act
         vm.startPrank(safeAddress);
@@ -283,7 +293,8 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
         safeZkEmailRecoveryPlugin.configureRecovery(
             owner,
             guardian,
-            customDelay
+            customDelay,
+            previousOwnerInLinkedList
         );
 
         RecoveryRequest memory recoveryRequest = safeZkEmailRecoveryPlugin
@@ -328,6 +339,7 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
 
         address guardian1;
         uint256 customDelay = 0;
+        address previousOwnerInLinkedList = address(0x1);
 
         address guardian2;
 
@@ -336,14 +348,16 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
         safeZkEmailRecoveryPlugin.configureRecovery(
             owner,
             guardian1,
-            customDelay
+            customDelay,
+            previousOwnerInLinkedList
         );
 
         vm.startPrank(safe2Address);
         safeZkEmailRecoveryPlugin.configureRecovery(
             owner,
             guardian2,
-            customDelay
+            customDelay,
+            previousOwnerInLinkedList
         );
 
         // Assert
@@ -386,6 +400,7 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
 
         address guardian;
         uint256 customDelay = 0;
+        address previousOwnerInLinkedList = address(0x1);
 
         uint templateIdx;
         bytes[] memory subjectParams;
@@ -394,7 +409,8 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
         safeZkEmailRecoveryPlugin.configureRecovery(
             owner,
             guardian,
-            customDelay
+            customDelay,
+            previousOwnerInLinkedList
         );
         vm.stopPrank();
 
@@ -424,6 +440,7 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
 
         address guardian;
         uint256 customDelay = 0;
+        address previousOwnerInLinkedList = address(0x1);
 
         uint templateIdx;
         bytes[] memory subjectParams;
@@ -435,7 +452,8 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
         safeZkEmailRecoveryPlugin.configureRecovery(
             owner,
             guardian,
-            customDelay
+            customDelay,
+            previousOwnerInLinkedList
         );
         vm.stopPrank();
 
@@ -466,13 +484,16 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
 
     function test_recoverPlugin_recoveryNotInitiated() public {
         // Arrange
-        address previousOwner;
+        address previousOwnerInLinkedList;
 
         // Act & Assert
         vm.expectRevert(
             SafeZkEmailRecoveryPlugin.RECOVERY_NOT_INITIATED.selector
         );
-        safeZkEmailRecoveryPlugin.recoverPlugin(safeAddress, previousOwner);
+        safeZkEmailRecoveryPlugin.recoverPlugin(
+            safeAddress,
+            previousOwnerInLinkedList
+        );
     }
 
     function test_recoverPlugin_delayNotPassed() public {
@@ -480,8 +501,8 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
         address recoveryAccount = Bob.addr;
 
         address guardian;
-        address previousOwner;
         uint256 customDelay = 0;
+        address previousOwnerInLinkedList = address(0x1);
 
         uint templateIdx;
         bytes[] memory subjectParams;
@@ -490,7 +511,8 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
         safeZkEmailRecoveryPlugin.configureRecovery(
             owner,
             guardian,
-            customDelay
+            customDelay,
+            previousOwnerInLinkedList
         );
         vm.stopPrank();
 
@@ -505,7 +527,10 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
         // Act
         vm.startPrank(recoveryAccount);
         vm.expectRevert(SafeZkEmailRecoveryPlugin.DELAY_NOT_PASSED.selector);
-        safeZkEmailRecoveryPlugin.recoverPlugin(safeAddress, previousOwner);
+        safeZkEmailRecoveryPlugin.recoverPlugin(
+            safeAddress,
+            previousOwnerInLinkedList
+        );
     }
 
     function test_recoverPlugin_swapsPluginOwnerSuccessfully() public {
@@ -513,8 +538,8 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
         address recoveryAccount = Bob.addr;
 
         address guardian;
-        address previousOwner;
         uint256 customDelay = 0;
+        address previousOwnerInLinkedList = address(0x1);
 
         uint templateIdx;
         bytes[] memory subjectParams;
@@ -523,7 +548,8 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
         safeZkEmailRecoveryPlugin.configureRecovery(
             owner,
             guardian,
-            customDelay
+            customDelay,
+            previousOwnerInLinkedList
         );
         vm.stopPrank();
 
@@ -547,7 +573,10 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
         vm.startPrank(recoveryAccount);
         vm.expectEmit(true, false, false, false);
         emit OwnerRecovered(safeAddress, owner, newOwner.addr);
-        safeZkEmailRecoveryPlugin.recoverPlugin(safeAddress, previousOwner);
+        safeZkEmailRecoveryPlugin.recoverPlugin(
+            safeAddress,
+            previousOwnerInLinkedList
+        );
 
         // Assert
         bool isOwner = Safe(payable(safeAddress)).isOwner(newOwner.addr);
@@ -568,8 +597,8 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
         address recoveryAccount = Bob.addr;
 
         address guardian;
-        address previousOwner;
         uint256 initialDelay = 0;
+        address previousOwnerInLinkedList = address(0x1);
 
         uint templateIdx;
         bytes[] memory subjectParams;
@@ -578,7 +607,8 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
         safeZkEmailRecoveryPlugin.configureRecovery(
             owner,
             guardian,
-            initialDelay
+            initialDelay,
+            previousOwnerInLinkedList
         );
 
         RecoveryRequest memory recoveryRequest = safeZkEmailRecoveryPlugin
@@ -607,7 +637,10 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
 
         // Act
         vm.startPrank(recoveryAccount);
-        safeZkEmailRecoveryPlugin.recoverPlugin(safeAddress, previousOwner);
+        safeZkEmailRecoveryPlugin.recoverPlugin(
+            safeAddress,
+            previousOwnerInLinkedList
+        );
 
         // Assert
         bool isOwner = Safe(payable(safeAddress)).isOwner(newOwner.addr);
@@ -623,6 +656,7 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
 
         address guardian;
         uint256 customDelay = 0;
+        address previousOwnerInLinkedList = address(0x1);
 
         uint templateIdx;
         bytes[] memory subjectParams;
@@ -631,7 +665,8 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
         safeZkEmailRecoveryPlugin.configureRecovery(
             owner,
             guardian,
-            customDelay
+            customDelay,
+            previousOwnerInLinkedList
         );
         vm.stopPrank();
 

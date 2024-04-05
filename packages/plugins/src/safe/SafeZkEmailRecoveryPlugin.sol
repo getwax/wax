@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {ISafe} from "./utils/Safe4337Base.sol";
+import {EmailAccountRecoveryRouter} from "./EmailAccountRecoveryRouter.sol";
 import {EmailAccountRecovery} from "ether-email-auth/packages/contracts/src/EmailAccountRecovery.sol";
 
 /*//////////////////////////////////////////////////////////////////////////
@@ -21,6 +22,11 @@ struct GuardianRequest {
     bool accepted;
 }
 
+struct SafeAccountInfo {
+    address safe;
+    address previousOwnerInLinkedList;
+}
+
 /**
  * A safe plugin that recovers a safe owner via a zkp of an email.
  * NOT FOR PRODUCTION USE
@@ -33,10 +39,12 @@ contract SafeZkEmailRecoveryPlugin is EmailAccountRecovery {
 
     /** Mapping of safe address to recovery request */
     mapping(address => RecoveryRequest) public recoveryRequests;
+
     /** Mapping of guardian address to guardian request */
     mapping(address => GuardianRequest) public guardianRequests;
 
-    // mapping(address => address) public entryContractToSafe;
+    /** Mapping of email account recovery router contracts to safe details needed to complete recovery */
+    mapping(address => SafeAccountInfo) public recoveryRouterToSafeInfo;
 
     /** Mapping of safe address to dkim registry address */
     // TODO How can we use a custom DKIM reigstry/key with email auth?
@@ -198,10 +206,13 @@ contract SafeZkEmailRecoveryPlugin is EmailAccountRecovery {
     }
 
     function completeRecovery() public override {
-        // TODO see if this is needed
-        revert("use recoverPlugin");
-        // address safeToRecover = entryContractToSafe[msg.sender];
-        // recoverPlugin(safe, previousOwner);
+        SafeAccountInfo memory safeAccountInfo = recoveryRouterToSafeInfo[
+            msg.sender
+        ];
+        recoverPlugin(
+            safeAccountInfo.safe,
+            safeAccountInfo.previousOwnerInLinkedList
+        );
     }
 
     /**
@@ -242,12 +253,25 @@ contract SafeZkEmailRecoveryPlugin is EmailAccountRecovery {
     function configureRecovery(
         address owner,
         address guardian,
-        uint256 customDelay
-    ) external {
+        uint256 customDelay,
+        address previousOwnerInLinkedList
+    ) external returns (address emailAccountRecoveryRouterAddress) {
         address safe = msg.sender;
 
-        // EntryContract entryContract = new EntryContract(safe);
-        // entryContractToSafe[address(entryContract)] = safe;
+        EmailAccountRecoveryRouter emailAccountRecoveryRouter = new EmailAccountRecoveryRouter(
+                address(this)
+            );
+        emailAccountRecoveryRouterAddress = address(emailAccountRecoveryRouter);
+
+        // TODO: check entry contract exists before deploying
+        require(
+            recoveryRouterToSafeInfo[emailAccountRecoveryRouterAddress].safe ==
+                address(0),
+            "entry contract for safe already exits"
+        );
+        recoveryRouterToSafeInfo[
+            emailAccountRecoveryRouterAddress
+        ] = SafeAccountInfo(safe, previousOwnerInLinkedList);
 
         bool moduleEnabled = ISafe(safe).isModuleEnabled(address(this));
         if (!moduleEnabled) revert MODULE_NOT_ENABLED();
@@ -289,7 +313,7 @@ contract SafeZkEmailRecoveryPlugin is EmailAccountRecovery {
      * @param safe The safe for the owner being rotated
      * @param previousOwner The previous owner in the safe owners linked list // TODO: (merge-ok) retrieve this automatically
      */
-    function recoverPlugin(address safe, address previousOwner) external {
+    function recoverPlugin(address safe, address previousOwner) public {
         RecoveryRequest memory recoveryRequest = recoveryRequests[safe];
 
         if (recoveryRequest.executeAfter == 0) {
@@ -324,7 +348,7 @@ contract SafeZkEmailRecoveryPlugin is EmailAccountRecovery {
      *      the msg.sender is the safe that the recovery request is being deleted for
      */
     function cancelRecovery() external {
-        address safe = msg.sender;
+        address safe = msg.sender; // FIXME: update to use router contract
         delete recoveryRequests[safe];
         emit RecoveryCancelled(safe);
     }
@@ -337,7 +361,7 @@ contract SafeZkEmailRecoveryPlugin is EmailAccountRecovery {
      * @param delay The custom delay to be used when recovering an owner on the safe
      */
     function setRecoveryDelay(uint256 delay) external {
-        address safe = msg.sender;
+        address safe = msg.sender; // FIXME: update to use router contract
         recoveryRequests[safe].delay = delay;
         emit RecoveryDelaySet(safe, delay);
     }

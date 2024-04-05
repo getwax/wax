@@ -5,6 +5,7 @@ import "forge-std/Test.sol";
 import "forge-std/console2.sol";
 import {TestHelper} from "../../unit/utils/TestHelper.sol";
 import {SafeZkEmailRecoveryPlugin, RecoveryRequest, GuardianRequest} from "../../../src/safe/SafeZkEmailRecoveryPlugin.sol";
+import {IEmailAccountRecovery} from "../../../src/safe/EmailAccountRecoveryRouter.sol";
 import {MockGroth16Verifier} from "../../../src/safe/utils/MockGroth16Verifier.sol";
 import {Safe} from "safe-contracts/contracts/Safe.sol";
 import {SafeProxy} from "safe-contracts/contracts/proxies/SafeProxy.sol";
@@ -125,19 +126,22 @@ contract SafeZkEmailRecoveryPlugin_Integration_Test is TestHelper {
         address guardian = safeZkEmailRecoveryPlugin.computeEmailAuthAddress(
             accountSalt
         );
-        address previousOwner = address(0x1);
+        address previousOwnerInLinkedList = address(0x1);
         uint256 customDelay = 0;
         uint templateIdx = 0;
 
         // Configure recovery
         vm.startPrank(safeAddress);
-        safeZkEmailRecoveryPlugin.configureRecovery(
-            owner,
-            guardian,
-            customDelay
-        );
+        address emailAccountRecoveryRouterAddress = safeZkEmailRecoveryPlugin
+            .configureRecovery(
+                owner,
+                guardian,
+                customDelay,
+                previousOwnerInLinkedList
+            );
         vm.stopPrank();
 
+        // Create email proof for guardian acceptance
         EmailProof memory emailProof;
         emailProof.domainName = "gmail.com";
         emailProof.publicKeyHash = bytes32(
@@ -165,7 +169,8 @@ contract SafeZkEmailRecoveryPlugin_Integration_Test is TestHelper {
             proof: emailProof
         });
 
-        safeZkEmailRecoveryPlugin.handleAcceptance(emailAuthMsg, templateIdx);
+        IEmailAccountRecovery(emailAccountRecoveryRouterAddress)
+            .handleAcceptance(emailAuthMsg, templateIdx);
 
         GuardianRequest memory guardianRequest = safeZkEmailRecoveryPlugin
             .getGuardianRequest(guardian);
@@ -203,7 +208,10 @@ contract SafeZkEmailRecoveryPlugin_Integration_Test is TestHelper {
             skipedSubjectPrefix: 0,
             proof: emailProof
         });
-        safeZkEmailRecoveryPlugin.handleRecovery(emailAuthMsg, templateIdx);
+        IEmailAccountRecovery(emailAccountRecoveryRouterAddress).handleRecovery(
+            emailAuthMsg,
+            templateIdx
+        );
 
         vm.warp(
             block.timestamp +
@@ -211,10 +219,14 @@ contract SafeZkEmailRecoveryPlugin_Integration_Test is TestHelper {
                 1 seconds
         );
 
-        // safeZkEmailRecoveryPlugin.completeRecovery(); // FIXME: implement this instead of calling recoverPlugin directly
+        // Complete recovery
+        IEmailAccountRecovery(emailAccountRecoveryRouterAddress)
+            .completeRecovery();
 
-        safeZkEmailRecoveryPlugin.recoverPlugin(safeAddress, previousOwner);
         bool isOwner = Safe(payable(safeAddress)).isOwner(newOwner.addr);
         assertTrue(isOwner);
+
+        bool oldOwnerIsOwner = Safe(payable(safeAddress)).isOwner(owner);
+        assertFalse(oldOwnerIsOwner);
     }
 }
