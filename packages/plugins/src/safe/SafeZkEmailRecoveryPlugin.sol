@@ -10,7 +10,6 @@ import {EmailAccountRecovery} from "ether-email-auth/packages/contracts/src/Emai
 //////////////////////////////////////////////////////////////////////////*/
 
 struct RecoveryRequest {
-    address guardian;
     uint256 executeAfter;
     address ownerToSwap;
     address pendingNewOwner;
@@ -153,6 +152,10 @@ contract SafeZkEmailRecoveryPlugin is EmailAccountRecovery {
             guardianRequests[guardian].safe != address(0),
             "guardian not requested"
         );
+        require(
+            !guardianRequests[guardian].accepted,
+            "guardian has already accepted"
+        );
         require(templateIdx == 0, "invalid template index");
         require(subjectParams.length == 1, "invalid subject params");
 
@@ -268,6 +271,11 @@ contract SafeZkEmailRecoveryPlugin is EmailAccountRecovery {
         bool moduleEnabled = ISafe(safe).isModuleEnabled(address(this));
         if (!moduleEnabled) revert MODULE_NOT_ENABLED();
 
+        require(
+            guardianRequests[guardian].safe == address(0),
+            "guardian already requested"
+        );
+
         bool isOwner = ISafe(safe).isOwner(owner);
         if (!isOwner) revert INVALID_OWNER(owner);
 
@@ -300,7 +308,7 @@ contract SafeZkEmailRecoveryPlugin is EmailAccountRecovery {
         }
 
         recoveryRequests[safe] = RecoveryRequest({
-            guardian: guardian,
+            // guardian: guardian,
             executeAfter: 0,
             ownerToSwap: owner,
             pendingNewOwner: address(0),
