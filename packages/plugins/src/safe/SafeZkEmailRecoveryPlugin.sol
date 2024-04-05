@@ -36,6 +36,8 @@ contract SafeZkEmailRecoveryPlugin is EmailAccountRecovery {
     /** Mapping of guardian address to guardian request */
     mapping(address => GuardianRequest) public guardianRequests;
 
+    // mapping(address => address) public entryContractToSafe;
+
     /** Mapping of safe address to dkim registry address */
     // TODO How can we use a custom DKIM reigstry/key with email auth?
     // mapping(address => address) public dkimRegistryOfSafe;
@@ -198,6 +200,8 @@ contract SafeZkEmailRecoveryPlugin is EmailAccountRecovery {
     function completeRecovery() public override {
         // TODO see if this is needed
         revert("use recoverPlugin");
+        // address safeToRecover = entryContractToSafe[msg.sender];
+        // recoverPlugin(safe, previousOwner);
     }
 
     /**
@@ -212,6 +216,16 @@ contract SafeZkEmailRecoveryPlugin is EmailAccountRecovery {
         address safe
     ) external view returns (RecoveryRequest memory) {
         return recoveryRequests[safe];
+    }
+
+    /**
+     * @notice Returns guardian request accociated with a safe address
+     * @param safe address to query storage with
+     */
+    function getGuardianRequest(
+        address safe
+    ) external view returns (GuardianRequest memory) {
+        return guardianRequests[safe];
     }
 
     /**
@@ -231,6 +245,9 @@ contract SafeZkEmailRecoveryPlugin is EmailAccountRecovery {
         uint256 customDelay
     ) external {
         address safe = msg.sender;
+
+        // EntryContract entryContract = new EntryContract(safe);
+        // entryContractToSafe[address(entryContract)] = safe;
 
         bool moduleEnabled = ISafe(safe).isModuleEnabled(address(this));
         if (!moduleEnabled) revert MODULE_NOT_ENABLED();

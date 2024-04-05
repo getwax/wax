@@ -19,6 +19,8 @@ import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/Messa
 /* solhint-disable private-vars-leading-underscore */
 /* solhint-disable var-name-mixedcase */
 
+// TODO: THESE TESTS ARE CURRENTLY SKIPPED IN CI WHILE WE'RE WORKING ON THE ZK SUMMIT DEMO. WE STILL HAVE A PASSING INTEGRATION TEST.
+
 contract SafeZkEmailRecoveryPluginTest is TestHelper {
     using MessageHashUtils for bytes;
 
@@ -77,7 +79,9 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
             domainName,
             publicKeyHash
         );
-        bytes32 digest = bytes(signedMsg).toEthSignedMessageHash();
+        bytes32 digest = MessageHashUtils.toEthSignedMessageHash(
+            bytes(signedMsg)
+        );
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(1, digest);
         bytes memory signature = abi.encodePacked(r, s, v);
         ecdsaOwnedDkimRegistry.setDKIMPublicKeyHash(
