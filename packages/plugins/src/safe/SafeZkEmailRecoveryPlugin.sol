@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import {ISafe} from "./utils/Safe4337Base.sol";
 import {EmailAccountRecoveryRouter} from "./EmailAccountRecoveryRouter.sol";
 import {EmailAccountRecovery} from "ether-email-auth/packages/contracts/src/EmailAccountRecovery.sol";
-
+// import "forge-std/console.sol";
 /*//////////////////////////////////////////////////////////////////////////
     THIS CONTRACT IS STILL IN ACTIVE DEVELOPMENT. NOT FOR PRODUCTION USE        
 //////////////////////////////////////////////////////////////////////////*/
@@ -158,7 +158,7 @@ contract SafeZkEmailRecoveryPlugin is EmailAccountRecovery {
 
         address safeInEmail = abi.decode(subjectParams[0], (address));
         address safeForRouter = recoveryRouterToSafeInfo[msg.sender].safe;
-        require(safeForRouter != safeInEmail, "invalid account for router");
+        require(safeForRouter == safeInEmail, "invalid account for router");
         require(
             guardianRequests[guardian].safe == safeInEmail,
             "invalid account in email"
@@ -190,7 +190,7 @@ contract SafeZkEmailRecoveryPlugin is EmailAccountRecovery {
 
         address safeInEmail = abi.decode(subjectParams[1], (address));
         address safeForRouter = recoveryRouterToSafeInfo[msg.sender].safe;
-        require(safeForRouter != safeInEmail, "invalid account for router");
+        require(safeForRouter == safeInEmail, "invalid account for router");
         require(
             guardianRequests[guardian].safe == safeInEmail,
             "invalid account in email"

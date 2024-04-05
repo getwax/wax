@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {EmailAuthMsg} from "ether-email-auth/packages/contracts/src/EmailAuth.sol";
+// import "forge-std/console.sol";
 
 interface IEmailAccountRecovery {
     function verifier() external view returns (address);
