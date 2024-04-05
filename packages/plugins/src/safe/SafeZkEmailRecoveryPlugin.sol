@@ -4,13 +4,12 @@ pragma solidity ^0.8.0;
 import {ISafe} from "./utils/Safe4337Base.sol";
 import {EmailAccountRecoveryRouter} from "./EmailAccountRecoveryRouter.sol";
 import {EmailAccountRecovery} from "ether-email-auth/packages/contracts/src/EmailAccountRecovery.sol";
-
+// import "forge-std/console.sol";
 /*//////////////////////////////////////////////////////////////////////////
     THIS CONTRACT IS STILL IN ACTIVE DEVELOPMENT. NOT FOR PRODUCTION USE        
 //////////////////////////////////////////////////////////////////////////*/
 
 struct RecoveryRequest {
-    address guardian;
     uint256 executeAfter;
     address ownerToSwap;
     address pendingNewOwner;
@@ -45,6 +44,10 @@ contract SafeZkEmailRecoveryPlugin is EmailAccountRecovery {
 
     /** Mapping of email account recovery router contracts to safe details needed to complete recovery */
     mapping(address => SafeAccountInfo) public recoveryRouterToSafeInfo;
+
+    /** Mapping of safe account addresses to email account recovery router contracts**/
+    /** These are stored for frontends to easily find the router contract address from the given safe account address**/
+    mapping(address => address) public safeAddrToRecoveryRouter;
 
     /** Mapping of safe address to dkim registry address */
     // TODO How can we use a custom DKIM reigstry/key with email auth?
@@ -149,10 +152,16 @@ contract SafeZkEmailRecoveryPlugin is EmailAccountRecovery {
             guardianRequests[guardian].safe != address(0),
             "guardian not requested"
         );
+        require(
+            !guardianRequests[guardian].accepted,
+            "guardian has already accepted"
+        );
         require(templateIdx == 0, "invalid template index");
         require(subjectParams.length == 1, "invalid subject params");
 
         address safeInEmail = abi.decode(subjectParams[0], (address));
+        address safeForRouter = recoveryRouterToSafeInfo[msg.sender].safe;
+        require(safeForRouter == safeInEmail, "invalid account for router");
         require(
             guardianRequests[guardian].safe == safeInEmail,
             "invalid account in email"
@@ -183,6 +192,8 @@ contract SafeZkEmailRecoveryPlugin is EmailAccountRecovery {
         require(newOwnerInEmail != address(0), "invalid new owner in email");
 
         address safeInEmail = abi.decode(subjectParams[1], (address));
+        address safeForRouter = recoveryRouterToSafeInfo[msg.sender].safe;
+        require(safeForRouter == safeInEmail, "invalid account for router");
         require(
             guardianRequests[guardian].safe == safeInEmail,
             "invalid account in email"
@@ -257,24 +268,13 @@ contract SafeZkEmailRecoveryPlugin is EmailAccountRecovery {
         address previousOwnerInLinkedList
     ) external returns (address emailAccountRecoveryRouterAddress) {
         address safe = msg.sender;
-
-        EmailAccountRecoveryRouter emailAccountRecoveryRouter = new EmailAccountRecoveryRouter(
-                address(this)
-            );
-        emailAccountRecoveryRouterAddress = address(emailAccountRecoveryRouter);
-
-        // TODO: check entry contract exists before deploying
-        require(
-            recoveryRouterToSafeInfo[emailAccountRecoveryRouterAddress].safe ==
-                address(0),
-            "entry contract for safe already exits"
-        );
-        recoveryRouterToSafeInfo[
-            emailAccountRecoveryRouterAddress
-        ] = SafeAccountInfo(safe, previousOwnerInLinkedList);
-
         bool moduleEnabled = ISafe(safe).isModuleEnabled(address(this));
         if (!moduleEnabled) revert MODULE_NOT_ENABLED();
+
+        require(
+            guardianRequests[guardian].safe == address(0),
+            "guardian already requested"
+        );
 
         bool isOwner = ISafe(safe).isOwner(owner);
         if (!isOwner) revert INVALID_OWNER(owner);
@@ -282,6 +282,25 @@ contract SafeZkEmailRecoveryPlugin is EmailAccountRecovery {
         if (recoveryRequests[guardian].executeAfter > 0) {
             revert RECOVERY_ALREADY_INITIATED();
         }
+        require(
+            safeAddrToRecoveryRouter[safe] == address(0),
+            "router contract for safe already exits"
+        );
+
+        EmailAccountRecoveryRouter emailAccountRecoveryRouter = new EmailAccountRecoveryRouter(
+                address(this)
+            );
+        emailAccountRecoveryRouterAddress = address(emailAccountRecoveryRouter);
+
+        require(
+            recoveryRouterToSafeInfo[emailAccountRecoveryRouterAddress].safe ==
+                address(0),
+            "safe for the router contract already exits"
+        );
+        recoveryRouterToSafeInfo[
+            emailAccountRecoveryRouterAddress
+        ] = SafeAccountInfo(safe, previousOwnerInLinkedList);
+        safeAddrToRecoveryRouter[safe] = emailAccountRecoveryRouterAddress;
 
         uint256 delay = defaultDelay;
         if (customDelay > 0) {
@@ -289,7 +308,7 @@ contract SafeZkEmailRecoveryPlugin is EmailAccountRecovery {
         }
 
         recoveryRequests[safe] = RecoveryRequest({
-            guardian: guardian,
+            // guardian: guardian,
             executeAfter: 0,
             ownerToSwap: owner,
             pendingNewOwner: address(0),

@@ -33,7 +33,7 @@ contract SafeZkEmailRecoveryPlugin_Integration_Test is TestHelper {
     address public owner;
 
     // ZK email contracts
-    EmailAuth emailAuth;
+    // EmailAuth emailAuth;
     ECDSAOwnedDKIMRegistry ecdsaOwnedDkimRegistry;
     MockGroth16Verifier verifier;
     bytes32 accountSalt;
@@ -78,9 +78,9 @@ contract SafeZkEmailRecoveryPlugin_Integration_Test is TestHelper {
                 accountSalt
             )
         );
-        emailAuth = EmailAuth(payable(address(emailAuthProxy)));
-        emailAuth.updateVerifier(address(verifier));
-        emailAuth.updateDKIMRegistry(address(ecdsaOwnedDkimRegistry));
+        // emailAuth = EmailAuth(payable(address(emailAuthProxy)));
+        // emailAuth.updateVerifier(address(verifier));
+        // emailAuth.updateDKIMRegistry(address(ecdsaOwnedDkimRegistry));
         vm.stopPrank();
 
         safeZkEmailRecoveryPlugin = new SafeZkEmailRecoveryPlugin(
@@ -159,7 +159,7 @@ contract SafeZkEmailRecoveryPlugin_Integration_Test is TestHelper {
 
         // Handle acceptance
         bytes[] memory subjectParamsForAcceptance = new bytes[](1);
-        subjectParamsForAcceptance[0] = abi.encode(safeAddress); // TODO: might need to be entry contract
+        subjectParamsForAcceptance[0] = abi.encode(safeAddress);
         EmailAuthMsg memory emailAuthMsg = EmailAuthMsg({
             templateId: safeZkEmailRecoveryPlugin.computeAcceptanceTemplateId(
                 templateIdx
@@ -168,7 +168,6 @@ contract SafeZkEmailRecoveryPlugin_Integration_Test is TestHelper {
             skipedSubjectPrefix: 0,
             proof: emailProof
         });
-
         IEmailAccountRecovery(emailAccountRecoveryRouterAddress)
             .handleAcceptance(emailAuthMsg, templateIdx);
 

@@ -58,7 +58,7 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
     string dkimPublicKey;
 
     // ZK email contracts
-    EmailAuth emailAuth;
+    // EmailAuth emailAuth;
     ECDSAOwnedDKIMRegistry ecdsaOwnedDkimRegistry;
     Verifier verifier;
     bytes32 accountSalt;
@@ -95,16 +95,16 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
         accountSalt = 0x2c3abbf3d1171bfefee99c13bf9c47f1e8447576afd89096652a34f27b297971;
 
         EmailAuth emailAuthImpl = new EmailAuth();
-        ERC1967Proxy emailAuthProxy = new ERC1967Proxy(
-            address(emailAuthImpl),
-            abi.encodeWithSelector(
-                emailAuthImpl.initialize.selector,
-                accountSalt
-            )
-        );
-        emailAuth = EmailAuth(payable(address(emailAuthProxy)));
-        emailAuth.updateVerifier(address(verifier));
-        emailAuth.updateDKIMRegistry(address(ecdsaOwnedDkimRegistry));
+        // ERC1967Proxy emailAuthProxy = new ERC1967Proxy(
+        //     address(emailAuthImpl),
+        //     abi.encodeWithSelector(
+        //         emailAuthImpl.initialize.selector,
+        //         accountSalt
+        //     )
+        // );
+        // emailAuth = EmailAuth(payable(address(emailAuthProxy)));
+        // emailAuth.updateVerifier(address(verifier));
+        // emailAuth.updateDKIMRegistry(address(ecdsaOwnedDkimRegistry));
         vm.stopPrank();
 
         safeZkEmailRecoveryPlugin = new SafeZkEmailRecoveryPluginHarness(
