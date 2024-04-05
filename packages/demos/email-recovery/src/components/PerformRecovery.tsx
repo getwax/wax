@@ -3,6 +3,8 @@ import { Button } from './Button'
 import { relayer } from '../services/relayer';
 
 export function PerformRecovery() {
+    // TODO Pass in props or get from onchain data
+    const recoveryConfigured = false;
     const [recoveryInProgress, setRecoveryInProgress] = useState(false);
     const [recoveryApproved, setRecoveryApproved] = useState(false);
     const [delayRemaining, setDelayRemaining] = useState(0);
@@ -33,13 +35,13 @@ export function PerformRecovery() {
 
     return (
         <>
-            <Button disabled={recoveryInProgress} onClick={requestRecovery}>
+            <Button disabled={!recoveryConfigured || recoveryInProgress} onClick={requestRecovery}>
                 3. Request Recovery
             </Button>
             <div>
                 <div>4. Awaiting Guardian Approval</div>
-                <Button disabled={recoveryApproved} onClick={testRecoveryApprove}>
-                    TEST Approve
+                <Button disabled={!recoveryConfigured || recoveryApproved} onClick={testRecoveryApprove}>
+                    TEST Approve (Switch to polling)
                 </Button>
             </div>
             <div>
@@ -53,7 +55,7 @@ export function PerformRecovery() {
             <Button
                 disabled={!recoveryInProgress || !recoveryApproved || !delayRemaining} 
                 onClick={completeRecovery}>
-                6. Complete Recovery
+                6. Complete Recovery (Switch to polling)
             </Button>
         </>
     );
