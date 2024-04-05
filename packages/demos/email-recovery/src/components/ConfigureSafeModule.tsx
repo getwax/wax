@@ -5,7 +5,6 @@ import { relayer } from '../services/relayer'
 import { abi as moduleAbi, bytecode as moduleBytecode } from '../abi/SafeZkEmailRecoveryPlugin.json'
 import { verifier, dkimRegistry, emailAuthImpl } from '../../contracts.base-sepolia.json'
 import { Button } from './Button'
-import { baseSepolia } from 'viem/chains'
 
 // TODO Pull from lib
 type HexStr = `0x${string}`;
@@ -14,7 +13,7 @@ const safeModuleAddressKey = 'safeModuleAddress'
 
 export function ConfigureSafeModule() {
     const cfg = useConfig();
-    const { data: walletClient } = useWalletClient({ chainId: baseSepolia.id })
+    const { data: walletClient } = useWalletClient()
     const [safeModuleAddress/*, setSafeModuleAddress*/] = useState(
         localStorage.getItem(safeModuleAddressKey)
     )
@@ -48,7 +47,7 @@ export function ConfigureSafeModule() {
       // TODO submit txn/userop to configure recovery
       // TODO Consider, could we enable the module & configure recovery in one step/txn/userop?
   
-      await relayer.acceptanceRequest();
+    //   await relayer.acceptanceRequest();
   
       setRecoveryConfigured(true);
     }, [])

@@ -10,7 +10,7 @@ function App() {
       <h1>Safe Email Recovery Demo</h1>
       <Web3Provider>
         <ConnectKitButton />
-        <ConfigureSafeModule />
+        {/*<ConfigureSafeModule />*/}
         <PerformRecovery />
       </Web3Provider>
     </>
