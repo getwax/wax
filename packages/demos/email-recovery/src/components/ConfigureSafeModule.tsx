@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from 'react'
-import { useAccount, useWriteContract } from 'wagmi'
+import { useAccount, useWriteContract, useReadContract } from 'wagmi'
 import { abi as safeAbi } from '../abi/Safe.json'
 import { safeZkSafeZkEmailRecoveryPlugin } from '../../contracts.base-sepolia.json'
 import { relayer } from '../services/relayer'
@@ -8,9 +8,15 @@ import { Button } from './Button'
 export function ConfigureSafeModule() {
     const { address } = useAccount()
     const { writeContract } = useWriteContract()
-  
-    const moduleEnabled = false;
+
     const [recoveryConfigured, setRecoveryConfigured] = useState(false)
+
+    const { data: isModuleEnabled } = useReadContract({
+        address,
+        abi: safeAbi,
+        functionName: 'isModuleEnabled',
+        args: [safeZkSafeZkEmailRecoveryPlugin]
+    });
 
     const enableEmailRecoveryModule = useCallback(async () => {
         if (!address) {
@@ -35,15 +41,19 @@ export function ConfigureSafeModule() {
     }, [])
 
     const recoveryCfgEnabled = useMemo(
-        () => !moduleEnabled || recoveryConfigured,
-        [moduleEnabled, recoveryConfigured]
+        () => !isModuleEnabled || recoveryConfigured,
+        [isModuleEnabled, recoveryConfigured]
     );
 
     return (
         <>
-            <Button onClick={enableEmailRecoveryModule}>
-                1. Enable Email Recovery Module
-            </Button>
+            {
+                isModuleEnabled ?
+                <div>Recovery Module Enabled</div> :
+                <Button onClick={enableEmailRecoveryModule}>
+                    1. Enable Email Recovery Module
+                </Button>
+            }
             <div>
                 <label>
                     Guardian's Email
