@@ -1,28 +1,29 @@
 import { useState, useCallback, useMemo } from 'react'
-import { useWalletClient, useConfig } from 'wagmi'
+import { useAccount, useWriteContract } from 'wagmi'
+import { abi as safeAbi } from '../abi/Safe.json'
+import { safeZkSafeZkEmailRecoveryPlugin } from '../../contracts.base-sepolia.json'
 import { relayer } from '../services/relayer'
 import { Button } from './Button'
 
-// TODO Pull from lib
-type HexStr = `0x${string}`;
-
-const safeModuleAddressKey = 'safeModuleAddress'
-
 export function ConfigureSafeModule() {
-    const cfg = useConfig();
-    const { data: walletClient } = useWalletClient()
-    const [safeModuleAddress/*, setSafeModuleAddress*/] = useState(
-        localStorage.getItem(safeModuleAddressKey)
-    )
+    const { address } = useAccount()
+    const { writeContract } = useWriteContract()
   
-    const [moduleEnabled, setModuleEnabled] = useState(false)
+    const moduleEnabled = false;
     const [recoveryConfigured, setRecoveryConfigured] = useState(false)
 
     const enableEmailRecoveryModule = useCallback(async () => {
-      // TODO submit txn to enable module
-  
-      setModuleEnabled(true);
-    }, [])
+        if (!address) {
+            throw new Error('unable to get account address');
+        }
+
+        writeContract({
+            abi: safeAbi,
+            address,
+            functionName: 'enableModule',
+            args: [safeZkSafeZkEmailRecoveryPlugin],
+         })
+    }, [address, writeContract])
   
     const configureRecoveryAndRequestGuardian = useCallback(async () => {
       // TODO submit txn/userop to configure recovery
@@ -40,7 +41,7 @@ export function ConfigureSafeModule() {
 
     return (
         <>
-            <Button disabled={!safeModuleAddress} onClick={enableEmailRecoveryModule}>
+            <Button onClick={enableEmailRecoveryModule}>
                 1. Enable Email Recovery Module
             </Button>
             <div>
@@ -55,7 +56,7 @@ export function ConfigureSafeModule() {
                 <Button
                     disabled={recoveryCfgEnabled}
                     onClick={configureRecoveryAndRequestGuardian}>
-                    3. Configure Recovery & Request Guardian
+                    2. Configure Recovery & Request Guardian
                 </Button>
             </div>
         </>

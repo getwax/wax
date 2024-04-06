@@ -62,6 +62,12 @@ export function PerformRecovery() {
         functionName: 'owner',
     });
 
+    const { data: timelock } = useReadContract({
+        address: simpleWalletAddress as HexStr,
+        abi: simpleWalletAbi,
+        functionName: 'timelock',
+    });
+
     const deploySimpleWallet = useCallback(async() => {
         const simpleWalletInterface = new ethers.Interface(simpleWalletAbi);
         const data = simpleWalletInterface.encodeFunctionData('initialize', [
@@ -73,12 +79,10 @@ export function PerformRecovery() {
             bytecode: proxyBytecode.object as HexStr,
             args: [simpleWalletImpl, data],
         }) as HexStr
-        console.debug('simplewallet deploy txn hash', hash)
         const { contractAddress } = await waitForTransactionReceipt(cfg, { hash })
         if (!contractAddress) {
             throw new Error('simplewallet deployment has no contractAddress');
         }
-        console.debug('simplewallet address ', contractAddress)
 
         setSimpleWalletAddress(contractAddress);
         // localStorage.setItem(storageKeys.simpleWalletAddress, contractAddress);
@@ -135,14 +139,14 @@ export function PerformRecovery() {
 
         const subject = getRequestsRecoverySubject(simpleWalletAddress, newOwner)
 
-        const resBody = await relayer.recoveryRequest(
+        const { requestId } = await relayer.recoveryRequest(
             simpleWalletAddress,
             guardianEmail,
             templateIdx,
             subject,
         )
+        console.debug('recovery request id', requestId)
 
-        console.debug('request recovery res body', resBody);
     }, [simpleWalletAddress, guardianEmail, newOwner])
 
     const completeRecovery = useCallback(async () => {
@@ -155,6 +159,7 @@ export function PerformRecovery() {
             <div>{`TEST SimplerWallet address: ${simpleWalletAddress}`}</div>
             <div>{`TEST SimpleWallet owner ${simpleWalletOwner}`}</div>
             <div>{`TEST account code: ${accountCode}`}</div>
+            <div>{`TEST timelock: ${timelock}`}</div>
             <Button disabled={!!simpleWalletAddress} onClick={deploySimpleWallet}>TEST Deploy SimpleWallet</Button>
             <div>
                 <label>

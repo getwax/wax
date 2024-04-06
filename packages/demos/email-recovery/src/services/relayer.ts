@@ -32,7 +32,11 @@ class Relayer {
     }
 
     async requestStatus(requestId: number) {
-        const res = await fetch(`${this.apiUrl}/requestStatus`);
+        const res = await fetch(`${this.apiUrl}/requestStatus`, {
+			body: JSON.stringify({
+				request_id: requestId
+			})
+		});
         if (!res.ok) {
             await this.throwErrFromRes(res);
         }
@@ -83,7 +87,10 @@ class Relayer {
         if (!res.ok) {
             await this.throwErrFromRes(res);
         }
-		return res.json();
+		const { request_id: requestId } = await res.json();
+		return {
+			requestId,
+		}
     }
 
     async completeRequest(walletEthAddr: string) {
