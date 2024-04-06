@@ -2,7 +2,7 @@ import { waitForTransactionReceipt } from '@wagmi/core'
 import { useState, useCallback } from 'react'
 import { Button } from './Button'
 import { relayer } from '../services/relayer'
-import { useConfig, useWalletClient } from 'wagmi'
+import { useConfig, useReadContract, useWalletClient } from 'wagmi'
 import { abi as proxyAbi, bytecode as proxyBytecode } from '../abi/ERC1967Proxy.json'
 import { abi as simpleWalletAbi } from '../abi/SimpleWallet.json'
 import {
@@ -16,7 +16,15 @@ import { ethers } from 'ethers'
 // TODO Pull from lib
 type HexStr = `0x${string}`;
 
-const simpleWalletAddressKey = 'simpleWalletAddress'
+const storageKeys = {
+    simpleWalletAddress: 'simpleWalletAddress',
+    guardianEmail: 'guardianEmail',
+    accountCode: 'accountCode',
+}
+
+// TODO Update both with safe module accept subject
+const getRequestGuardianSubject = (acctAddr: string) => `Accept guardian request for ${acctAddr}`;
+const getRequestsRecoverySubject = (acctAddr: string, newOwner: string) => `Set the new signer of ${acctAddr} to ${newOwner}`;
 
 // Gen 32 byte rand hex (64 char)
 // TODO spot check this to make sure done correctly
@@ -29,16 +37,30 @@ const genRandHex = () => {
       .join('')
 }
 
+const templateIdx = 0
+
 // TODO Switch back to Safe over SimpleWallet
 export function PerformRecovery() {
     const cfg = useConfig()
     const { data: walletClient } = useWalletClient()
     const [simpleWalletAddress, setSimpleWalletAddress] = useState(
-        localStorage.getItem(simpleWalletAddressKey)
+        localStorage.getItem(storageKeys.simpleWalletAddress)
     )
-    const [guardianEmail, setGuardianEmail] = useState<string>();
+    const [guardianEmail, setGuardianEmail] = useState(
+        localStorage.getItem(storageKeys.guardianEmail)
+    );
     // TODO TEST, probably don't show on FE
-    const [accountCode, setAccountCode] = useState<string>();
+    const [accountCode, setAccountCode] = useState(
+        localStorage.getItem(storageKeys.accountCode)
+    );
+    const [gurdianRequestId, setGuardianRequestId] = useState<number>()
+    const [newOwner, setNewOwner] = useState<string>()
+
+    const { data: simpleWalletOwner } = useReadContract({
+        address: simpleWalletAddress as HexStr,
+        abi: simpleWalletAbi,
+        functionName: 'owner',
+    });
 
     const deploySimpleWallet = useCallback(async() => {
         const simpleWalletInterface = new ethers.Interface(simpleWalletAbi);
@@ -59,20 +81,10 @@ export function PerformRecovery() {
         console.debug('simplewallet address ', contractAddress)
 
         setSimpleWalletAddress(contractAddress);
-        localStorage.setItem(simpleWalletAddressKey, contractAddress);
+        // localStorage.setItem(storageKeys.simpleWalletAddress, contractAddress);
     }, [walletClient, cfg])
 
-    // TODO Pass in props or get from onchain data
-    const [recoveryInProgress, setRecoveryInProgress] = useState(false);
-    const [recoveryApproved, setRecoveryApproved] = useState(false);
-    const [delayRemaining, setDelayRemaining] = useState(0);
-
     const requestGuardian = useCallback(async () => {
-        const accountCode = genRandHex()
-        const templateIdx = 0
-        // TODO Update with safe module accept subject
-        const subject = `Accept guardian request for ${simpleWalletAddress}`;
-
         if (!simpleWalletAddress) {
             throw new Error('simple wallet address not set')
         }
@@ -81,46 +93,67 @@ export function PerformRecovery() {
             throw new Error('guardian email not set')
         }
 
-        const resBody = await relayer.acceptanceRequest(
+        const accountCode = genRandHex()
+        const subject = getRequestGuardianSubject(simpleWalletAddress);
+
+        const { requestId } = await relayer.acceptanceRequest(
             simpleWalletAddress,
             guardianEmail,
             accountCode,
             templateIdx,
-            subject
+            subject,
         );
-        console.debug('acceptance request res body', resBody);
+
+        setGuardianRequestId(requestId)
 
         setAccountCode(accountCode)
-        setRecoveryInProgress(true)
+        // localStorage.setItem(storageKeys.accountCode, accountCode)
+        // localStorage.setItem(storageKeys.guardianEmail, guardianEmail)
     }, [simpleWalletAddress, guardianEmail])
 
+    const checkGuardianAcceptance = useCallback(async () => {
+        if (!gurdianRequestId) {
+            throw new Error('missing guardian request id')
+        }
+
+        const resBody = await relayer.requestStatus(gurdianRequestId)
+        console.debug('guardian req res body', resBody);
+    }, [gurdianRequestId])
+
     const requestRecovery = useCallback(async () => {
-        // await relayer.recoveryRequest();
-    
-        setRecoveryInProgress(true);
-    }, [])
+        if (!simpleWalletAddress) {
+            throw new Error('simple wallet address not set')
+        }
 
-    const testRecoveryApprove = useCallback(() => {
-        // TODO Instead, poll relayer.requestStatus until approval is complete
+        if (!guardianEmail) {
+            throw new Error('guardian email not set')
+        }
 
-        setRecoveryApproved(true);
-        setDelayRemaining(42);
-    }, []);
+        if (!newOwner) {
+            throw new Error('new owner not set')
+        }
 
-    const testTimeTravel = useCallback(() => {
-        setDelayRemaining(0);
-    }, []);
+        const subject = getRequestsRecoverySubject(simpleWalletAddress, newOwner)
+
+        const resBody = await relayer.recoveryRequest(
+            simpleWalletAddress,
+            guardianEmail,
+            templateIdx,
+            subject,
+        )
+
+        console.debug('request recovery res body', resBody);
+    }, [simpleWalletAddress, guardianEmail, newOwner])
 
     const completeRecovery = useCallback(async () => {
         // TODO Instead, poll relayer.requestStatus until complete recovery is complete
 
-        setRecoveryInProgress(false);
-        setRecoveryApproved(false);
     }, []);
 
     return (
         <>
             <div>{`TEST SimplerWallet address: ${simpleWalletAddress}`}</div>
+            <div>{`TEST SimpleWallet owner ${simpleWalletOwner}`}</div>
             <div>{`TEST account code: ${accountCode}`}</div>
             <Button disabled={!!simpleWalletAddress} onClick={deploySimpleWallet}>TEST Deploy SimpleWallet</Button>
             <div>
@@ -137,27 +170,22 @@ export function PerformRecovery() {
                     TEST Request Guardian
                 </Button>
             </div>
-            <Button disabled={recoveryInProgress} onClick={requestRecovery}>
+            <div>
+                <Button onClick={checkGuardianAcceptance}>
+                    Check for guardian acceptance
+                </Button>
+            </div>
+                <label>
+                    New Owner (address)
+                    <input type='text'
+                        onInput={e => setNewOwner(e.target.value)}
+                    />
+                </label>
+            <Button onClick={requestRecovery}>
                 3. Request Recovery
             </Button>
-            <div>
-                <div>4. Awaiting Guardian Approval</div>
-                <Button disabled={recoveryApproved} onClick={testRecoveryApprove}>
-                    TEST Approve (Switch to polling)
-                </Button>
-            </div>
-            <div>
-                <div>5. Waiting until delay is finished... ({delayRemaining} time units)</div>
-                <Button
-                    disabled={!recoveryInProgress || !recoveryApproved || !delayRemaining}
-                    onClick={testTimeTravel}>
-                    TEST Time Travel
-                </Button>
-            </div>
-            <Button
-                disabled={!recoveryInProgress || !recoveryApproved || !delayRemaining} 
-                onClick={completeRecovery}>
-                6. Complete Recovery (Switch to polling)
+            <Button onClick={completeRecovery}>
+                4. Complete Recovery (Switch to polling)
             </Button>
         </>
     );

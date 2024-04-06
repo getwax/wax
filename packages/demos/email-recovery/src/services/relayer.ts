@@ -1,3 +1,6 @@
+// TODO replace fetch
+// import { get, post } from "axios"
+
 class RelayerError extends Error {
     constructor(msg: string) {
         super(msg);
@@ -22,18 +25,14 @@ class Relayer {
 
     // Similar to a ping or health endpoint
     async echo() {
-        const res = await fetch(`${this.apiUrl}/echo`);
+        const res = await Axios(`${this.apiUrl}/echo`);
         if (!res.ok) {
             await this.throwErrFromRes(res);
         }
     }
 
     async requestStatus(requestId: number) {
-        const res = await fetch(`${this.apiUrl}/requestStatus`, {
-			body: JSON.stringify({
-				request_id: requestId,
-			})
-		});
+        const res = await fetch(`${this.apiUrl}/requestStatus`);
         if (!res.ok) {
             await this.throwErrFromRes(res);
         }
@@ -46,7 +45,7 @@ class Relayer {
 		accountCode: string,
 		templateIdx: number,
 		subject: string
-	) {
+	): Promise<{ requestId: number }> {
 		const res = await fetch(`${this.apiUrl}/acceptanceRequest`, {
 			method: "POST",
 			body: JSON.stringify({
@@ -60,7 +59,10 @@ class Relayer {
         if (!res.ok) {
             await this.throwErrFromRes(res);
         }
-		return res.json();
+		const { request_id: requestId } = await res.json();
+		return {
+			requestId,
+		}
     }
 
     async recoveryRequest(
