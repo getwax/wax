@@ -1,5 +1,8 @@
 import hre from "hardhat";
-import { SafeZkEmailRecoveryPlugin__factory } from "../typechain-types";
+import {
+  SafeZkEmailRecoveryPlugin__factory,
+  EmailAccountRecoveryRouter__factory,
+} from "../typechain-types";
 
 // base sepolia
 // TODO make configurable
@@ -9,7 +12,7 @@ const emailAuthContracts = {
   emailAuthImpl: "0x1C76Aa365c17B40c7E944DcCdE4dC6e6D2A7b748",
 };
 
-async function deploySafeZkEmailRecoveryPlugin() {
+async function deploySafeEmailRecoveryPluginAndRouter() {
   console.log("Deploying SafeZkEmailRecoveryPlugin");
 
   const [firstSigner] = await hre.ethers.getSigners();
@@ -28,9 +31,18 @@ async function deploySafeZkEmailRecoveryPlugin() {
   console.log(
     `SafeZkEmailRecoveryPlugin deployed to ${await recoveryPlugin.getAddress()}`,
   );
+
+  const recoveryRouter = await new EmailAccountRecoveryRouter__factory()
+    .connect(firstSigner)
+    .deploy(emailAuthContracts.emailAuthImpl);
+  await recoveryRouter.waitForDeployment();
+
+  console.log(
+    `EmailAccountRecoveryRouter deployed to ${await recoveryRouter.getAddress()}`,
+  );
 }
 
-deploySafeZkEmailRecoveryPlugin().catch((error: Error) => {
+deploySafeEmailRecoveryPluginAndRouter().catch((error: Error) => {
   console.error(error);
   process.exitCode = 1;
 });

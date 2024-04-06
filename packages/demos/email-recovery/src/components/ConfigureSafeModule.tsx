@@ -1,9 +1,6 @@
-import { waitForTransactionReceipt } from '@wagmi/core'
 import { useState, useCallback, useMemo } from 'react'
 import { useWalletClient, useConfig } from 'wagmi'
 import { relayer } from '../services/relayer'
-import { abi as moduleAbi, bytecode as moduleBytecode } from '../abi/SafeZkEmailRecoveryPlugin.json'
-import { verifier, dkimRegistry, emailAuthImpl } from '../../contracts.base-sepolia.json'
 import { Button } from './Button'
 
 // TODO Pull from lib
@@ -20,22 +17,6 @@ export function ConfigureSafeModule() {
   
     const [moduleEnabled, setModuleEnabled] = useState(false)
     const [recoveryConfigured, setRecoveryConfigured] = useState(false)
-
-    const deployEmailRecoveryModule = useCallback(async() => {
-        const hash = await walletClient?.deployContract({
-            abi: moduleAbi,
-            bytecode: moduleBytecode.object as HexStr,
-            args: [verifier, dkimRegistry, emailAuthImpl],
-        }) as HexStr
-        console.debug('module deploy txn hash', hash)
-        const receipt = await waitForTransactionReceipt(cfg, { hash })
-        console.debug('module deploy txn receipt', receipt)
-        // TODO Look this up from receipt
-        // const moduleAddress = "0x01";
-
-        // setSafeModuleAddress(moduleAddress);
-        // localStorage.setItem(safeModuleAddressKey, moduleAddress);
-    }, [walletClient, cfg])
 
     const enableEmailRecoveryModule = useCallback(async () => {
       // TODO submit txn to enable module
@@ -62,7 +43,6 @@ export function ConfigureSafeModule() {
             <Button disabled={!!safeModuleAddress} onClick={deployEmailRecoveryModule}>
                 1. Deploy Email Recovery Module
             </Button>
-            <h2>TODO (below)</h2>
             <Button disabled={!safeModuleAddress} onClick={enableEmailRecoveryModule}>
                 2. Enable Email Recovery Module
             </Button>
