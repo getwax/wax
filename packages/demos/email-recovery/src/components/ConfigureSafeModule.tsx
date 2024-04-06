@@ -40,11 +40,8 @@ export function ConfigureSafeModule() {
 
     return (
         <>
-            <Button disabled={!!safeModuleAddress} onClick={deployEmailRecoveryModule}>
-                1. Deploy Email Recovery Module
-            </Button>
             <Button disabled={!safeModuleAddress} onClick={enableEmailRecoveryModule}>
-                2. Enable Email Recovery Module
+                1. Enable Email Recovery Module
             </Button>
             <div>
                 <label>
