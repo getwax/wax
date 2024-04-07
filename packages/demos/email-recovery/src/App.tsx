@@ -9,14 +9,22 @@ import { NewButton } from "./components/Button";
 import { VStack, HStack } from "./components/Spacer/Stack";
 import WalletIcon from "./icons/WalletIcon";
 import InfoIcon from "./icons/InfoIcon";
-import { useMemo } from "react";
+import Input from "./components/Input";
+import Card from "./components/Card";
+import { useMemo, useState } from "react";
+
+type View = "providerTest" | "firstStep" | "secondStep" | "thirdStep";
+
+const testWalletConnectionData = {
+  ensName: "anaaronist.eth",
+  walletAddress: "0x95e1...17d6",
+};
 
 function App() {
-  const providerTest = false;
-  const secondStep = true;
+  const [currentView, _] = useState<View>("thirdStep" as View);
 
   const inner = useMemo(() => {
-    if (providerTest) {
+    if (currentView === "providerTest") {
       return (
         <ControlsAndExistingUI>
           <Web3Provider>
@@ -28,24 +36,66 @@ function App() {
           </Web3Provider>
         </ControlsAndExistingUI>
       );
-    } else if (secondStep) {
+    } else if (currentView === "secondStep") {
       return (
         <>
           <Header>Safe Email Recovery Demo</Header>
 
           <VStack gap={20} align="center">
             <HStack gap={12}>
-              <StyledText>Connected Wallet:</StyledText>
+              <SecondaryText>Connected Wallet: </SecondaryText>
+              <Card>
+                <StyledSafeDetailsWrapper gap={8} align="center">
+                  <>pfp</>
+                  <PrimaryText>{testWalletConnectionData.ensName}</PrimaryText>
+                  <TertiaryText>
+                    {testWalletConnectionData.walletAddress}
+                  </TertiaryText>
+                </StyledSafeDetailsWrapper>
+              </Card>
             </HStack>
             <StyledWalletButton active={false}>
-              <HStack gap={12}>Enable email recovery module</HStack>
+              <HStack gap={12}>Enable Email Recovery Module</HStack>
             </StyledWalletButton>
           </VStack>
         </>
       );
+    } else if (currentView === "thirdStep") {
+      return (
+        <VStack gap={28} align="center">
+          <Header>Safe Email Recovery Demo</Header>
+          <VStack>
+            <HStack>
+              <SecondaryText>Connected Wallet: </SecondaryText>
+            </HStack>
+            <Card>
+              <StyledSafeDetailsWrapper gap={8} align="center">
+                <>pfp</>
+                <PrimaryText>{testWalletConnectionData.ensName}</PrimaryText>
+                <TertiaryText>
+                  {testWalletConnectionData.walletAddress}
+                </TertiaryText>
+              </StyledSafeDetailsWrapper>
+            </Card>
+          </VStack>
+          <Card>
+            <VStack>
+              <HStack>
+                <TertiaryText>Guardian's Email</TertiaryText>
+              </HStack>
+              <Input name="Guardian Email" />
+            </VStack>
+          </Card>
+          <StyledWalletButton active={false}>
+            Configure Recovery and Request Guardian
+          </StyledWalletButton>
+        </VStack>
+      );
     }
+
     return (
       <VStack gap={28} align="center">
+        <Header>Email Recovery Demo</Header>
         <StyledWalletButton active={false}>
           <HStack gap={12}>
             <WalletIcon />
@@ -82,15 +132,18 @@ const PageWrapper = styled(VStack)`
 const ContentWrapper = styled.div``;
 
 const StyledWalletButton = styled(NewButton)`
-  display: flex;
   justify-content: center;
   align-items: center;
   height: 60px;
-  max-width: 312px;
+  max-width: 380px;
 `;
 
 const ControlsAndExistingUI = styled.div`
   padding-top: 1000px;
+`;
+
+const StyledSafeDetailsWrapper = styled(HStack)`
+  height: 32px;
 `;
 
 const Header = styled.p`
@@ -107,7 +160,15 @@ const UnderlinedText = styled.p`
   }
 `;
 
-const StyledText = styled.p`
+const PrimaryText = styled.p`
+  color: white;
+`;
+
+const SecondaryText = styled.p`
   font-size: 16px;
   color: #cecfd2;
+`;
+
+const TertiaryText = styled.span`
+  color: #94969c;
 `;
