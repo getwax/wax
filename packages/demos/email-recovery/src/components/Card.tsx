@@ -11,7 +11,10 @@ export default function Card({ compact = false, children }: CardProps) {
 
 const Wrapper = styled.div<{ compact: boolean }>`
   display: flex;
-  padding: ${({ compact }) => (compact ? "12" : "22")}px;
+  padding-left: ${({ compact }) => (compact ? "12" : "22")}px;
+  padding-right: ${({ compact }) => (compact ? "12" : "22")}px;
+  padding-top: ${({ compact }) => (compact ? "8" : "16")}px;
+  padding-bottom: ${({ compact }) => (compact ? "8" : "16")}px;
   border-radius: 8px;
 
   background-color: #161b26;

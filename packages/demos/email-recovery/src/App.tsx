@@ -14,11 +14,18 @@ import {
 } from "./components/core/Text";
 import WalletIcon from "./icons/WalletIcon";
 import InfoIcon from "./icons/InfoIcon";
+import { SecondaryHeader } from "./components/core/Text";
 import Card from "./components/Card";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import ConfigureAndStartRecoverySection from "./ConfigureAndStartRecoverySection";
+import testPfp from "../src/assets/testPfp.png";
 
-type View = "providerTest" | "firstStep" | "secondStep" | "thirdStep";
+enum View {
+  providerTest = "providerTest",
+  firstStep = "firstStep",
+  secondStep = "secondStep",
+  thirdStep = "thirdStep",
+}
 
 const testWalletConnectionData = {
   ensName: "anaaronist.eth",
@@ -28,7 +35,15 @@ const testWalletConnectionData = {
 const testGuardianEmail = "guardian@prove.email";
 
 function App() {
-  const [currentView, _] = useState<View>("thirdStep" as View);
+  const [currentView, setCurrentView] = useState<View>(View.firstStep);
+
+  const handleConnectGnosisSafeClick = useCallback(() => {
+    setCurrentView(View.secondStep);
+  }, []);
+
+  const handleEnableEmailRecoveryClick = useCallback(() => {
+    setCurrentView(View.thirdStep);
+  }, []);
 
   const inner = useMemo(() => {
     if (currentView === "providerTest") {
@@ -46,14 +61,19 @@ function App() {
     } else if (currentView === "secondStep") {
       return (
         <>
-          <Header>Safe Email Recovery Demo</Header>
+          <SecondaryHeader>Safe Email Recovery Demo</SecondaryHeader>
 
           <VStack gap={20} align="center">
-            <HStack gap={12}>
+            <HStack gap={12} align="center">
               <SecondaryText>Connected Wallet: </SecondaryText>
-              <Card>
+              <Card compact={true}>
                 <StyledSafeDetailsWrapper gap={8} align="center">
-                  <>pfp</>
+                  <img
+                    src={testPfp}
+                    width={24}
+                    height={24}
+                    alt="profilePictute"
+                  />
                   <PrimaryText>{testWalletConnectionData.ensName}</PrimaryText>
                   <TertiaryText>
                     {testWalletConnectionData.walletAddress}
@@ -61,7 +81,7 @@ function App() {
                 </StyledSafeDetailsWrapper>
               </Card>
             </HStack>
-            <StyledWalletButton active={false}>
+            <StyledWalletButton onClick={handleEnableEmailRecoveryClick}>
               <HStack gap={12}>Enable Email Recovery Module</HStack>
             </StyledWalletButton>
           </VStack>
@@ -73,8 +93,8 @@ function App() {
 
     return (
       <VStack gap={28} align="center">
-        <Header>Email Recovery Demo</Header>
-        <StyledWalletButton active={false}>
+        <SecondaryHeader>Email Recovery Demo</SecondaryHeader>
+        <StyledWalletButton onClick={handleConnectGnosisSafeClick}>
           <HStack gap={12}>
             <WalletIcon />
             <>Connect Gnosis Safe</>
@@ -93,7 +113,11 @@ function App() {
         <UnderlinedText>Or, recover existing wallet instead</UnderlinedText>
       </VStack>
     );
-  }, []);
+  }, [
+    handleEnableEmailRecoveryClick,
+    handleConnectGnosisSafeClick,
+    currentView,
+  ]);
 
   return <PageWrapper justify="center">{inner}</PageWrapper>;
 }
@@ -120,12 +144,6 @@ const ControlsAndExistingUI = styled.div`
 
 const StyledSafeDetailsWrapper = styled(HStack)`
   height: 32px;
-`;
-
-const Header = styled.p`
-  font-size: 36px;
-  font-weight: 600;
-  margin: 0;
 `;
 
 const UnderlinedText = styled.p`

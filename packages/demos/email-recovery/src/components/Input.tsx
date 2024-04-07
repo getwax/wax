@@ -29,11 +29,11 @@ export default function Input({
   );
 }
 
-const StyledInput = styled.input`
+const StyledInput = styled.input<{ readOnly?: boolean }>`
   background-color: #1f242f;
   border: 1px solid #333741;
-  color: #85888e;
-  font-size: 16px;
+  color: ${(props) => (props.readOnly ? "#85888e" : "white")};
+  font-size: 14px;
   border-radius: 8px;
 
   padding-left: 12px;

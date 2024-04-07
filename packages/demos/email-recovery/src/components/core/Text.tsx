@@ -25,6 +25,17 @@ const StyledSecondaryText = styled.p`
 `;
 
 const StyledTertiaryText = styled.span`
+  font-size: 14px;
   color: #94969c;
   line-height: 10px;
+`;
+
+export function SecondaryHeader({ children }: PropsWithChildren) {
+  return <StyledSecondaryHeader>{children}</StyledSecondaryHeader>;
+}
+
+const StyledSecondaryHeader = styled.p`
+  font-size: 36px;
+  font-weight: 600;
+  margin: 0;
 `;

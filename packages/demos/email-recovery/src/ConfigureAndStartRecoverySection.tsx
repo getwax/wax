@@ -1,5 +1,5 @@
 import styled from "styled-components";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react";
 
 import { VStack, HStack } from "./components/Spacer/Stack";
 import { NewButton } from "./components/Button";
@@ -7,9 +7,14 @@ import {
   PrimaryText,
   SecondaryText,
   TertiaryText,
+  SecondaryHeader,
 } from "./components/core/Text";
 import Card from "./components/Card";
 import Input from "./components/Input";
+import ShieldDollarIcon from "../src/icons/ShieldDollarIcon";
+import SafeIcon from "../src/icons/SafeIcon";
+import StatusCard, { Status } from "./components/core/StatusCard";
+import testPfp from "../src/assets/testPfp.png";
 
 const testWalletConnectionData = {
   ensName: "anaaronist.eth",
@@ -22,21 +27,79 @@ enum SubmitType {
   completeRecovery = "completeRecovery",
 }
 
+enum RecoverState {
+  notStarted = "notStarted",
+  inProgress = "inProgess",
+  readyToComplete = "readyToComplete",
+}
+
 const testGuardianEmail = "guardian@prove.email";
+const testRequestWalletAddress = "0x.....";
 
 export default function ConfigureAndStartRecoverySection() {
   const [progressState, setProgressState] = useState<SubmitType>(
-    SubmitType.startRecovery,
+    SubmitType.configureAndRequestGuardian,
   );
+  const [recoverState, setRecoverState] = useState<RecoverState>(
+    RecoverState.notStarted,
+  );
+
+  const handleConfigureAndRequestClick = useCallback(() => {
+    setProgressState(SubmitType.startRecovery);
+  }, []);
+
+  const handleRerouteToNewWalletToSetNewGuardianClick =
+    useCallback(() => {}, []);
+
+  const handleStartRecoveryClick = useCallback(async () => {
+    setRecoverState(RecoverState.inProgress); // Set recovering to true initially
+
+    await new Promise((resolve) => setTimeout(resolve, 3000)); // Wait for 3 seconds
+
+    setRecoverState(RecoverState.readyToComplete); // Set recovering to true initially
+  }, []);
+
+  const handleCompleteRecoveryClick = useCallback(
+    () => setProgressState(SubmitType.completeRecovery),
+    [],
+  );
+
+  const startRecoveryActionButton = useMemo(() => {
+    let title = "";
+
+    console.log("recoverState ", recoverState);
+    if (recoverState === RecoverState.notStarted) {
+      title = "Start Recovery";
+    } else if (recoverState === RecoverState.inProgress) {
+      title = "Cancel Recovery";
+    } else if (recoverState === RecoverState.readyToComplete) {
+      title = "Complete Recovery";
+    }
+
+    const onClick =
+      recoverState === RecoverState.readyToComplete
+        ? handleCompleteRecoveryClick
+        : handleStartRecoveryClick;
+
+    return (
+      <StyledWalletButton onClick={onClick}>
+        <HStack gap={4}>
+          {title}
+          {recoverState === RecoverState.readyToComplete && <SafeIcon />}
+        </HStack>
+      </StyledWalletButton>
+    );
+  }, [recoverState, handleStartRecoveryClick]);
+
   const actionsComponent = useMemo(() => {
-    if (progressState === SubmitType.startRecovery) {
+    if (progressState === SubmitType.configureAndRequestGuardian) {
       return (
         <>
           <ContentWrapper>
             <Card>
               <ContentWrapper gap={12}>
                 <HStack>
-                  <TertiaryText>Guardian's Email</TertiaryText>
+                  <StyledTertiaryText>Guardian's Email</StyledTertiaryText>
                 </HStack>
 
                 <HStack justify="space-between" align="center">
@@ -52,33 +115,105 @@ export default function ConfigureAndStartRecoverySection() {
               </ContentWrapper>
             </Card>
           </ContentWrapper>
-          <StyledWalletButton active={false}>
+          <StyledWalletButton
+            onClick={handleConfigureAndRequestClick}
+            active={false}
+          >
             Configure Recovery and Request Guardian
           </StyledWalletButton>
         </>
       );
+    } else if (progressState === SubmitType.startRecovery) {
+      return (
+        <>
+          <ContentWrapper gap={12}>
+            <HStack>
+              <SecondaryText>Requested Recoveries: </SecondaryText>
+            </HStack>
+            <Card>
+              <ContentWrapper gap={12}>
+                <GridWrapper>
+                  <HStack>
+                    <TertiaryText>Guardian's Email</TertiaryText>
+                  </HStack>
+                  <HStack>
+                    <StyledTertiaryText>
+                      Requested New Wallet Address
+                    </StyledTertiaryText>
+                  </HStack>
+                  <Input
+                    placeholder="guardian email here"
+                    defaultValue={testGuardianEmail}
+                    type="email"
+                    readOnly={false}
+                    onChange={() => {}}
+                  />
+                  <Input
+                    placeholder="request wallet here"
+                    defaultValue={testRequestWalletAddress}
+                    type="text"
+                    readOnly={false}
+                    onChange={() => {}}
+                  />
+                </GridWrapper>
+              </ContentWrapper>
+            </Card>
+          </ContentWrapper>
+          {startRecoveryActionButton}
+        </>
+      );
+    } else if (progressState === SubmitType.completeRecovery) {
+      return (
+        <StyledWalletButton
+          active={false}
+          onClick={handleRerouteToNewWalletToSetNewGuardianClick}
+        >
+          {"Complete! Connect new wallet to set new guardians ->"}
+        </StyledWalletButton>
+      );
     }
-  }, [progressState, testGuardianEmail]);
+  }, [
+    progressState,
+    handleStartRecoveryClick,
+    startRecoveryActionButton,
+    testGuardianEmail,
+    testRequestWalletAddress,
+    handleConfigureAndRequestClick,
+  ]);
 
   return (
     <VStack gap={28} align="center">
-      <Header>Safe Email Recovery Demo</Header>
-      <ContentWrapper>
-        <HStack>
+      <SecondaryHeader>Safe Email Recovery Demo</SecondaryHeader>
+      <ContentWrapper gap={12}>
+        <HStack gap={16}>
           <SecondaryText>Connected Wallet: </SecondaryText>
         </HStack>
         <ContentWrapper>
-          <StyledCard>
-            <Card compact={true}>
-              <HStack gap={8} align="center">
-                <>pfp</>
-                <PrimaryText>{testWalletConnectionData.ensName}</PrimaryText>
-                <TertiaryText>
-                  {testWalletConnectionData.walletAddress}
-                </TertiaryText>
-              </HStack>
-            </Card>
-          </StyledCard>
+          <HStack gap={12} align="center">
+            <StyledCard>
+              <Card compact={true}>
+                <HStack gap={8} align="center">
+                  <img
+                    src={testPfp}
+                    width={24}
+                    height={24}
+                    alt="profilePictute"
+                  />
+                  <PrimaryText>{testWalletConnectionData.ensName}</PrimaryText>
+                  <TertiaryText>
+                    {testWalletConnectionData.walletAddress}
+                  </TertiaryText>
+                </HStack>
+              </Card>
+            </StyledCard>
+            {progressState === SubmitType.completeRecovery && (
+              <StatusCard
+                statusText="Recovered"
+                status={Status.Recovered}
+                icon={<ShieldDollarIcon />}
+              />
+            )}
+          </HStack>
         </ContentWrapper>
       </ContentWrapper>
       {actionsComponent}
@@ -86,27 +221,30 @@ export default function ConfigureAndStartRecoverySection() {
   );
 }
 
+const GridWrapper = styled.div`
+  display: grid;
+  grid-template-columns: repeat(
+    2,
+    50%
+  ); /* Creates two columns, each taking 45% of the container's width */
+  grid-row-gap: 10px;
+  grid-column-gap: 10px;
+  width: 100%; /* Ensures the grid takes the full width of its parent */
+  justify-content: center; /* Center aligns the grid items horizontally */
+  align-items: start; /* Aligns the grid items to the start of the container vertically */
+`;
+
 const StyledCard = styled.div`
   width: min-content;
 `;
 
-const ContentHWrapper = styled(HStack)`
-  width: 100%;
+const StyledTertiaryText = styled(TertiaryText)`
+  font-size: 14px;
+  display: flex;
 `;
 
 const ContentWrapper = styled(VStack)`
   width: 100%;
-`;
-
-const Header = styled.p`
-  font-size: 36px;
-  font-weight: 600;
-  margin: 0;
-`;
-
-const StyledSafeDetailsWrapper = styled(HStack)`
-  width: min-content;
-  height: 32px;
 `;
 
 const StyledWalletButton = styled(NewButton)`

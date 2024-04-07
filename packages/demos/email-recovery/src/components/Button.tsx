@@ -15,7 +15,7 @@ export function Button({
 }
 
 type ButtonProps = {
-  active: boolean;
+  active?: boolean;
 } & React.ComponentPropsWithoutRef<"button">;
 
 export function NewButton({ active, children, ...buttonProps }: ButtonProps) {
