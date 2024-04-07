@@ -36,6 +36,7 @@ const testGuardianEmail = "guardian@prove.email";
 
 function App() {
   const [currentView, setCurrentView] = useState<View>(View.firstStep);
+  const [isExistingWallet, setIsExistingWallet] = useState<boolean>(false);
 
   const handleConnectGnosisSafeClick = useCallback(() => {
     setCurrentView(View.secondStep);
@@ -44,6 +45,11 @@ function App() {
   const handleEnableEmailRecoveryClick = useCallback(() => {
     setCurrentView(View.thirdStep);
   }, []);
+
+  const handleRecoverExistingWalletClick = () => {
+    setIsExistingWallet(true);
+    setCurrentView(View.thirdStep);
+  };
 
   const inner = useMemo(() => {
     if (currentView === "providerTest") {
@@ -88,7 +94,9 @@ function App() {
         </>
       );
     } else if (currentView === "thirdStep") {
-      return <ConfigureAndStartRecoverySection />;
+      return (
+        <ConfigureAndStartRecoverySection isExistingWallet={isExistingWallet} />
+      );
     }
 
     return (
@@ -110,7 +118,9 @@ function App() {
             Connect Test Wallet
           </HStack>
         </StyledWalletButton>
-        <UnderlinedText>Or, recover existing wallet instead</UnderlinedText>
+        <div onClick={handleRecoverExistingWalletClick}>
+          <UnderlinedText>Or, recover existing wallet instead</UnderlinedText>
+        </div>
       </VStack>
     );
   }, [

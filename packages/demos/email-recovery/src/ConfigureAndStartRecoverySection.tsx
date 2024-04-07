@@ -1,5 +1,5 @@
 import styled from "styled-components";
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useState, useCallback, useEffect } from "react";
 
 import { VStack, HStack } from "./components/Spacer/Stack";
 import { NewButton } from "./components/Button";
@@ -15,6 +15,7 @@ import ShieldDollarIcon from "../src/icons/ShieldDollarIcon";
 import SafeIcon from "../src/icons/SafeIcon";
 import StatusCard, { Status } from "./components/core/StatusCard";
 import testPfp from "../src/assets/testPfp.png";
+import ExistingWalletStartRecoverySection from "./ExistingWalletStartRecoverySection";
 
 const testWalletConnectionData = {
   ensName: "anaaronist.eth",
@@ -29,14 +30,20 @@ enum SubmitType {
 
 enum RecoverState {
   notStarted = "notStarted",
-  inProgress = "inProgess",
+  inProgress = "inProgress",
   readyToComplete = "readyToComplete",
 }
 
 const testGuardianEmail = "guardian@prove.email";
 const testRequestWalletAddress = "0x.....";
 
-export default function ConfigureAndStartRecoverySection() {
+type ConfigureAndStartRecoverySectionProps = {
+  isExistingWallet?: boolean;
+};
+
+export default function ConfigureAndStartRecoverySection({
+  isExistingWallet = false,
+}: ConfigureAndStartRecoverySectionProps) {
   const [progressState, setProgressState] = useState<SubmitType>(
     SubmitType.configureAndRequestGuardian,
   );
@@ -84,8 +91,8 @@ export default function ConfigureAndStartRecoverySection() {
     return (
       <StyledWalletButton onClick={onClick}>
         <HStack gap={4}>
-          {title}
           {recoverState === RecoverState.readyToComplete && <SafeIcon />}
+          {title}
         </HStack>
       </StyledWalletButton>
     );
@@ -128,7 +135,11 @@ export default function ConfigureAndStartRecoverySection() {
         <>
           <ContentWrapper gap={12}>
             <HStack>
-              <SecondaryText>Requested Recoveries: </SecondaryText>
+              <SecondaryText>
+                {recoverState === RecoverState.readyToComplete
+                  ? "Requested Status:"
+                  : "Requested Recoveries"}
+              </SecondaryText>
             </HStack>
             <Card>
               <ContentWrapper gap={12}>
@@ -180,6 +191,16 @@ export default function ConfigureAndStartRecoverySection() {
     testRequestWalletAddress,
     handleConfigureAndRequestClick,
   ]);
+
+  if (isExistingWallet) {
+    console.log("handle", handleCompleteRecoveryClick);
+
+    return (
+      <ExistingWalletStartRecoverySection
+        onProceed={handleCompleteRecoveryClick}
+      />
+    );
+  }
 
   return (
     <VStack gap={28} align="center">
