@@ -250,6 +250,13 @@ contract SafeZkEmailRecoveryPlugin is EmailAccountRecovery {
         return guardianRequests[safe];
     }
 
+    // TODO Natspec & test
+    function getRouterForSafe(
+        address safe
+    ) external view returns (address) {
+        return safeAddrToRecoveryRouter[safe];
+    }
+
     /**
      * @notice Stores a recovery hash that can be used to recover a safe owner
      *         at a later stage.
