@@ -1,9 +1,8 @@
 import styled from "styled-components";
-import { useMemo, useState, useCallback, useEffect } from "react";
+import { useMemo, useState } from "react";
 
 import { VStack, HStack } from "./components/Spacer/Stack";
 import {
-  PrimaryText,
   SecondaryText,
   TertiaryText,
   SecondaryHeader,
@@ -168,28 +167,22 @@ const ContentWrapper = styled(VStack)`
 
 const TriggerGridWrapper = styled.div`
   display: grid;
-  grid-template-columns: repeat(
-    3,
-    33%
-  ); /* Creates two columns, each taking 45% of the container's width */
+  grid-template-columns: repeat(3, 33%);
   grid-row-gap: 10px;
   grid-column-gap: 10px;
-  width: 100%; /* Ensures the grid takes the full width of its parent */
-  justify-content: center; /* Center aligns the grid items horizontally */
-  align-items: start; /* Aligns the grid items to the start of the container vertically */
+  width: 100%;
+  justify-content: center;
+  align-items: start;
 `;
 
 const GridWrapper = styled.div`
   display: grid;
-  grid-template-columns: repeat(
-    2,
-    48%
-  ); /* Creates two columns, each taking 45% of the container's width */
+  grid-template-columns: repeat(2, 48%);
   grid-row-gap: 10px;
   grid-column-gap: 10px;
-  width: 100%; /* Ensures the grid takes the full width of its parent */
-  justify-content: center; /* Center aligns the grid items horizontally */
-  align-items: start; /* Aligns the grid items to the start of the container vertically */
+  width: 100%;
+  justify-content: center;
+  align-items: start;
 `;
 
 const StyledTertiaryText = styled(TertiaryText)`
