@@ -28,20 +28,20 @@ export function bytesToHex(bytes: Uint8Array) {
         .join("");
 }
 
-export async function genAccountCode(): Promise<string> {
+export async function genAccountCode(): Promise<Uint8Array> {
     const poseidon = await buildPoseidon();
     const accountCodeBytes: Uint8Array = poseidon.F.random();
-    return bytesToHex(accountCodeBytes);
+    return accountCodeBytes;
 }
 
-export async function getGuardianAddress(guardianEmail: string, accountCode: string) {
+export async function getGuardianSalt(guardianEmail: string, accountCode: Uint8Array) {
     const poseidon = await buildPoseidon();
     const emailField = bytes2fields(padStringToBytes(guardianEmail, 256), poseidon.F);
-    const guardianAddressBytes = poseidon([
+    const accountSaltBytes = poseidon([
         ...emailField, accountCode, 0
     ]);
-    const guardianAddress: `0x${string}` = `0x${bytesToHex(guardianAddressBytes)}`
-    return guardianAddress;
+    const accountSalt: `0x${string}` = `0x${bytesToHex(accountSaltBytes)}`
+    return accountSalt;
 }
 
 // TODO Update both with safe module accept subject

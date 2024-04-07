@@ -4,7 +4,10 @@ import { abi as safeAbi } from '../abi/Safe.json'
 import { abi as recoveryPluginAbi } from '../abi/SafeZkEmailRecoveryPlugin.json'
 import { safeZkSafeZkEmailRecoveryPlugin } from '../../contracts.base-sepolia.json'
 import { Button } from './Button'
-import { genAccountCode, getGuardianAddress, getRequestGuardianSubject } from '../utils/email'
+import { genAccountCode, getGuardianSalt, getRequestGuardianSubject } from '../utils/email'
+import { readContract } from 'wagmi/actions'
+import { config } from '../providers/config'
+import { pad } from 'viem'
 
 export function ConfigureSafeModule() {
     const { address } = useAccount()
@@ -63,10 +66,18 @@ export function ConfigureSafeModule() {
         }
 
         const accountCode = await genAccountCode();
-        const guardianAddr = await getGuardianAddress(guardianEmail, accountCode);
+        const guardianSalt = await getGuardianSalt(guardianEmail, accountCode);
+        const guardianAddr = await readContract(config, {
+            abi: recoveryPluginAbi,
+            address: safeZkSafeZkEmailRecoveryPlugin as `0x${string}`,
+            functionName: 'computeEmailAuthAddress',
+            args: [guardianSalt]
+        })
         const subject = getRequestGuardianSubject(address);
         // TODO Should this be something else?
-        const previousOwnerInLinkedList = '0x1'
+        const previousOwnerInLinkedList = pad("0x1", {
+            size: 20
+        })
 
         await writeContractAsync({
             abi: recoveryPluginAbi,
