@@ -43,9 +43,11 @@ jobs:
           cache-dependency-path: packages/demos/email-recovery/yarn.lock
 
       - name: Install dependencies
-        run: yarn
+        run: yarn install --frozen-lockfile
       - name: Build
-        run: yarn build
+        env:
+            SUPER_SECRET: ${{ secrets.VITE_WALLET_CONNECT_PROJECT_ID }}
+        run: VITE_WALLET_CONNECT_PROJECT_ID=${VITE_WALLET_CONNECT_PROJECT_ID} yarn build
 
       - name: Setup Pages
         uses: actions/configure-pages@v3

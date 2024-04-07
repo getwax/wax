@@ -12,6 +12,7 @@ import {
     simpleWalletImpl
 } from '../../contracts.base-sepolia.json'
 import { ethers } from 'ethers'
+import { genAccountCode } from '../crypto/accountCode'
 
 // TODO Pull from lib
 type HexStr = `0x${string}`;
@@ -25,17 +26,6 @@ const storageKeys = {
 // TODO Update both with safe module accept subject
 const getRequestGuardianSubject = (acctAddr: string) => `Accept guardian request for ${acctAddr}`;
 const getRequestsRecoverySubject = (acctAddr: string, newOwner: string) => `Set the new signer of ${acctAddr} to ${newOwner}`;
-
-// Gen 32 byte rand hex (64 char)
-// TODO spot check this to make sure done correctly
-const genRandHex = () => {
-    const randVals = new Uint32Array(8)
-    crypto.getRandomValues(randVals)
-
-    return [...randVals]
-      .map((val) => val.toString(16).padStart(2, '0'))
-      .join('')
-}
 
 const templateIdx = 0
 
@@ -97,7 +87,7 @@ export function PerformRecovery() {
             throw new Error('guardian email not set')
         }
 
-        const accountCode = genRandHex()
+        const accountCode = await genAccountCode()
         const subject = getRequestGuardianSubject(simpleWalletAddress);
 
         const { requestId } = await relayer.acceptanceRequest(

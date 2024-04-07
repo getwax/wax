@@ -97,5 +97,8 @@ jobs:
       - name: Install Yarn dependencies
         run: yarn install --frozen-lockfile
 
+      - name: Copy env file
+        run: cp .env.example .env
+
       - name: Run hardhat compile
         run: yarn hardhat compile
