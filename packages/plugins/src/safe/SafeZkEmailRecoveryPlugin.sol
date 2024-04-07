@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import {ISafe} from "./utils/Safe4337Base.sol";
 import {EmailAccountRecoveryRouter} from "./EmailAccountRecoveryRouter.sol";
 import {EmailAccountRecovery} from "ether-email-auth/packages/contracts/src/EmailAccountRecovery.sol";
-// import "forge-std/console.sol";
+
 /*//////////////////////////////////////////////////////////////////////////
     THIS CONTRACT IS STILL IN ACTIVE DEVELOPMENT. NOT FOR PRODUCTION USE        
 //////////////////////////////////////////////////////////////////////////*/
@@ -53,14 +53,15 @@ contract SafeZkEmailRecoveryPlugin is EmailAccountRecovery {
     // TODO How can we use a custom DKIM reigstry/key with email auth?
     // mapping(address => address) public dkimRegistryOfSafe;
 
+    /** Errors */
     error MODULE_NOT_ENABLED();
     error INVALID_OWNER(address owner);
     error INVALID_NEW_OWNER();
     error RECOVERY_ALREADY_INITIATED();
-    error RECOVERY_NOT_CONFIGURED();
     error RECOVERY_NOT_INITIATED();
     error DELAY_NOT_PASSED();
 
+    /** Events */
     event RecoveryConfigured(
         address indexed safe,
         address indexed owner,
@@ -77,7 +78,6 @@ contract SafeZkEmailRecoveryPlugin is EmailAccountRecovery {
         address newOwner
     );
     event RecoveryCancelled(address indexed safe);
-    event RecoveryDelaySet(address indexed safe, uint256 delay);
 
     constructor(
         address _verifier,
@@ -87,25 +87,15 @@ contract SafeZkEmailRecoveryPlugin is EmailAccountRecovery {
         verifierAddr = _verifier;
         dkimAddr = _dkimRegistry;
         emailAuthImplementationAddr = _emailAuthImpl;
-
-        // TODO May no longer be necesary
-        RECOVERY_HASH_DOMAIN = keccak256(
-            abi.encode(
-                keccak256(
-                    "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
-                ),
-                keccak256("SafeZKEmailRecoveryPlugin"),
-                keccak256("1"),
-                block.chainid,
-                address(this)
-            )
-        );
     }
 
     /**
      * EmailAccountRecovery implementations
      */
 
+    /**
+     * @inheritdoc EmailAccountRecovery
+     */
     function acceptanceSubjectTemplates()
         public
         pure
@@ -122,6 +112,9 @@ contract SafeZkEmailRecoveryPlugin is EmailAccountRecovery {
         return templates;
     }
 
+    /**
+     * @inheritdoc EmailAccountRecovery
+     */
     function recoverySubjectTemplates()
         public
         pure
@@ -250,10 +243,12 @@ contract SafeZkEmailRecoveryPlugin is EmailAccountRecovery {
         return guardianRequests[safe];
     }
 
-    // TODO Natspec & test
-    function getRouterForSafe(
-        address safe
-    ) external view returns (address) {
+    // TODO test
+    /**
+     * @notice Returns the recovery router address that corresponds to the specified Safe account
+     * @param safe address to query storage with
+     */
+    function getRouterForSafe(address safe) external view returns (address) {
         return safeAddrToRecoveryRouter[safe];
     }
 
@@ -265,14 +260,16 @@ contract SafeZkEmailRecoveryPlugin is EmailAccountRecovery {
      *      This function assumes it is being called from a safe - see how msg.sender
      *      is interpreted. This is the first function that must be called when setting up recovery.
      * @param owner Owner on the safe being recovered
-     * @param guardian TODO
+     * @param guardian The EmailAuth guardian address that has permissions to recover an owner on the account
      * @param customDelay A custom delay to set the recoveryDelay value that is associated with a safe.
+     * @param previousOwnerInLinkedList The previous owner stored in the Safe owners linked list.
+     * This is needed to rotate the owner at the end of the recovery flow
      */
     function configureRecovery(
         address owner,
         address guardian,
         uint256 customDelay,
-        address previousOwnerInLinkedList
+        address previousOwnerInLinkedList // TODO: We should try fetch this automatically when needed. It is possible that owners are changed without going through the recovery plugin and this value could be outdated
     ) external returns (address emailAccountRecoveryRouterAddress) {
         address safe = msg.sender;
         bool moduleEnabled = ISafe(safe).isModuleEnabled(address(this));
@@ -315,7 +312,6 @@ contract SafeZkEmailRecoveryPlugin is EmailAccountRecovery {
         }
 
         recoveryRequests[safe] = RecoveryRequest({
-            // guardian: guardian,
             executeAfter: 0,
             ownerToSwap: owner,
             pendingNewOwner: address(0),
@@ -374,21 +370,8 @@ contract SafeZkEmailRecoveryPlugin is EmailAccountRecovery {
      *      the msg.sender is the safe that the recovery request is being deleted for
      */
     function cancelRecovery() external {
-        address safe = msg.sender; // FIXME: update to use router contract
+        address safe = msg.sender;
         delete recoveryRequests[safe];
         emit RecoveryCancelled(safe);
-    }
-
-    /**
-     * @notice Sets a custom delay for recovering an owner for a specific safe.
-     * @dev Custom delay is used instead of the default delay when recovering an
-     *      owner. Custom delays should be configured with care as they can be
-     *      used to bypass the default delay.
-     * @param delay The custom delay to be used when recovering an owner on the safe
-     */
-    function setRecoveryDelay(uint256 delay) external {
-        address safe = msg.sender; // FIXME: update to use router contract
-        recoveryRequests[safe].delay = delay;
-        emit RecoveryDelaySet(safe, delay);
     }
 }
