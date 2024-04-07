@@ -7,11 +7,16 @@ import { PerformRecovery } from "./components/PerformRecovery";
 import { Web3Provider } from "./providers/Web3Provider";
 import { NewButton } from "./components/Button";
 import { VStack, HStack } from "./components/Spacer/Stack";
+import {
+  PrimaryText,
+  SecondaryText,
+  TertiaryText,
+} from "./components/core/Text";
 import WalletIcon from "./icons/WalletIcon";
 import InfoIcon from "./icons/InfoIcon";
-import Input from "./components/Input";
 import Card from "./components/Card";
 import { useMemo, useState } from "react";
+import ConfigureAndStartRecoverySection from "./ConfigureAndStartRecoverySection";
 
 type View = "providerTest" | "firstStep" | "secondStep" | "thirdStep";
 
@@ -19,6 +24,8 @@ const testWalletConnectionData = {
   ensName: "anaaronist.eth",
   walletAddress: "0x95e1...17d6",
 };
+
+const testGuardianEmail = "guardian@prove.email";
 
 function App() {
   const [currentView, _] = useState<View>("thirdStep" as View);
@@ -61,36 +68,7 @@ function App() {
         </>
       );
     } else if (currentView === "thirdStep") {
-      return (
-        <VStack gap={28} align="center">
-          <Header>Safe Email Recovery Demo</Header>
-          <VStack>
-            <HStack>
-              <SecondaryText>Connected Wallet: </SecondaryText>
-            </HStack>
-            <Card>
-              <StyledSafeDetailsWrapper gap={8} align="center">
-                <>pfp</>
-                <PrimaryText>{testWalletConnectionData.ensName}</PrimaryText>
-                <TertiaryText>
-                  {testWalletConnectionData.walletAddress}
-                </TertiaryText>
-              </StyledSafeDetailsWrapper>
-            </Card>
-          </VStack>
-          <Card>
-            <VStack>
-              <HStack>
-                <TertiaryText>Guardian's Email</TertiaryText>
-              </HStack>
-              <Input name="Guardian Email" />
-            </VStack>
-          </Card>
-          <StyledWalletButton active={false}>
-            Configure Recovery and Request Guardian
-          </StyledWalletButton>
-        </VStack>
-      );
+      return <ConfigureAndStartRecoverySection />;
     }
 
     return (
@@ -129,8 +107,6 @@ const PageWrapper = styled(VStack)`
   color: white;
 `;
 
-const ContentWrapper = styled.div``;
-
 const StyledWalletButton = styled(NewButton)`
   justify-content: center;
   align-items: center;
@@ -158,17 +134,4 @@ const UnderlinedText = styled.p`
   &:hover {
     cursor: pointer;
   }
-`;
-
-const PrimaryText = styled.p`
-  color: white;
-`;
-
-const SecondaryText = styled.p`
-  font-size: 16px;
-  color: #cecfd2;
-`;
-
-const TertiaryText = styled.span`
-  color: #94969c;
 `;
