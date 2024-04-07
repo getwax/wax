@@ -8,5 +8,5 @@ export default defineConfig({
     nodePolyfills(),
     react()
   ],
-  base: '/email-recovery/'
+  base: '/wax/'
 })
