@@ -13,6 +13,7 @@
   "dependencies": {
     "@tanstack/react-query": "^5.28.14",
     "axios": "^1.6.8",
+    "circomlibjs": "^0.1.7",
     "connectkit": "^1.7.3",
     "ethers": "^6.11.1",
     "react": "^18.2.0",

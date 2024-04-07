@@ -1,10 +1,10 @@
+import { ReactNode } from "react";
 import { WagmiProvider, createConfig } from "wagmi";
 import { baseSepolia } from "wagmi/chains";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ConnectKitProvider, getDefaultConfig } from "connectkit";
 
 const connectKitOptions = {
-    walletConnectCTA: 'both',
     walletConnectName: 'WalletConnect',
     hideNoWalletCTA: true,
 };
@@ -23,7 +23,7 @@ const config = createConfig(
 
 const queryClient = new QueryClient();
 
-export const Web3Provider = ({ children }) => {
+export const Web3Provider = ({ children }: { children: ReactNode }) => {
   return (
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>

@@ -166,7 +166,7 @@ export function PerformRecovery() {
                     Guardian's Email
                     <input disabled ={!simpleWalletAddress}
                         type='email'
-                        onInput={e => setGuardianEmail(e.target.value)}
+                        onInput={e => setGuardianEmail((e.target as HTMLTextAreaElement).value)}
                     />
                 </label>
                 <Button
@@ -183,7 +183,7 @@ export function PerformRecovery() {
                 <label>
                     New Owner (address)
                     <input type='text'
-                        onInput={e => setNewOwner(e.target.value)}
+                        onInput={e => setNewOwner((e.target as HTMLTextAreaElement).value)}
                     />
                 </label>
             <Button onClick={requestRecovery}>

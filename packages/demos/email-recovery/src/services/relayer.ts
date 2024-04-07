@@ -25,7 +25,7 @@ class Relayer {
 
     // Similar to a ping or health endpoint
     async echo() {
-        const res = await Axios(`${this.apiUrl}/echo`);
+        const res = await fetch(`${this.apiUrl}/echo`);
         if (!res.ok) {
             await this.throwErrFromRes(res);
         }

@@ -2,7 +2,6 @@ import { useState, useCallback, useMemo } from 'react'
 import { useAccount, useWriteContract, useReadContract } from 'wagmi'
 import { abi as safeAbi } from '../abi/Safe.json'
 import { safeZkSafeZkEmailRecoveryPlugin } from '../../contracts.base-sepolia.json'
-import { relayer } from '../services/relayer'
 import { Button } from './Button'
 
 export function ConfigureSafeModule() {
