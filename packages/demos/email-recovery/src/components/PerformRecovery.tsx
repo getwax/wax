@@ -83,7 +83,7 @@ export function PerformRecovery() {
             throw new Error('guardian email not set')
         }
 
-        const { accountCode } = await genAccountCode()
+        const accountCode = await genAccountCode()
         const subject = getRequestGuardianSubject(simpleWalletAddress);
 
         const { requestId } = await relayer.acceptanceRequest(
@@ -156,14 +156,14 @@ export function PerformRecovery() {
                     />
                 </label>
                 <Button
-                    disabled={!simpleWalletAddress || !guardianEmail}
+                    disabled={!simpleWalletAddress || !guardianEmail || !!gurdianRequestId}
                     onClick={requestGuardian}>
                     TEST Request Guardian
                 </Button>
             </div>
             <div>
                 <Button onClick={checkGuardianAcceptance}>
-                    Check for guardian acceptance
+                    TEST Check for guardian acceptance
                 </Button>
             </div>
                 <label>

@@ -28,24 +28,17 @@ export function bytesToHex(bytes: Uint8Array) {
         .join("");
 }
 
-export async function genAccountCode(): Promise<{
-    accountCodeBytes: Uint8Array, accountCode: string
-}> {
+export async function genAccountCode(): Promise<string> {
     const poseidon = await buildPoseidon();
-    const F = poseidon.F;
-    const accountCodeBytes: Uint8Array = F.random();
-    const accountCode = bytesToHex(accountCodeBytes);
-    return {
-        accountCodeBytes,
-        accountCode,
-    }
+    const accountCodeBytes: Uint8Array = poseidon.F.random();
+    return bytesToHex(accountCodeBytes);
 }
 
-export async function getGuardianAddress(guardianEmail: string, accountCodeBytes: Uint8Array) {
+export async function getGuardianAddress(guardianEmail: string, accountCode: string) {
     const poseidon = await buildPoseidon();
     const emailField = bytes2fields(padStringToBytes(guardianEmail, 256), poseidon.F);
     const guardianAddressBytes = poseidon([
-        ...emailField, ...accountCodeBytes, 0
+        ...emailField, accountCode, 0
     ]);
     const guardianAddress: `0x${string}` = `0x${bytesToHex(guardianAddressBytes)}`
     return guardianAddress;

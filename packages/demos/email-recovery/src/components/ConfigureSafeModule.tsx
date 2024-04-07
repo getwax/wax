@@ -62,8 +62,8 @@ export function ConfigureSafeModule() {
             throw new Error('safe owner not found')
         }
 
-        const { accountCode, accountCodeBytes } = await genAccountCode();
-        const guardianAddr = await getGuardianAddress(guardianEmail, accountCodeBytes);
+        const accountCode = await genAccountCode();
+        const guardianAddr = await getGuardianAddress(guardianEmail, accountCode);
         const subject = getRequestGuardianSubject(address);
         // TODO Should this be something else?
         const previousOwnerInLinkedList = '0x1'
