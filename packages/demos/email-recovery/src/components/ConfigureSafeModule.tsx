@@ -4,10 +4,11 @@ import { abi as safeAbi } from '../abi/Safe.json'
 import { abi as recoveryPluginAbi } from '../abi/SafeZkEmailRecoveryPlugin.json'
 import { safeZkSafeZkEmailRecoveryPlugin } from '../../contracts.base-sepolia.json'
 import { Button } from './Button'
-import { genAccountCode, getGuardianSalt, getRequestGuardianSubject } from '../utils/email'
+import { genAccountCode, getRequestGuardianSubject, templateIdx } from '../utils/email'
 import { readContract } from 'wagmi/actions'
 import { config } from '../providers/config'
 import { pad } from 'viem'
+import { relayer } from '../services/relayer'
 
 export function ConfigureSafeModule() {
     const { address } = useAccount()
@@ -66,14 +67,13 @@ export function ConfigureSafeModule() {
         }
 
         const accountCode = await genAccountCode();
-        const guardianSalt = await getGuardianSalt(guardianEmail, accountCode);
+        const guardianSalt = await relayer.getAccountSalt(accountCode, guardianEmail);
         const guardianAddr = await readContract(config, {
             abi: recoveryPluginAbi,
             address: safeZkSafeZkEmailRecoveryPlugin as `0x${string}`,
             functionName: 'computeEmailAuthAddress',
             args: [guardianSalt]
         })
-        const subject = getRequestGuardianSubject(address);
         // TODO Should this be something else?
         const previousOwnerInLinkedList = pad("0x1", {
             size: 20
@@ -93,16 +93,23 @@ export function ConfigureSafeModule() {
 
          console.debug('recovery configured');
 
-         accountCode;
-         subject;
+         const recoveryRelayerAddr = await readContract(config, {
+            abi: recoveryPluginAbi,
+            address: safeZkSafeZkEmailRecoveryPlugin as `0x${string}`,
+            functionName: 'getRouterForSafe',
+            args: [address]
+        }) as string;
 
-        // const { requestId } = await relayer.acceptanceRequest(
-        //     emailRecoveryRelayer,
-        //     guardianEmail,
-        //     accountCode,
-        //     templateIdx,
-        //     subject,
-        // );
+        const subject = getRequestGuardianSubject(address);
+        const { requestId } = await relayer.acceptanceRequest(
+            recoveryRelayerAddr,
+            guardianEmail,
+            accountCode,
+            templateIdx,
+            subject,
+        );
+
+        console.debug('req guard req id', requestId)
 
         setRecoveryConfigured(true);
     }, [

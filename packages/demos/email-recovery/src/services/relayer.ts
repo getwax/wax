@@ -24,9 +24,8 @@ class Relayer {
     }
 
     async requestStatus(requestId: number) {
-		// TODO type res body
         const { data } = await axios({
-			method: 'GET',
+			method: 'POST',
 			url: `${this.apiUrl}/requestStatus`,
 			data: {
 				request_id: requestId
@@ -88,6 +87,18 @@ class Relayer {
 		})
 		return data;
     }
+
+	async getAccountSalt(accountCode: string, emailAddress: string) {
+		const { data } = await axios<unknown, { data: string }>({
+			method: "POST",
+			url: `${this.apiUrl}/getAccountSalt`,
+			data: {
+				account_code: accountCode,
+				email_addr: emailAddress,
+			}
+		})
+		return data
+	}
 }
 
 export const relayer = new Relayer(import.meta.env.VITE_RELAYER_URL);

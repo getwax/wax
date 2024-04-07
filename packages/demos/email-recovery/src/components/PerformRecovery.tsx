@@ -12,7 +12,12 @@ import {
     simpleWalletImpl
 } from '../../contracts.base-sepolia.json'
 import { ethers } from 'ethers'
-import { genAccountCode, getRequestGuardianSubject, getRequestsRecoverySubject } from '../utils/email'
+import {
+    genAccountCode,
+    getRequestGuardianSubject,
+    getRequestsRecoverySubject,
+    templateIdx
+} from '../utils/email'
 
 // TODO Pull from lib
 type HexStr = `0x${string}`;
@@ -22,8 +27,6 @@ const storageKeys = {
     guardianEmail: 'guardianEmail',
     accountCode: 'accountCode',
 }
-
-const templateIdx = 0
 
 // TODO Switch back to Safe over SimpleWallet
 export function PerformRecovery() {
