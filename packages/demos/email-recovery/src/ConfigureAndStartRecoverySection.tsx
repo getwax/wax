@@ -16,6 +16,7 @@ import SafeIcon from "../src/icons/SafeIcon";
 import StatusCard, { Status } from "./components/core/StatusCard";
 import testPfp from "../src/assets/testPfp.png";
 import ExistingWalletStartRecoverySection from "./ExistingWalletStartRecoverySection";
+import ClockFastForwardIcon from "./icons/ClockFastForwardIcon";
 
 const testWalletConnectionData = {
   ensName: "anaaronist.eth",
@@ -39,10 +40,12 @@ const testRequestWalletAddress = "0x.....";
 
 type ConfigureAndStartRecoverySectionProps = {
   isExistingWallet?: boolean;
+  onConfigureRecoveryAndRequestGuardianClick: () => void;
 };
 
 export default function ConfigureAndStartRecoverySection({
   isExistingWallet = false,
+  onConfigureRecoveryAndRequestGuardianClick,
 }: ConfigureAndStartRecoverySectionProps) {
   const [progressState, setProgressState] = useState<SubmitType>(
     SubmitType.configureAndRequestGuardian,
@@ -52,7 +55,13 @@ export default function ConfigureAndStartRecoverySection({
   );
 
   const handleConfigureAndRequestClick = useCallback(() => {
-    setProgressState(SubmitType.startRecovery);
+    try {
+      onConfigureRecoveryAndRequestGuardianClick();
+    } catch {
+      throw new Error("ConfigureRecoveryAndRequestGuardian error");
+    } finally {
+      setProgressState(SubmitType.startRecovery);
+    }
   }, []);
 
   const handleRerouteToNewWalletToSetNewGuardianClick =
@@ -73,25 +82,24 @@ export default function ConfigureAndStartRecoverySection({
 
   const startRecoveryActionButton = useMemo(() => {
     let title = "";
+    let icon = null;
+    let onClick: any = handleStartRecoveryClick;
 
-    console.log("recoverState ", recoverState);
     if (recoverState === RecoverState.notStarted) {
       title = "Start Recovery";
     } else if (recoverState === RecoverState.inProgress) {
       title = "Cancel Recovery";
+      icon = <ClockFastForwardIcon />;
     } else if (recoverState === RecoverState.readyToComplete) {
       title = "Complete Recovery";
+      icon = <SafeIcon />;
+      onClick = handleCompleteRecoveryClick;
     }
-
-    const onClick =
-      recoverState === RecoverState.readyToComplete
-        ? handleCompleteRecoveryClick
-        : handleStartRecoveryClick;
 
     return (
       <StyledWalletButton onClick={onClick}>
-        <HStack gap={4}>
-          {recoverState === RecoverState.readyToComplete && <SafeIcon />}
+        <HStack gap={12} align="center">
+          {icon}
           {title}
         </HStack>
       </StyledWalletButton>
@@ -193,8 +201,6 @@ export default function ConfigureAndStartRecoverySection({
   ]);
 
   if (isExistingWallet) {
-    console.log("handle", handleCompleteRecoveryClick);
-
     return (
       <ExistingWalletStartRecoverySection
         onProceed={handleCompleteRecoveryClick}
