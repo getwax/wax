@@ -1,9 +1,12 @@
 # Based on https://dev.to/daslaw/deploying-a-vite-app-to-github-pages-using-github-actions-a-step-by-step-guide-2p4h
-name: Deploy Email Recovery Dmeo to GitHub Pages
+name: packages/demos/email-recovery
 
 on:
   push:
     branches: ['main', 'feature/email-recovery-circuits']
+    paths:
+        - packages/demos/email-recovery/**
+  
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -37,6 +40,7 @@ jobs:
         with:
           node-version: 18
           cache: 'yarn'
+          cache-dependency-path: packages/demos/email-recovery/yarn.lock
 
       - name: Install dependencies
         run: yarn
