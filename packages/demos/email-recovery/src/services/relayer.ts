@@ -2,10 +2,6 @@ import axios from "axios"
 
 // Spec: https://www.notion.so/proofofemail/Email-Sender-Auth-c87063cd6cdc4c5987ea3bc881c68813#d7407d31e1354167be61612f5a16995b
 // TODO Consider using a bigint for templateIdx as it *could* overflow JS number, but practically seems unlikely
-type RequestIDData = {
-	request_id: number;
-}
-
 class Relayer {
     private readonly apiRoute = 'api';
     apiUrl: string;
@@ -62,9 +58,7 @@ class Relayer {
 		templateIdx: number,
 		subject: string
 	) {
-		const {
-			request_id: requestId 
-		} = await axios<unknown, RequestIDData>({
+		const { data } = await axios({
 			method: "POST",
 			url: `${this.apiUrl}/recoveryRequest`,
 			data: {
@@ -74,13 +68,14 @@ class Relayer {
 				subject,
 			}
 		})
+		const { request_id: requestId } = data
 		return { requestId };
     }
 
-    async completeRequest(walletEthAddr: string) {
-		const data = await axios<unknown, unknown>({
+    async completeRecovery(walletEthAddr: string) {
+		const data = await axios({
 			method: "POST",
-			url: `${this.apiUrl}/completeRequest`,
+			url: `${this.apiUrl}/completeRecovery`,
 			data: {
 				wallet_eth_addr: walletEthAddr,
 			}
@@ -89,7 +84,7 @@ class Relayer {
     }
 
 	async getAccountSalt(accountCode: string, emailAddress: string) {
-		const { data } = await axios<unknown, { data: string }>({
+		const { data } = await axios({
 			method: "POST",
 			url: `${this.apiUrl}/getAccountSalt`,
 			data: {

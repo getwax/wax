@@ -9,13 +9,18 @@ import { readContract } from 'wagmi/actions'
 import { config } from '../providers/config'
 import { pad } from 'viem'
 import { relayer } from '../services/relayer'
+import { useAppContext } from '../context/AppContextHook'
 
 export function ConfigureSafeModule() {
     const { address } = useAccount()
     const { writeContractAsync } = useWriteContract()
 
-    const [recoveryConfigured, setRecoveryConfigured] = useState(false)
-    const [guardianEmail, setGuardianEmail] = useState<string>()
+    const {
+        guardianEmail,
+        setGuardianEmail,
+        accountCode,
+        setAccountCode
+    } = useAppContext()
     // TODO 0 sets recovery to default of 2 weeks, likely want a warning here
     // Also, better time duration setting component
     const [recoveryDelay, setRecoveryDelay] = useState(0)
@@ -39,6 +44,15 @@ export function ConfigureSafeModule() {
         }
         return safeOwners[0];
     }, [safeOwnersData]);
+
+    // const checkGuardianAcceptance = useCallback(async () => {
+    //     if (!gurdianRequestId) {
+    //         throw new Error('missing guardian request id')
+    //     }
+
+    //     const resBody = await relayer.requestStatus(gurdianRequestId)
+    //     console.debug('guardian req res body', resBody);
+    // }, [gurdianRequestId])
 
     const enableEmailRecoveryModule = useCallback(async () => {
         if (!address) {
@@ -66,8 +80,10 @@ export function ConfigureSafeModule() {
             throw new Error('safe owner not found')
         }
 
-        const accountCode = await genAccountCode();
-        const guardianSalt = await relayer.getAccountSalt(accountCode, guardianEmail);
+        const acctCode = await genAccountCode();
+        setAccountCode(accountCode);
+
+        const guardianSalt = await relayer.getAccountSalt(acctCode, guardianEmail);
         const guardianAddr = await readContract(config, {
             abi: recoveryPluginAbi,
             address: safeZkSafeZkEmailRecoveryPlugin as `0x${string}`,
@@ -93,7 +109,7 @@ export function ConfigureSafeModule() {
 
          console.debug('recovery configured');
 
-         const recoveryRelayerAddr = await readContract(config, {
+         const recoveryRouterAddr = await readContract(config, {
             abi: recoveryPluginAbi,
             address: safeZkSafeZkEmailRecoveryPlugin as `0x${string}`,
             functionName: 'getRouterForSafe',
@@ -102,33 +118,29 @@ export function ConfigureSafeModule() {
 
         const subject = getRequestGuardianSubject(address);
         const { requestId } = await relayer.acceptanceRequest(
-            recoveryRelayerAddr,
+            recoveryRouterAddr,
             guardianEmail,
-            accountCode,
+            acctCode,
             templateIdx,
             subject,
         );
 
         console.debug('req guard req id', requestId)
-
-        setRecoveryConfigured(true);
+        // TODO poll until guard req is complete or fails
     }, [
         address,
         firstSafeOwner,
         guardianEmail,
         recoveryDelay,
+        accountCode,
+        setAccountCode,
         writeContractAsync
     ])
-
-    const recoveryCfgEnabled = useMemo(
-        () => !isModuleEnabled || recoveryConfigured,
-        [isModuleEnabled, recoveryConfigured]
-    );
 
     return (
         <>
             {
-                isModuleEnabled ?
+                isModuleEnabled ?   
                 <div>Recovery Module Enabled</div> :
                 <Button onClick={enableEmailRecoveryModule}>
                     1. Enable Email Recovery Module
@@ -137,7 +149,7 @@ export function ConfigureSafeModule() {
             <div>
                 <label>
                     Guardian's Email
-                    <input disabled ={recoveryCfgEnabled}
+                    <input disabled ={!isModuleEnabled}
                         type='email'
                         onInput={e => setGuardianEmail((e.target as HTMLTextAreaElement).value)}
                     />
@@ -145,13 +157,13 @@ export function ConfigureSafeModule() {
                 <label>
                     Recovery Delay
                     <input
-                        disabled={recoveryCfgEnabled}
+                        disabled={!isModuleEnabled}
                         type='number'
                         onInput={e => setRecoveryDelay(parseInt((e.target as HTMLTextAreaElement).value))}
                     />
                 </label>
                 <Button
-                    disabled={recoveryCfgEnabled}
+                    disabled={!isModuleEnabled}
                     onClick={configureRecoveryAndRequestGuardian}>
                     2. Configure Recovery & Request Guardian
                 </Button>

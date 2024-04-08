@@ -51,4 +51,4 @@ export async function genAccountCode(): Promise<string> {
 export const getRequestGuardianSubject = (acctAddr: string) => 
     `Accept guardian request for ${acctAddr}`;
 export const getRequestsRecoverySubject = (acctAddr: string, newOwner: string) => 
-    `Set the new signer of ${acctAddr} to ${newOwner}`;
+    `Update owner to ${newOwner} on account ${acctAddr}`;

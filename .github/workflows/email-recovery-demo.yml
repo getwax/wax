@@ -46,7 +46,7 @@ jobs:
         run: yarn install --frozen-lockfile
       - name: Build
         env:
-            SUPER_SECRET: ${{ secrets.VITE_WALLET_CONNECT_PROJECT_ID }}
+          VITE_WALLET_CONNECT_PROJECT_ID: ${{ secrets.VITE_WALLET_CONNECT_PROJECT_ID }}
         run: VITE_WALLET_CONNECT_PROJECT_ID=${VITE_WALLET_CONNECT_PROJECT_ID} yarn build
 
       - name: Setup Pages
