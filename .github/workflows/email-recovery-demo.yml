@@ -44,6 +44,8 @@ jobs:
 
       - name: Install dependencies
         run: yarn install --frozen-lockfile
+      - name: Copy .env.base-sepolia
+        run: cp .env.base-sepolia .env
       - name: Build
         env:
           VITE_WALLET_CONNECT_PROJECT_ID: ${{ secrets.VITE_WALLET_CONNECT_PROJECT_ID }}

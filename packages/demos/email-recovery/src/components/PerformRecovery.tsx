@@ -23,7 +23,6 @@ export function PerformRecovery() {
     //     abi: simpleWalletAbi,
     //     functionName: 'timelock',
     // });
-    const timelock = -1
 
     const { data: recoveryRouterAddr } = useReadContract({
         abi: recoveryPluginAbi,
@@ -86,7 +85,7 @@ export function PerformRecovery() {
             <Button onClick={requestRecovery}>
                 3. Request Recovery
             </Button>
-            <div>{`TEST timelock: ${timelock}`}</div>
+            {/* <div>{`TEST timelock: ${timelock}`}</div> */}
             <Button onClick={completeRecovery}>
                 TEST Complete Recovery (Switch to polling)
             </Button>
