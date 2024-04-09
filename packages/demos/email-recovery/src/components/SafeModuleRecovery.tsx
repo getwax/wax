@@ -1,0 +1,60 @@
+import { ConnectKitButton } from "connectkit";
+import { Button } from "./Button";
+import { useAccount, useReadContract, useWriteContract } from "wagmi";
+import { safeZkSafeZkEmailRecoveryPlugin } from "../../contracts.base-sepolia.json";
+import { abi as safeAbi } from "../abi/Safe.json";
+import { useCallback, useContext, useState } from "react";
+import { StepsContext } from "../App";
+import { STEPS } from "../constants";
+
+const SafeModuleRecovery = () => {
+  const { address } = useAccount();
+  const { writeContractAsync } = useWriteContract();
+  const stepsContext = useContext(StepsContext);
+  const [loading, setLoading] = useState(false);
+
+  const { data: isModuleEnabled } = useReadContract({
+    address,
+    abi: safeAbi,
+    functionName: "isModuleEnabled",
+    args: [safeZkSafeZkEmailRecoveryPlugin],
+  });
+
+  console.log(isModuleEnabled);
+
+  if (isModuleEnabled) {
+    console.log("Module is enabled");
+    setLoading(false);
+    stepsContext?.setStep(STEPS.REQUEST_GUARDIAN);
+  }
+
+  const enableEmailRecoveryModule = useCallback(async () => {
+    setLoading(true);
+    if (!address) {
+      throw new Error("unable to get account address");
+    }
+
+    await writeContractAsync({
+      abi: safeAbi,
+      address,
+      functionName: "enableModule",
+      args: [safeZkSafeZkEmailRecoveryPlugin],
+    });
+
+  }, [address, writeContractAsync]);
+
+  return (
+    <div style={{ display: "flex", gap: "2rem", flexDirection: "column" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+        Connected wallet: <ConnectKitButton />
+      </div>
+      {!isModuleEnabled ? (
+        <Button loading={loading} onClick={enableEmailRecoveryModule}>
+          Enable email recovery module
+        </Button>
+      ) : null}
+    </div>
+  );
+};
+
+export default SafeModuleRecovery;
