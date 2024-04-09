@@ -15,17 +15,12 @@ import { config } from "./providers/config";
 import { pad } from "viem";
 import { relayer } from "./services/relayer";
 
-// TODO Pull from lib
-type HexStr = `0x${string}`;
-
-const safeModuleAddressKey = "safeModuleAddress";
-
 import { VStack, HStack } from "./components/Spacer/Stack";
 import { SecondaryText } from "./components/core/Text";
 import WalletIcon from "./icons/WalletIcon";
 import InfoIcon from "./icons/InfoIcon";
 import { SecondaryHeader } from "./components/core/Text";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import ConfigureAndStartRecoverySection from "./ConfigureAndStartRecoverySection";
 import { ConfigureSafeModule } from "./components/ConfigureSafeModule";
 import { PerformRecovery } from "./components/PerformRecovery";
@@ -46,7 +41,6 @@ export default function EmailRecovery() {
   const { address } = useAccount();
   const { writeContractAsync } = useWriteContract();
 
-  const [recoveryConfigured, setRecoveryConfigured] = useState(false);
   const [guardianEmail, setGuardianEmail] = useState<string>();
   // TODO 0 sets recovery to default of 2 weeks, likely want a warning here
   // Also, better time duration setting component
@@ -58,6 +52,13 @@ export default function EmailRecovery() {
     functionName: "isModuleEnabled",
     args: [safeZkSafeZkEmailRecoveryPlugin],
   });
+
+  useEffect(() => {
+    // If module if enabled, skip to config enablement
+    if (isModuleEnabled && currentView === View.secondStep) {
+      setCurrentView(View.thirdStep);
+    }
+  }, [isModuleEnabled]);
 
   const { data: safeOwnersData } = useReadContract({
     address,
@@ -155,11 +156,6 @@ export default function EmailRecovery() {
     writeContractAsync,
   ]);
 
-  const recoveryCfgEnabled = useMemo(
-    () => !isModuleEnabled || recoveryConfigured,
-    [isModuleEnabled, recoveryConfigured],
-  );
-
   const handleEnableEmailRecoveryClick = useCallback(() => {
     setCurrentView(View.thirdStep);
     enableEmailRecoveryModule();
@@ -195,7 +191,7 @@ export default function EmailRecovery() {
               <SecondaryText>Connected Wallet: </SecondaryText>
               <CustomConnectWalletButton />
             </HStack>
-            <StyledWalletButton onClick={handleEnableEmailRecoveryClick}>
+            <StyledWalletButton disabled={!address} onClick={handleEnableEmailRecoveryClick}>
               <HStack gap={12}>Enable Email Recovery Module</HStack>
             </StyledWalletButton>
           </VStack>
