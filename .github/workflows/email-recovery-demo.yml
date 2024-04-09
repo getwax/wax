@@ -3,7 +3,7 @@ name: packages/demos/email-recovery
 
 on:
   push:
-    branches: ['main', 'feature/email-recovery-circuits']
+    branches: ['main']
     paths:
         - packages/demos/email-recovery/**
   
