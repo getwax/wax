@@ -1,17 +1,19 @@
 import styled from "styled-components";
 import { ConnectKitButton } from "connectkit";
-import { waitForTransactionReceipt } from "@wagmi/core";
-import { useWalletClient, useConfig } from "wagmi";
+
+import { useAccount, useWriteContract, useReadContract } from "wagmi";
+import { abi as safeAbi } from "./abi/Safe.json";
+import { abi as recoveryPluginAbi } from "./abi/SafeZkEmailRecoveryPlugin.json";
+import { safeZkSafeZkEmailRecoveryPlugin } from "./../contracts.base-sepolia.json";
+import {
+  genAccountCode,
+  getRequestGuardianSubject,
+  templateIdx,
+} from "./utils/email";
+import { readContract } from "wagmi/actions";
+import { config } from "./providers/config";
+import { pad } from "viem";
 import { relayer } from "./services/relayer";
-import {
-  abi as moduleAbi,
-  bytecode as moduleBytecode,
-} from "./abi/SafeZkEmailRecoveryPlugin.json";
-import {
-  verifier,
-  dkimRegistry,
-  emailAuthImpl,
-} from "./../contracts.base-sepolia.json";
 
 // TODO Pull from lib
 type HexStr = `0x${string}`;
@@ -19,21 +21,15 @@ type HexStr = `0x${string}`;
 const safeModuleAddressKey = "safeModuleAddress";
 
 import { VStack, HStack } from "./components/Spacer/Stack";
-import {
-  PrimaryText,
-  SecondaryText,
-  TertiaryText,
-} from "./components/core/Text";
+import { SecondaryText } from "./components/core/Text";
 import WalletIcon from "./icons/WalletIcon";
 import InfoIcon from "./icons/InfoIcon";
 import { SecondaryHeader } from "./components/core/Text";
-import Card from "./components/Card";
 import { useCallback, useMemo, useState } from "react";
 import ConfigureAndStartRecoverySection from "./ConfigureAndStartRecoverySection";
-import testPfp from "../src/assets/testPfp.png";
 import { ConfigureSafeModule } from "./components/ConfigureSafeModule";
 import { PerformRecovery } from "./components/PerformRecovery";
-import { NewButton } from "./components/Button";
+import { CustomConnectWalletButton, NewButton } from "./components/Button";
 
 enum View {
   providerTest = "providerTest",
@@ -42,65 +38,132 @@ enum View {
   thirdStep = "thirdStep",
 }
 
-const testWalletConnectionData = {
-  ensName: "anaaronist.eth",
-  walletAddress: "0x95e1...17d6",
-};
-
 export default function EmailRecovery() {
-  const [currentView, setCurrentView] = useState<View>(View.firstStep);
+  // set currentView to default value View.firstStep to test flow
+  const [currentView, setCurrentView] = useState<View>(View.providerTest);
   const [isExistingWallet, setIsExistingWallet] = useState<boolean>(false);
 
-  const cfg = useConfig();
-  const { data: walletClient } = useWalletClient();
-  const [safeModuleAddress, _] = useState(
-    localStorage.getItem(safeModuleAddressKey),
-  );
+  const { address } = useAccount();
+  const { writeContractAsync } = useWriteContract();
 
-  const [moduleEnabled, setModuleEnabled] = useState(false);
   const [recoveryConfigured, setRecoveryConfigured] = useState(false);
+  const [guardianEmail, setGuardianEmail] = useState<string>();
+  // TODO 0 sets recovery to default of 2 weeks, likely want a warning here
+  // Also, better time duration setting component
+  const [recoveryDelay, setRecoveryDelay] = useState(0);
 
-  // not sure where we need use this
-  const deployEmailRecoveryModule = useCallback(async () => {
-    const hash = (await walletClient?.deployContract({
-      abi: moduleAbi,
-      bytecode: moduleBytecode.object as HexStr,
-      args: [verifier, dkimRegistry, emailAuthImpl],
-    })) as HexStr;
-    console.debug("module deploy txn hash", hash);
-    const receipt = await waitForTransactionReceipt(cfg, { hash });
-    console.debug("module deploy txn receipt", receipt);
-    // TODO Look this up from receipt
-    // const moduleAddress = "0x01";
+  const { data: isModuleEnabled } = useReadContract({
+    address,
+    abi: safeAbi,
+    functionName: "isModuleEnabled",
+    args: [safeZkSafeZkEmailRecoveryPlugin],
+  });
 
-    // setSafeModuleAddress(moduleAddress);
-    // localStorage.setItem(safeModuleAddressKey, moduleAddress);
-  }, [walletClient, cfg]);
+  const { data: safeOwnersData } = useReadContract({
+    address,
+    abi: safeAbi,
+    functionName: "getOwners",
+  });
+  const firstSafeOwner = useMemo(() => {
+    const safeOwners = safeOwnersData as string[];
+    if (!safeOwners?.length) {
+      return;
+    }
+    return safeOwners[0];
+  }, [safeOwnersData]);
 
   const enableEmailRecoveryModule = useCallback(async () => {
-    // TODO submit txn to enable module
+    if (!address) {
+      throw new Error("unable to get account address");
+    }
 
-    setModuleEnabled(true);
-  }, []);
+    await writeContractAsync({
+      abi: safeAbi,
+      address,
+      functionName: "enableModule",
+      args: [safeZkSafeZkEmailRecoveryPlugin],
+    });
+  }, [address, writeContractAsync]);
+
+  const configureRecoveryAndRequestGuardian = useCallback(async () => {
+    if (!address) {
+      throw new Error("unable to get account address");
+    }
+
+    if (!guardianEmail) {
+      throw new Error("guardian email not set");
+    }
+
+    if (!firstSafeOwner) {
+      throw new Error("safe owner not found");
+    }
+
+    const accountCode = await genAccountCode();
+    const guardianSalt = await relayer.getAccountSalt(
+      accountCode,
+      guardianEmail,
+    );
+    const guardianAddr = await readContract(config, {
+      abi: recoveryPluginAbi,
+      address: safeZkSafeZkEmailRecoveryPlugin as `0x${string}`,
+      functionName: "computeEmailAuthAddress",
+      args: [guardianSalt],
+    });
+    // TODO Should this be something else?
+    const previousOwnerInLinkedList = pad("0x1", {
+      size: 20,
+    });
+
+    await writeContractAsync({
+      abi: recoveryPluginAbi,
+      address: safeZkSafeZkEmailRecoveryPlugin as `0x${string}`,
+      functionName: "configureRecovery",
+      args: [
+        firstSafeOwner,
+        guardianAddr,
+        recoveryDelay,
+        previousOwnerInLinkedList,
+      ],
+    });
+
+    console.debug("recovery configured");
+
+    const recoveryRelayerAddr = (await readContract(config, {
+      abi: recoveryPluginAbi,
+      address: safeZkSafeZkEmailRecoveryPlugin as `0x${string}`,
+      functionName: "getRouterForSafe",
+      args: [address],
+    })) as string;
+
+    const subject = getRequestGuardianSubject(address);
+    const { requestId } = await relayer.acceptanceRequest(
+      recoveryRelayerAddr,
+      guardianEmail,
+      accountCode,
+      templateIdx,
+      subject,
+    );
+
+    console.debug("req guard req id", requestId);
+
+    setRecoveryConfigured(true);
+  }, [
+    address,
+    firstSafeOwner,
+    guardianEmail,
+    recoveryDelay,
+    writeContractAsync,
+  ]);
+
+  const recoveryCfgEnabled = useMemo(
+    () => !isModuleEnabled || recoveryConfigured,
+    [isModuleEnabled, recoveryConfigured],
+  );
 
   const handleEnableEmailRecoveryClick = useCallback(() => {
     setCurrentView(View.thirdStep);
     enableEmailRecoveryModule();
   }, [enableEmailRecoveryModule]);
-
-  const configureRecoveryAndRequestGuardian = useCallback(async () => {
-    // TODO submit txn/userop to configure recovery
-    // TODO Consider, could we enable the module & configure recovery in one step/txn/userop?
-
-    //   await relayer.acceptanceRequest();
-
-    setRecoveryConfigured(true);
-  }, []);
-
-  const recoveryCfgEnabled = useMemo(
-    () => !moduleEnabled || recoveryConfigured,
-    [moduleEnabled, recoveryConfigured],
-  );
 
   const handleConnectGnosisSafeClick = useCallback(() => {
     setCurrentView(View.secondStep);
@@ -130,20 +193,7 @@ export default function EmailRecovery() {
           <VStack gap={20} align="center">
             <HStack gap={12} align="center">
               <SecondaryText>Connected Wallet: </SecondaryText>
-              <Card compact={true}>
-                <StyledSafeDetailsWrapper gap={8} align="center">
-                  <img
-                    src={testPfp}
-                    width={24}
-                    height={24}
-                    alt="profilePictute"
-                  />
-                  <PrimaryText>{testWalletConnectionData.ensName}</PrimaryText>
-                  <TertiaryText>
-                    {testWalletConnectionData.walletAddress}
-                  </TertiaryText>
-                </StyledSafeDetailsWrapper>
-              </Card>
+              <CustomConnectWalletButton />
             </HStack>
             <StyledWalletButton onClick={handleEnableEmailRecoveryClick}>
               <HStack gap={12}>Enable Email Recovery Module</HStack>
@@ -153,7 +203,12 @@ export default function EmailRecovery() {
       );
     } else if (currentView === View.thirdStep) {
       return (
-        <ConfigureAndStartRecoverySection isExistingWallet={isExistingWallet} />
+        <ConfigureAndStartRecoverySection
+          onConfigureRecoveryAndRequestGuardianClick={
+            configureRecoveryAndRequestGuardian
+          }
+          isExistingWallet={isExistingWallet}
+        />
       );
     }
 
@@ -161,12 +216,10 @@ export default function EmailRecovery() {
     return (
       <VStack gap={28} align="center">
         <SecondaryHeader>Email Recovery Demo</SecondaryHeader>
-        <StyledWalletButton onClick={handleConnectGnosisSafeClick}>
-          <HStack gap={12}>
-            <WalletIcon />
-            <>Connect Gnosis Safe</>
-          </HStack>
-        </StyledWalletButton>
+        <CustomConnectWalletButton
+          buttonLabel="Connect Gnosis Safe"
+          onConnect={handleConnectGnosisSafeClick}
+        />
 
         <HStack gap={8}>
           <InfoIcon /> <>Copy the link and import into your Safe wallet</>
@@ -199,11 +252,7 @@ const StyledWalletButton = styled(NewButton)`
 `;
 
 const ControlsAndExistingUI = styled.div`
-  padding-top: 1000px;
-`;
-
-const StyledSafeDetailsWrapper = styled(HStack)`
-  height: 32px;
+  padding-top: 0px;
 `;
 
 const UnderlinedText = styled.p`

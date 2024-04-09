@@ -2,7 +2,7 @@ import styled from "styled-components";
 import { useMemo, useState, useCallback, useEffect } from "react";
 
 import { VStack, HStack } from "./components/Spacer/Stack";
-import { NewButton } from "./components/Button";
+import { CustomConnectWalletButton, NewButton } from "./components/Button";
 import {
   PrimaryText,
   SecondaryText,
@@ -217,22 +217,9 @@ export default function ConfigureAndStartRecoverySection({
         </HStack>
         <ContentWrapper>
           <HStack gap={12} align="center">
-            <StyledCard>
-              <Card compact={true}>
-                <HStack gap={8} align="center">
-                  <img
-                    src={testPfp}
-                    width={24}
-                    height={24}
-                    alt="profilePictute"
-                  />
-                  <PrimaryText>{testWalletConnectionData.ensName}</PrimaryText>
-                  <TertiaryText>
-                    {testWalletConnectionData.walletAddress}
-                  </TertiaryText>
-                </HStack>
-              </Card>
-            </StyledCard>
+            <MinContentWrapper>
+              <CustomConnectWalletButton />
+            </MinContentWrapper>
             {progressState === SubmitType.completeRecovery && (
               <StatusCard
                 statusText="Recovered"
@@ -261,7 +248,7 @@ const GridWrapper = styled.div`
   align-items: start; /* Aligns the grid items to the start of the container vertically */
 `;
 
-const StyledCard = styled.div`
+const MinContentWrapper = styled.div`
   width: min-content;
 `;
 
