@@ -4,6 +4,17 @@ pragma abicoder v2;
 
 import {IGroth16Verifier} from "../interface/IGroth16Verifier.sol";
 
+struct EmailProof {
+    string domainName; // Domain name of the sender's email
+    bytes32 publicKeyHash; // Hash of the DKIM public key used in email/proof
+    uint timestamp; // Timestamp of the email
+    string maskedSubject; // Masked subject of the email
+    bytes32 emailNullifier; // Nullifier of the email to prevent its reuse.
+    bytes32 accountSalt; // Create2 salt of the account
+    bool isCodeExist; // Check if the account code is exist
+    bytes proof; // ZK Proof of Email
+}
+
 // Mock/stub of snarkjs Groth16 Solidity verifier.
 // We can't allow the result to change via a flag in storage as
 // that would break ERC-4337 validation storage rules.
@@ -42,5 +53,13 @@ contract MockGroth16Verifier is IGroth16Verifier {
         }
 
         r = true;
+    }
+
+    function verifyEmailProof(
+        EmailProof memory proof
+    ) public view returns (bool) {
+        proof;
+
+        return true;
     }
 }
