@@ -33,7 +33,7 @@ export const AppContextProviderV2 = ({ children } : { children: ReactNode }) => 
 
         setRecoveryConfigs(updatedConfigs);
         localStorage.setItem(appContextLocalStorageKey, JSON.stringify(updatedConfigs));
-    }, []);
+    }, [recoveryConfigs]);
 
     const { data: isModuleEnabled } = useReadContract({
         address,
@@ -162,7 +162,8 @@ export const AppContextProviderV2 = ({ children } : { children: ReactNode }) => 
     }, [
         address,
         firstSafeOwner,
-        writeContractAsync
+        writeContractAsync,
+        setRecoveryConfig
     ])
 
     const requestRecovery = useCallback(async (newOwner: string) => {
@@ -190,7 +191,7 @@ export const AppContextProviderV2 = ({ children } : { children: ReactNode }) => 
         )
         console.debug('recovery request id', requestId)
         // TODO poll until recovery req is complete or fails
-    }, [recoveryRouterAddr, address])
+    }, [recoveryRouterAddr, address, getRecoveryConfig])
 
     const completeRecovery = useCallback(async () => {
         if (!recoveryRouterAddr) {
@@ -212,7 +213,7 @@ export const AppContextProviderV2 = ({ children } : { children: ReactNode }) => 
             {};
 
         setRecoveryConfigs(cfgs);
-    });
+    }, []);
     
     const ctxVal = useMemo(() => ({
         recoveryConfigs,

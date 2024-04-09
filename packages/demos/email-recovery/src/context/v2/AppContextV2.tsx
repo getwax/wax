@@ -27,13 +27,11 @@ type AppContextTypeV2 = {
 export const appContextV2 = createContext<AppContextTypeV2>({
     recoveryConfigs: {},
     // TODO Properly type return type, this will be overwritten in provider
-    getRecoveryConfig: (_address: string) => { return {} as any; },
-    setRecoveryConfig: (_cfg: RecoveryConfig) => {},
+    getRecoveryConfig: () => { return {} as any; },
+    setRecoveryConfig: () => {},
     isModuleEnabled: false,
     enableEmailRecoveryModule: async () => {},
-    configureRecoveryAndRequestGuardian: async(
-        _guardianEmail: string, _recoveryDelay: number
-    ) => {},
-    requestRecovery: async (_newOwner: string) => {},
+    configureRecoveryAndRequestGuardian: async() => {},
+    requestRecovery: async () => {},
     completeRecovery: async () => {},
 });

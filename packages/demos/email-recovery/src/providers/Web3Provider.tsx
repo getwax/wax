@@ -5,7 +5,8 @@ import { ConnectKitProvider, getDefaultConfig } from "connectkit";
 import { PropsWithChildren } from "react";
 
 const connectKitOptions = {
-  walletConnectCTA: "both",
+  // TODO wat, why is cast needed?
+  walletConnectCTA: "both" as "both",
   walletConnectName: "WalletConnect",
   hideNoWalletCTA: true,
 };
