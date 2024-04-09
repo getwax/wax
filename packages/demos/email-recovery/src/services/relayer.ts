@@ -1,15 +1,7 @@
-// TODO replace fetch
-// import { get, post } from "axios"
-
-class RelayerError extends Error {
-    constructor(msg: string) {
-        super(msg);
-        this.name = 'RelayerError';
-    }
-}
+import axios from "axios"
 
 // Spec: https://www.notion.so/proofofemail/Email-Sender-Auth-c87063cd6cdc4c5987ea3bc881c68813#d7407d31e1354167be61612f5a16995b
-// TODO Do we need to use bigints to prevent possible overflows?
+// TODO Consider using a bigint for templateIdx as it *could* overflow JS number, but practically seems unlikely
 class Relayer {
     private readonly apiRoute = 'api';
     apiUrl: string;
@@ -18,25 +10,24 @@ class Relayer {
         this.apiUrl = `${relayerUrl}${this.apiRoute}`
     }
 
-    private async throwErrFromRes(res: Response) {
-        const msg = `${res.url} ${res.status} ${await res.text()}`;
-        throw new RelayerError(msg);
-    }
-
     // Similar to a ping or health endpoint
     async echo() {
-        const res = await Axios(`${this.apiUrl}/echo`);
-        if (!res.ok) {
-            await this.throwErrFromRes(res);
-        }
+        const res = await axios({
+			method: 'GET',
+			url: `${this.apiUrl}/echo`
+		})
+		return res.data;
     }
 
     async requestStatus(requestId: number) {
-        const res = await fetch(`${this.apiUrl}/requestStatus`);
-        if (!res.ok) {
-            await this.throwErrFromRes(res);
-        }
-		return res.json();
+        const { data } = await axios({
+			method: 'POST',
+			url: `${this.apiUrl}/requestStatus`,
+			data: {
+				request_id: requestId
+			}
+		})
+		return data;
     }
 
     async acceptanceRequest(
@@ -46,23 +37,19 @@ class Relayer {
 		templateIdx: number,
 		subject: string
 	): Promise<{ requestId: number }> {
-		const res = await fetch(`${this.apiUrl}/acceptanceRequest`, {
+		const { data } = await axios({
 			method: "POST",
-			body: JSON.stringify({
+			url: `${this.apiUrl}/acceptanceRequest`,
+			data: {
 				wallet_eth_addr: walletEthAddr,
 				guardian_email_addr: guardianEmailAddr,
 				account_code: accountCode,
 				template_idx: templateIdx,
 				subject,
-			})
-		});
-        if (!res.ok) {
-            await this.throwErrFromRes(res);
-        }
-		const { request_id: requestId } = await res.json();
-		return {
-			requestId,
-		}
+			}
+		})
+		const { request_id: requestId } = data;
+		return { requestId };
     }
 
     async recoveryRequest(
@@ -71,33 +58,42 @@ class Relayer {
 		templateIdx: number,
 		subject: string
 	) {
-		const res = await fetch(`${this.apiUrl}/recoveryRequest`, {
+		const { data } = await axios({
 			method: "POST",
-			body: JSON.stringify({
+			url: `${this.apiUrl}/recoveryRequest`,
+			data: {
 				wallet_eth_addr: walletEthAddr,
 				guardian_email_addr: guardianEmailAddr,
 				template_idx: templateIdx,
 				subject,
-			})
-		});
-        if (!res.ok) {
-            await this.throwErrFromRes(res);
-        }
-		return res.json();
+			}
+		})
+		const { request_id: requestId } = data
+		return { requestId };
     }
 
-    async completeRequest(walletEthAddr: string) {
-		const res = await fetch(`${this.apiUrl}/completeRequest`, {
+    async completeRecovery(walletEthAddr: string) {
+		const data = await axios({
 			method: "POST",
-			body: JSON.stringify({
+			url: `${this.apiUrl}/completeRecovery`,
+			data: {
 				wallet_eth_addr: walletEthAddr,
-			})
-		});
-        if (!res.ok) {
-            await this.throwErrFromRes(res);
-        }
-		return res.json();
+			}
+		})
+		return data;
     }
+
+	async getAccountSalt(accountCode: string, emailAddress: string) {
+		const { data } = await axios({
+			method: "POST",
+			url: `${this.apiUrl}/getAccountSalt`,
+			data: {
+				account_code: accountCode,
+				email_addr: emailAddress,
+			}
+		})
+		return data
+	}
 }
 
 export const relayer = new Relayer(import.meta.env.VITE_RELAYER_URL);

@@ -1,84 +1,171 @@
-import { waitForTransactionReceipt } from '@wagmi/core'
 import { useState, useCallback, useMemo } from 'react'
-import { useWalletClient, useConfig } from 'wagmi'
-import { relayer } from '../services/relayer'
-import { abi as moduleAbi, bytecode as moduleBytecode } from '../abi/SafeZkEmailRecoveryPlugin.json'
-import { verifier, dkimRegistry, emailAuthImpl } from '../../contracts.base-sepolia.json'
+import { useAccount, useWriteContract, useReadContract } from 'wagmi'
+import { abi as safeAbi } from '../abi/Safe.json'
+import { abi as recoveryPluginAbi } from '../abi/SafeZkEmailRecoveryPlugin.json'
+import { safeZkSafeZkEmailRecoveryPlugin } from '../../contracts.base-sepolia.json'
 import { Button } from './Button'
-
-// TODO Pull from lib
-type HexStr = `0x${string}`;
-
-const safeModuleAddressKey = 'safeModuleAddress'
+import { genAccountCode, getRequestGuardianSubject, templateIdx } from '../utils/email'
+import { readContract } from 'wagmi/actions'
+import { config } from '../providers/config'
+import { pad } from 'viem'
+import { relayer } from '../services/relayer'
+import { useAppContext } from '../context/AppContextHook'
 
 export function ConfigureSafeModule() {
-    const cfg = useConfig();
-    const { data: walletClient } = useWalletClient()
-    const [safeModuleAddress/*, setSafeModuleAddress*/] = useState(
-        localStorage.getItem(safeModuleAddressKey)
-    )
-  
-    const [moduleEnabled, setModuleEnabled] = useState(false)
-    const [recoveryConfigured, setRecoveryConfigured] = useState(false)
+    const { address } = useAccount()
+    const { writeContractAsync } = useWriteContract()
 
-    const deployEmailRecoveryModule = useCallback(async() => {
-        const hash = await walletClient?.deployContract({
-            abi: moduleAbi,
-            bytecode: moduleBytecode.object as HexStr,
-            args: [verifier, dkimRegistry, emailAuthImpl],
-        }) as HexStr
-        console.debug('module deploy txn hash', hash)
-        const receipt = await waitForTransactionReceipt(cfg, { hash })
-        console.debug('module deploy txn receipt', receipt)
-        // TODO Look this up from receipt
-        // const moduleAddress = "0x01";
+    const {
+        guardianEmail,
+        setGuardianEmail,
+        accountCode,
+        setAccountCode
+    } = useAppContext()
+    // TODO 0 sets recovery to default of 2 weeks, likely want a warning here
+    // Also, better time duration setting component
+    const [recoveryDelay, setRecoveryDelay] = useState(0)
 
-        // setSafeModuleAddress(moduleAddress);
-        // localStorage.setItem(safeModuleAddressKey, moduleAddress);
-    }, [walletClient, cfg])
+    const { data: isModuleEnabled } = useReadContract({
+        address,
+        abi: safeAbi,
+        functionName: 'isModuleEnabled',
+        args: [safeZkSafeZkEmailRecoveryPlugin]
+    });
+
+    const { data: safeOwnersData } = useReadContract({
+        address,
+        abi: safeAbi,
+        functionName: 'getOwners',
+    });
+    const firstSafeOwner = useMemo(() => {
+        const safeOwners = safeOwnersData as string[];
+        if (!safeOwners?.length) {
+            return;
+        }
+        return safeOwners[0];
+    }, [safeOwnersData]);
+
+    // const checkGuardianAcceptance = useCallback(async () => {
+    //     if (!gurdianRequestId) {
+    //         throw new Error('missing guardian request id')
+    //     }
+
+    //     const resBody = await relayer.requestStatus(gurdianRequestId)
+    //     console.debug('guardian req res body', resBody);
+    // }, [gurdianRequestId])
 
     const enableEmailRecoveryModule = useCallback(async () => {
-      // TODO submit txn to enable module
-  
-      setModuleEnabled(true);
-    }, [])
-  
-    const configureRecoveryAndRequestGuardian = useCallback(async () => {
-      // TODO submit txn/userop to configure recovery
-      // TODO Consider, could we enable the module & configure recovery in one step/txn/userop?
-  
-    //   await relayer.acceptanceRequest();
-  
-      setRecoveryConfigured(true);
-    }, [])
+        if (!address) {
+            throw new Error('unable to get account address');
+        }
 
-    const recoveryCfgEnabled = useMemo(
-        () => !moduleEnabled || recoveryConfigured,
-        [moduleEnabled, recoveryConfigured]
-    );
+        await writeContractAsync({
+            abi: safeAbi,
+            address,
+            functionName: 'enableModule',
+            args: [safeZkSafeZkEmailRecoveryPlugin],
+         })
+    }, [address, writeContractAsync])
+
+    const configureRecoveryAndRequestGuardian = useCallback(async () => {
+        if (!address) {
+            throw new Error('unable to get account address');
+        }
+
+        if (!guardianEmail) {
+            throw new Error('guardian email not set')
+        }
+
+        if (!firstSafeOwner) {
+            throw new Error('safe owner not found')
+        }
+
+        const acctCode = await genAccountCode();
+        setAccountCode(accountCode);
+
+        const guardianSalt = await relayer.getAccountSalt(acctCode, guardianEmail);
+        const guardianAddr = await readContract(config, {
+            abi: recoveryPluginAbi,
+            address: safeZkSafeZkEmailRecoveryPlugin as `0x${string}`,
+            functionName: 'computeEmailAuthAddress',
+            args: [guardianSalt]
+        })
+        // TODO Should this be something else?
+        const previousOwnerInLinkedList = pad("0x1", {
+            size: 20
+        })
+
+        await writeContractAsync({
+            abi: recoveryPluginAbi,
+            address: safeZkSafeZkEmailRecoveryPlugin as `0x${string}`,
+            functionName: 'configureRecovery',
+            args: [
+                firstSafeOwner,
+                guardianAddr,
+                recoveryDelay,
+                previousOwnerInLinkedList
+            ],
+         })
+
+         console.debug('recovery configured');
+
+         const recoveryRouterAddr = await readContract(config, {
+            abi: recoveryPluginAbi,
+            address: safeZkSafeZkEmailRecoveryPlugin as `0x${string}`,
+            functionName: 'getRouterForSafe',
+            args: [address]
+        }) as string;
+
+        const subject = getRequestGuardianSubject(address);
+        const { requestId } = await relayer.acceptanceRequest(
+            recoveryRouterAddr,
+            guardianEmail,
+            acctCode,
+            templateIdx,
+            subject,
+        );
+
+        console.debug('req guard req id', requestId)
+        // TODO poll until guard req is complete or fails
+    }, [
+        address,
+        firstSafeOwner,
+        guardianEmail,
+        recoveryDelay,
+        accountCode,
+        setAccountCode,
+        writeContractAsync
+    ])
 
     return (
         <>
-            <Button disabled={!!safeModuleAddress} onClick={deployEmailRecoveryModule}>
-                1. Deploy Email Recovery Module
-            </Button>
-            <h2>TODO (below)</h2>
-            <Button disabled={!safeModuleAddress} onClick={enableEmailRecoveryModule}>
-                2. Enable Email Recovery Module
-            </Button>
+            {
+                isModuleEnabled ?   
+                <div>Recovery Module Enabled</div> :
+                <Button onClick={enableEmailRecoveryModule}>
+                    1. Enable Email Recovery Module
+                </Button>
+            }
             <div>
                 <label>
                     Guardian's Email
-                    <input disabled ={recoveryCfgEnabled} type='email' />
+                    <input disabled ={!isModuleEnabled}
+                        type='email'
+                        onInput={e => setGuardianEmail((e.target as HTMLTextAreaElement).value)}
+                    />
                 </label>
                 <label>
                     Recovery Delay
-                    <input disabled={recoveryCfgEnabled} type='number' />
+                    <input
+                        disabled={!isModuleEnabled}
+                        type='number'
+                        onInput={e => setRecoveryDelay(parseInt((e.target as HTMLTextAreaElement).value))}
+                    />
                 </label>
                 <Button
-                    disabled={recoveryCfgEnabled}
+                    disabled={!isModuleEnabled}
                     onClick={configureRecoveryAndRequestGuardian}>
-                    3. Configure Recovery & Request Guardian
+                    2. Configure Recovery & Request Guardian
                 </Button>
             </div>
         </>
