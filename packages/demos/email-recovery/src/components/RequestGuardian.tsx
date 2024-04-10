@@ -27,7 +27,9 @@ const RequestGuardian = () => {
     useAppContext();
   const stepsContext = useContext(StepsContext);
 
-  const [recoveryDelay, setRecoveryDelay] = useState(0);
+  const [loading, setLoading] = useState(false);
+  // 0 = 2 week default delay, don't do for demo
+  const [recoveryDelay, setRecoveryDelay] = useState(1);
 
   const isMobile = window.innerWidth < 768;
 
@@ -57,22 +59,24 @@ const RequestGuardian = () => {
       throw new Error("safe owner not found");
     }
 
-    const acctCode = await genAccountCode();
-    setAccountCode(accountCode);
-
-    const guardianSalt = await relayer.getAccountSalt(acctCode, guardianEmail);
-    const guardianAddr = await readContract(config, {
-      abi: recoveryPluginAbi,
-      address: safeZkSafeZkEmailRecoveryPlugin as `0x${string}`,
-      functionName: "computeEmailAuthAddress",
-      args: [guardianSalt],
-    });
-    // TODO Should this be something else?
-    const previousOwnerInLinkedList = pad("0x1", {
-      size: 20,
-    });
-
     try {
+      setLoading(true);
+
+      const acctCode = await genAccountCode();
+      setAccountCode(accountCode);
+  
+      const guardianSalt = await relayer.getAccountSalt(acctCode, guardianEmail);
+      const guardianAddr = await readContract(config, {
+        abi: recoveryPluginAbi,
+        address: safeZkSafeZkEmailRecoveryPlugin as `0x${string}`,
+        functionName: "computeEmailAuthAddress",
+        args: [guardianSalt],
+      });
+      // TODO Should this be something else?
+      const previousOwnerInLinkedList = pad("0x1", {
+        size: 20,
+      });
+  
       await writeContractAsync({
         abi: recoveryPluginAbi,
         address: safeZkSafeZkEmailRecoveryPlugin as `0x${string}`,
@@ -84,30 +88,34 @@ const RequestGuardian = () => {
           previousOwnerInLinkedList,
         ],
       });
-    } catch (error) {
-      console.log(error);
+  
+      console.debug("recovery configured");
+  
+      const recoveryRouterAddr = (await readContract(config, {
+        abi: recoveryPluginAbi,
+        address: safeZkSafeZkEmailRecoveryPlugin as `0x${string}`,
+        functionName: "getRouterForSafe",
+        args: [address],
+      })) as string;
+  
+      const subject = getRequestGuardianSubject(address);
+      const { requestId } = await relayer.acceptanceRequest(
+        recoveryRouterAddr,
+        guardianEmail,
+        acctCode,
+        templateIdx,
+        subject
+      );
+
+      console.debug('accpet req id', requestId);
+  
+      // TODO Use polling instead
+      stepsContext?.setStep(STEPS.REQUESTED_RECOVERIES);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
-
-    console.debug("recovery configured");
-
-    const recoveryRouterAddr = (await readContract(config, {
-      abi: recoveryPluginAbi,
-      address: safeZkSafeZkEmailRecoveryPlugin as `0x${string}`,
-      functionName: "getRouterForSafe",
-      args: [address],
-    })) as string;
-
-    const subject = getRequestGuardianSubject(address);
-    const { requestId } = await relayer.acceptanceRequest(
-      recoveryRouterAddr,
-      guardianEmail,
-      acctCode,
-      templateIdx,
-      subject
-    );
-
-    // TODO Use polling instead
-    stepsContext?.setStep(STEPS.REQUESTED_RECOVERIES);
 
     // let checkGuardianAcceptanceInterval = null
 
@@ -205,7 +213,7 @@ const RequestGuardian = () => {
         </div>
       </div>
       <div style={{ margin: "auto" }}>
-        <Button onClick={configureRecoveryAndRequestGuardian}>
+        <Button loading={loading} onClick={configureRecoveryAndRequestGuardian}>
           Configure Recovery and Request Guardian
         </Button>
       </div>
