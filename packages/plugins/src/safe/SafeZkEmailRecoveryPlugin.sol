@@ -100,8 +100,43 @@ contract SafeZkEmailRecoveryPlugin is EmailAccountRecovery {
     }
 
     /**
-     * EmailAccountRecovery implementations
+     * @notice Returns recovery config accociated with a safe address
+     * @param safe address to query storage with
      */
+    function getRecoveryConfig(
+        address safe
+    ) external view returns (RecoveryConfig memory) {
+        return recoveryConfigs[safe];
+    }
+
+    /**
+     * @notice Returns recovery request accociated with a safe address
+     * @param safe address to query storage with
+     */
+    function getRecoveryRequest(
+        address safe
+    ) external view returns (RecoveryRequest memory) {
+        return recoveryRequests[safe];
+    }
+
+    /**
+     * @notice Returns guardian request accociated with a safe address
+     * @param safe address to query storage with
+     */
+    function getGuardianRequest(
+        address safe
+    ) external view returns (GuardianRequest memory) {
+        return guardianRequests[safe];
+    }
+
+    // TODO test
+    /**
+     * @notice Returns the recovery router address that corresponds to the specified Safe account
+     * @param safe address to query storage with
+     */
+    function getRouterForSafe(address safe) external view returns (address) {
+        return safeAddrToRecoveryRouter[safe];
+    }
 
     /**
      * @inheritdoc EmailAccountRecovery
@@ -141,6 +176,86 @@ contract SafeZkEmailRecoveryPlugin is EmailAccountRecovery {
         templates[0][5] = "account";
         templates[0][6] = "{ethAddr}";
         return templates;
+    }
+
+    /**
+     * @notice Stores a recovery hash that can be used to recover a safe owner
+     *         at a later stage.
+     * @dev dkimRegistry can be a zero address if the user wants to use the
+     *      defaultDkimRegistry. customDelay can be 0 if the user wants to use defaultDelay
+     *      This function assumes it is being called from a safe - see how msg.sender
+     *      is interpreted. This is the first function that must be called when setting up recovery.
+     * @param owner Owner on the safe being recovered
+     * @param guardian The EmailAuth guardian address that has permissions to recover an owner on the account
+     * @param recoveryDelay A custom delay for recovery that is associated with a safe.
+     * @param previousOwnerInLinkedList The previous owner stored in the Safe owners linked list.
+     * This is needed to rotate the owner at the end of the recovery flow
+     */
+    function configureRecovery(
+        address owner,
+        address guardian,
+        address previousOwnerInLinkedList, // TODO: We should try fetch this automatically when needed. It is possible that owners are changed without going through the recovery plugin and this value could be outdated
+        uint256 recoveryDelay,
+        uint256 guardianCount,
+        uint256 threshold
+    ) external returns (address emailAccountRecoveryRouterAddress) {
+        address safe = msg.sender;
+        bool moduleEnabled = ISafe(safe).isModuleEnabled(address(this));
+        if (!moduleEnabled) revert MODULE_NOT_ENABLED();
+
+        require(
+            guardianRequests[guardian].safe == address(0),
+            "guardian already requested"
+        );
+
+        bool isOwner = ISafe(safe).isOwner(owner);
+        if (!isOwner) revert INVALID_OWNER(owner);
+
+        if (recoveryRequests[guardian].executeAfter > 0) {
+            revert RECOVERY_ALREADY_INITIATED();
+        }
+        require(
+            safeAddrToRecoveryRouter[safe] == address(0),
+            "router contract for safe already exits"
+        );
+
+        EmailAccountRecoveryRouter emailAccountRecoveryRouter = new EmailAccountRecoveryRouter(
+                address(this)
+            );
+        emailAccountRecoveryRouterAddress = address(emailAccountRecoveryRouter);
+
+        require(
+            recoveryRouterToSafeInfo[emailAccountRecoveryRouterAddress].safe ==
+                address(0),
+            "safe for the router contract already exits"
+        );
+        recoveryRouterToSafeInfo[
+            emailAccountRecoveryRouterAddress
+        ] = SafeAccountInfo(safe, previousOwnerInLinkedList);
+        safeAddrToRecoveryRouter[safe] = emailAccountRecoveryRouterAddress;
+
+        if (threshold < 1) revert INVALID_THRESHOLD();
+        if (guardianCount < threshold) revert INVALID_GUARDIAN_COUNT();
+
+        recoveryConfigs[safe] = RecoveryConfig({
+            guardianCount: guardianCount,
+            threshold: threshold,
+            recoveryDelay: recoveryDelay
+        });
+
+        recoveryRequests[safe] = RecoveryRequest({
+            executeAfter: 0,
+            ownerToSwap: owner,
+            pendingNewOwner: address(0),
+            approvalCount: 0
+        });
+
+        guardianRequests[guardian] = GuardianRequest({
+            safe: safe,
+            accepted: false
+        });
+
+        emit RecoveryConfigured(safe, owner, recoveryDelay);
     }
 
     function acceptGuardian(
@@ -235,125 +350,6 @@ contract SafeZkEmailRecoveryPlugin is EmailAccountRecovery {
             safeAccountInfo.safe,
             safeAccountInfo.previousOwnerInLinkedList
         );
-    }
-
-    /**
-     * @notice Returns recovery config accociated with a safe address
-     * @param safe address to query storage with
-     */
-    function getRecoveryConfig(
-        address safe
-    ) external view returns (RecoveryConfig memory) {
-        return recoveryConfigs[safe];
-    }
-
-    /**
-     * @notice Returns recovery request accociated with a safe address
-     * @param safe address to query storage with
-     */
-    function getRecoveryRequest(
-        address safe
-    ) external view returns (RecoveryRequest memory) {
-        return recoveryRequests[safe];
-    }
-
-    /**
-     * @notice Returns guardian request accociated with a safe address
-     * @param safe address to query storage with
-     */
-    function getGuardianRequest(
-        address safe
-    ) external view returns (GuardianRequest memory) {
-        return guardianRequests[safe];
-    }
-
-    // TODO test
-    /**
-     * @notice Returns the recovery router address that corresponds to the specified Safe account
-     * @param safe address to query storage with
-     */
-    function getRouterForSafe(address safe) external view returns (address) {
-        return safeAddrToRecoveryRouter[safe];
-    }
-
-    /**
-     * @notice Stores a recovery hash that can be used to recover a safe owner
-     *         at a later stage.
-     * @dev dkimRegistry can be a zero address if the user wants to use the
-     *      defaultDkimRegistry. customDelay can be 0 if the user wants to use defaultDelay
-     *      This function assumes it is being called from a safe - see how msg.sender
-     *      is interpreted. This is the first function that must be called when setting up recovery.
-     * @param owner Owner on the safe being recovered
-     * @param guardian The EmailAuth guardian address that has permissions to recover an owner on the account
-     * @param recoveryDelay A custom delay for recovery that is associated with a safe.
-     * @param previousOwnerInLinkedList The previous owner stored in the Safe owners linked list.
-     * This is needed to rotate the owner at the end of the recovery flow
-     */
-    function configureRecovery(
-        address owner,
-        address guardian,
-        address previousOwnerInLinkedList, // TODO: We should try fetch this automatically when needed. It is possible that owners are changed without going through the recovery plugin and this value could be outdated
-        uint256 recoveryDelay,
-        uint256 guardianCount,
-        uint256 threshold
-    ) external returns (address emailAccountRecoveryRouterAddress) {
-        address safe = msg.sender;
-        bool moduleEnabled = ISafe(safe).isModuleEnabled(address(this));
-        if (!moduleEnabled) revert MODULE_NOT_ENABLED();
-
-        require(
-            guardianRequests[guardian].safe == address(0),
-            "guardian already requested"
-        );
-
-        bool isOwner = ISafe(safe).isOwner(owner);
-        if (!isOwner) revert INVALID_OWNER(owner);
-
-        if (recoveryRequests[guardian].executeAfter > 0) {
-            revert RECOVERY_ALREADY_INITIATED();
-        }
-        require(
-            safeAddrToRecoveryRouter[safe] == address(0),
-            "router contract for safe already exits"
-        );
-
-        EmailAccountRecoveryRouter emailAccountRecoveryRouter = new EmailAccountRecoveryRouter(
-                address(this)
-            );
-        emailAccountRecoveryRouterAddress = address(emailAccountRecoveryRouter);
-
-        require(
-            recoveryRouterToSafeInfo[emailAccountRecoveryRouterAddress].safe ==
-                address(0),
-            "safe for the router contract already exits"
-        );
-        recoveryRouterToSafeInfo[
-            emailAccountRecoveryRouterAddress
-        ] = SafeAccountInfo(safe, previousOwnerInLinkedList);
-        safeAddrToRecoveryRouter[safe] = emailAccountRecoveryRouterAddress;
-
-        if (threshold < 1) revert INVALID_THRESHOLD();
-        if (guardianCount < threshold) revert INVALID_GUARDIAN_COUNT();
-
-        recoveryConfigs[safe] = RecoveryConfig({
-            guardianCount: guardianCount,
-            threshold: threshold,
-            recoveryDelay: recoveryDelay
-        });
-
-        recoveryRequests[safe] = RecoveryRequest({
-            executeAfter: 0,
-            ownerToSwap: owner,
-            pendingNewOwner: address(0),
-            approvalCount: 0
-        });
-
-        guardianRequests[guardian] = GuardianRequest({
-            safe: safe,
-            accepted: false
-        });
-
-        emit RecoveryConfigured(safe, owner, recoveryDelay);
     }
 
     /**
