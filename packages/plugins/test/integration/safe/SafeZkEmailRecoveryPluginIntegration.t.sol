@@ -127,7 +127,10 @@ contract SafeZkEmailRecoveryPlugin_Integration_Test is TestHelper {
             accountSalt
         );
         address previousOwnerInLinkedList = address(0x1);
-        uint256 customDelay = 0;
+        uint256 recoveryDelay = 1 seconds;
+        uint256 guardianCount = 1;
+        uint256 threshold = 1;
+
         uint templateIdx = 0;
 
         // Configure recovery
@@ -136,8 +139,10 @@ contract SafeZkEmailRecoveryPlugin_Integration_Test is TestHelper {
             .configureRecovery(
                 owner,
                 guardian,
-                customDelay,
-                previousOwnerInLinkedList
+                previousOwnerInLinkedList,
+                recoveryDelay,
+                guardianCount,
+                threshold
             );
         vm.stopPrank();
 
@@ -212,20 +217,19 @@ contract SafeZkEmailRecoveryPlugin_Integration_Test is TestHelper {
             templateIdx
         );
 
-        vm.warp(
-            block.timestamp +
-                safeZkEmailRecoveryPlugin.defaultDelay() +
-                1 seconds
-        );
+        vm.warp(block.timestamp + recoveryDelay);
 
         // Complete recovery
         IEmailAccountRecovery(emailAccountRecoveryRouterAddress)
             .completeRecovery();
 
         bool isOwner = Safe(payable(safeAddress)).isOwner(newOwner.addr);
-        assertTrue(isOwner);
+        assertTrue(isOwner, "New owner has not been added to the Safe");
 
         bool oldOwnerIsOwner = Safe(payable(safeAddress)).isOwner(owner);
-        assertFalse(oldOwnerIsOwner);
+        assertFalse(
+            oldOwnerIsOwner,
+            "Old owner has not been removed from the Safe"
+        );
     }
 }
