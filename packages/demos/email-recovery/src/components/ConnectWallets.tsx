@@ -1,7 +1,5 @@
 import { Button } from "./Button";
 import walletIcon from "../assets/wallet.svg";
-import infoIcon from "../assets/infoIcon.svg";
-import { Web3Provider } from "../providers/Web3Provider";
 import { ConnectKitButton } from "connectkit";
 import { useAccount } from "wagmi";
 import { useContext } from "react";
@@ -26,7 +24,7 @@ const ConnectWallets = () => {
         Copy the link and import into your safe wallet
       </p> */}
       <ConnectKitButton.Custom>
-        {({ isConnected, show, truncatedAddress, ensName }) => {
+        {({ show }) => {
           return (
             <Button onClick={show} endIcon={<img src={walletIcon} />}>
               Connect Genosis Safe

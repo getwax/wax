@@ -30,7 +30,7 @@ const RequestedRecoveries = () => {
 
   const [newOwner, setNewOwner] = useState<string>();
   const [buttonState, setButtonState] = useState(
-    BUTTON_STATES.TRIGGER_RECOVERY
+    BUTTON_STATES.TRIGGER_RECOVERY,
   );
   const [loading, setLoading] = useState<boolean>(false);
   const [gurdianRequestId, setGuardianRequestId] = useState<number>();
@@ -66,7 +66,7 @@ const RequestedRecoveries = () => {
       recoveryRouterAddr as string,
       guardianEmail,
       templateIdx,
-      subject
+      subject,
     );
 
     setGuardianRequestId(requestId);
@@ -122,11 +122,7 @@ const RequestedRecoveries = () => {
     switch (buttonState) {
       case BUTTON_STATES.TRIGGER_RECOVERY:
         return (
-          <Button
-            loading={loading}
-            onClick={requestRecovery}
-            endIcon={<img src={cancelRecoveryIcon} />}
-          >
+          <Button loading={loading} onClick={requestRecovery}>
             Trigger Recovery
           </Button>
         );
@@ -194,8 +190,8 @@ const RequestedRecoveries = () => {
                 height: "fit-content",
               }}
             >
-              <img src={recoveredIcon} style={{ marginRight: "0.5rem" }} />
               Recovered
+              <img src={recoveredIcon} style={{ marginRight: "0.5rem" }} />
             </div>
           ) : null}
         </div>
