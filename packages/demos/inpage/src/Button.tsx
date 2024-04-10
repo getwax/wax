@@ -1,104 +1,104 @@
-import jss from 'jss';
-import color from 'color';
-import React, { HTMLProps, useCallback, useState } from 'react';
-import sheetsRegistry from './sheetsRegistry';
-import { bgColor, dangerColor, fgColor } from './styleConstants';
-import classes from './helpers/classes';
-import runAsync from '../demo/helpers/runAsync';
+import jss from "jss";
+import color from "color";
+import React, { HTMLProps, useCallback, useState } from "react";
+import sheetsRegistry from "./sheetsRegistry";
+import { bgColor, dangerColor, fgColor } from "./styleConstants";
+import classes from "./helpers/classes";
+import runAsync from "../demo/helpers/runAsync";
 
 const sheet = jss.createStyleSheet({
   Button: {
-    '& > .button-content': {
-      padding: '0.5em 1em',
+    "& > .button-content": {
+      padding: "0.5em 1em",
     },
 
-    textAlign: 'center',
-    cursor: 'pointer',
-    userSelect: 'none',
+    textAlign: "center",
+    cursor: "pointer",
+    userSelect: "none",
 
     background: color(fgColor).darken(0.1).toString(),
     border: `1px solid ${color(fgColor).darken(0.1).toString()}`,
     color: bgColor,
 
-    position: 'relative',
+    position: "relative",
 
-    '&:hover > .hover-error': {
-      display: 'inline-block',
+    "&:hover > .hover-error": {
+      display: "inline-block",
     },
   },
   ButtonStates: {
-    '&:hover': {
+    "&:hover": {
       background: fgColor,
       border: `1px solid ${fgColor}`,
     },
 
-    '&:active': {
-      background: 'white',
-      border: '1px solid white',
+    "&:active": {
+      background: "white",
+      border: "1px solid white",
     },
   },
   ButtonSecondary: {
-    background: 'transparent',
+    background: "transparent",
     border: `1px solid ${fgColor}`,
     color: fgColor,
 
-    '& .loading-marker': {
+    "& .loading-marker": {
       background: fgColor,
     },
   },
   ButtonSecondaryStates: {
-    '&:hover': {
+    "&:hover": {
       background: color(fgColor).alpha(0.05).toString(),
     },
 
-    '&:active': {
+    "&:active": {
       background: color(fgColor).alpha(0.15).toString(),
     },
   },
   ButtonDisabled: {
-    filter: 'brightness(50%)',
-    cursor: 'initial',
+    filter: "brightness(50%)",
+    cursor: "initial",
   },
   ButtonError: {
     border: `1px solid ${dangerColor}`,
     color: dangerColor,
 
-    '&:hover': {
+    "&:hover": {
       border: `1px solid ${dangerColor}`,
     },
 
-    '&:active': {
+    "&:active": {
       border: `1px solid ${dangerColor}`,
     },
   },
   HoverError: {
-    display: 'none',
-    width: '100%',
-    position: 'absolute',
+    display: "none",
+    width: "100%",
+    position: "absolute",
   },
   HoverErrorContent: {
-    position: 'absolute',
-    transform: 'translateX(-50%)',
-    top: '-2.2em',
+    position: "absolute",
+    transform: "translateX(-50%)",
+    top: "-2.2em",
 
-    display: 'block',
+    display: "block",
     background: bgColor,
   },
   LoadingMarker: {
-    position: 'absolute',
-    bottom: '0px',
-    left: '0px',
-    width: '3px',
-    height: '3px',
+    position: "absolute",
+    bottom: "0px",
+    left: "0px",
+    width: "3px",
+    height: "3px",
     background: bgColor,
-    animation: '$loading-marker 3s ease infinite',
+    animation: "$loading-marker 3s ease infinite",
   },
-  '@keyframes loading-marker': {
-    '0%, 100%': {
-      left: 'max(0%, min(30%, calc(50% - 50px)))',
+  "@keyframes loading-marker": {
+    "0%, 100%": {
+      left: "max(0%, min(30%, calc(50% - 50px)))",
     },
-    '50%': {
-      left: 'min(calc(100% - 3px), max(70%, calc(50% + 50px)))',
+    "50%": {
+      left: "min(calc(100% - 3px), max(70%, calc(50% + 50px)))",
     },
   },
 });
@@ -109,10 +109,10 @@ const Button = ({
   children,
   secondary,
   errorStyle,
-  disabled,
+  disabled = false,
   onPress = () => undefined,
   ...props
-}: Omit<HTMLProps<HTMLDivElement>, 'className' | 'onClick'> & {
+}: Omit<HTMLProps<HTMLDivElement>, "className" | "onClick"> & {
   secondary?: boolean;
   errorStyle?: boolean;
   onPress?: (
@@ -168,7 +168,7 @@ const Button = ({
       )}
     >
       {error ? (
-        <div {...classes('hover-error', sheet.classes.HoverError)}>
+        <div {...classes("hover-error", sheet.classes.HoverError)}>
           <div className={sheet.classes.HoverErrorContent}>
             <Button
               onPress={(e) => {
@@ -180,8 +180,8 @@ const Button = ({
               secondary
               errorStyle
               style={{
-                display: 'inline-block',
-                whiteSpace: 'nowrap',
+                display: "inline-block",
+                whiteSpace: "nowrap",
               }}
             >
               {shortErrorString(error)}
@@ -190,7 +190,7 @@ const Button = ({
         </div>
       ) : undefined}
       {loading && (
-        <div {...classes('loading-marker', sheet.classes.LoadingMarker)} />
+        <div {...classes("loading-marker", sheet.classes.LoadingMarker)} />
       )}
       <div className="button-content">{children}</div>
     </div>

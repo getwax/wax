@@ -3,7 +3,7 @@ import { Button } from "./Button";
 import { useAccount, useReadContract, useWriteContract } from "wagmi";
 import { safeZkSafeZkEmailRecoveryPlugin } from "../../contracts.base-sepolia.json";
 import { abi as safeAbi } from "../abi/Safe.json";
-import { useCallback, useContext, useState } from "react";
+import { useCallback, useContext, useEffect, useState } from "react";
 import { StepsContext } from "../App";
 import { STEPS } from "../constants";
 
@@ -12,6 +12,12 @@ const SafeModuleRecovery = () => {
   const { writeContractAsync } = useWriteContract();
   const stepsContext = useContext(StepsContext);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!address) {
+      stepsContext?.setStep(STEPS.CONNECT_WALLETS);
+    }
+  }, [address, stepsContext]);
 
   const { data: isModuleEnabled } = useReadContract({
     address,
@@ -40,7 +46,6 @@ const SafeModuleRecovery = () => {
       functionName: "enableModule",
       args: [safeZkSafeZkEmailRecoveryPlugin],
     });
-
   }, [address, writeContractAsync]);
 
   return (
@@ -49,8 +54,8 @@ const SafeModuleRecovery = () => {
         Connected wallet: <ConnectKitButton />
       </div>
       {!isModuleEnabled ? (
-        <Button loading={loading} onClick={enableEmailRecoveryModule}>
-          Enable email recovery module
+        <Button disabled={loading} onClick={enableEmailRecoveryModule}>
+          Enable Email Recovery Module
         </Button>
       ) : null}
     </div>

@@ -1,14 +1,16 @@
-import React from "react";
+import React, { ReactNode } from "react";
 
-export function Button({
-  children,
-  ...buttonProps
-}: React.ComponentPropsWithoutRef<"button">) {
+type ButtonProps = {
+  endIcon?: ReactNode;
+  loading?: boolean;
+} & React.ComponentPropsWithoutRef<"button">;
+
+export function Button({ children, ...buttonProps }: ButtonProps) {
   return (
     <div className="button">
       <button {...buttonProps}>
         {children}
-        {buttonProps.endIcon ? buttonProps.endIcon : null}
+        {buttonProps?.endIcon ? buttonProps?.endIcon : null}
         {buttonProps?.loading ? <div className="loader" /> : null}
       </button>
     </div>
