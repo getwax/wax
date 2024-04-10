@@ -25,7 +25,7 @@ const BUTTON_STATES = {
 const RequestedRecoveries = () => {
   const isMobile = window.innerWidth < 768;
   const { address } = useAccount();
-  const { guardianEmail, setGuardianEmail } = useAppContext();
+  const { guardianEmail } = useAppContext();
   const stepsContext = useContext(StepsContext);
 
   const [newOwner, setNewOwner] = useState<string>();
@@ -71,31 +71,28 @@ const RequestedRecoveries = () => {
 
     setGuardianRequestId(requestId);
 
-
-    let checkRequestRecoveryStatusInterval = null
-
-    const checkGuardianAcceptance = async () => {
-      if (!requestId) {
-        throw new Error("missing guardian request id");
-      }
-
-      const resBody = await relayer.requestStatus(requestId);
-      console.debug("guardian req res body", resBody);
-
-      if(resBody?.is_success) {
-          stepsContext?.setStep(STEPS.REQUESTED_RECOVERIES);
-        checkRequestRecoveryStatusInterval?.clearInterval()
-      }
-    }
-
-    checkRequestRecoveryStatusInterval = setInterval(async () => {
-        const res = await checkGuardianAcceptance();
-        console.log(res)
-    }, 5000);
-
-
     setLoading(false);
     setButtonState(BUTTON_STATES.COMPLETE_RECOVERY);
+
+    // let checkRequestRecoveryStatusInterval = null
+
+    // const checkGuardianAcceptance = async () => {
+    //   if (!requestId) {
+    //     throw new Error("missing guardian request id");
+    //   }
+
+    //   const resBody = await relayer.requestStatus(requestId);
+    //   console.debug("guardian req res body", resBody);
+
+    //   if(resBody?.is_success) {
+    //     checkRequestRecoveryStatusInterval?.clearInterval()
+    //   }
+    // }
+
+    // checkRequestRecoveryStatusInterval = setInterval(async () => {
+    //     const res = await checkGuardianAcceptance();
+    //     console.log(res)
+    // }, 5000);
   }, [recoveryRouterAddr, address, guardianEmail, newOwner]);
 
   const completeRecovery = useCallback(async () => {
@@ -112,14 +109,14 @@ const RequestedRecoveries = () => {
     setButtonState(BUTTON_STATES.RECOVERY_COMPLETED);
   }, [recoveryRouterAddr]);
 
-  const checkGuardianAcceptance = useCallback(async () => {
-    if (!gurdianRequestId) {
-      throw new Error("missing guardian request id");
-    }
+  // const checkGuardianAcceptance = useCallback(async () => {
+  //   if (!gurdianRequestId) {
+  //     throw new Error("missing guardian request id");
+  //   }
 
-    const resBody = await relayer.requestStatus(gurdianRequestId);
-    console.debug("guardian req res body", resBody);
-  }, [gurdianRequestId]);
+  //   const resBody = await relayer.requestStatus(gurdianRequestId);
+  //   console.debug("guardian req res body", resBody);
+  // }, [gurdianRequestId]);
 
   const getButtonComponent = () => {
     switch (buttonState) {
@@ -236,7 +233,7 @@ const RequestedRecoveries = () => {
                   style={{ width: "100%" }}
                   type="email"
                   value={guardianEmail}
-                  onChange={(e) => setGuardianEmail(e.target.value)}
+                  readOnly={true}
                 />
               </div>
               <div

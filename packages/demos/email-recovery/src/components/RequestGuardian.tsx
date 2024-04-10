@@ -106,28 +106,29 @@ const RequestGuardian = () => {
       subject
     );
 
-    let checkGuardianAcceptanceInterval = null
+    // TODO Use polling instead
+    stepsContext?.setStep(STEPS.REQUESTED_RECOVERIES);
 
-    const checkGuardianAcceptance = async () => {
-      if (!requestId) {
-        throw new Error("missing guardian request id");
-      }
+    // let checkGuardianAcceptanceInterval = null
 
-      const resBody = await relayer.requestStatus(requestId);
-      console.debug("guardian req res body", resBody);
+    // const checkGuardianAcceptance = async () => {
+    //   if (!requestId) {
+    //     throw new Error("missing guardian request id");
+    //   }
 
-      if(resBody?.is_success) {
-          stepsContext?.setStep(STEPS.REQUESTED_RECOVERIES);
-        checkGuardianAcceptanceInterval?.clearInterval()
-      }
-    }
+    //   const resBody = await relayer.requestStatus(requestId);
+    //   console.debug("guardian req res body", resBody);
 
-    checkGuardianAcceptanceInterval = setInterval(async () => {
-        const res = await checkGuardianAcceptance();
-        console.log(res)
-    }, 5000);
+    //   if(resBody?.is_success) {
+    //       stepsContext?.setStep(STEPS.REQUESTED_RECOVERIES);
+    //     checkGuardianAcceptanceInterval?.clearInterval()
+    //   }
+    // }
 
-    // TODO poll until guard req is complete or fails
+    // checkGuardianAcceptanceInterval = setInterval(async () => {
+    //     const res = await checkGuardianAcceptance();
+    //     console.log(res)
+    // }, 5000);
   }, [
     address,
     firstSafeOwner,
@@ -195,7 +196,7 @@ const RequestGuardian = () => {
               <input
                 style={{ width: "1.875rem", marginLeft: "1rem" }}
                 type="number"
-                min={0}
+                min={1}
                 value={recoveryDelay}
                 onChange={(e) => setRecoveryDelay(e.target.value)}
               />
