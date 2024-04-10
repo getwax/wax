@@ -19,24 +19,24 @@ const ConnectWallets = () => {
 
   return (
     <div className="connect-wallets-container">
-      <Button endIcon={<img src={walletIcon} />}>Connect Genosis Safe</Button>
+      {/* <Button endIcon={<img src={walletIcon} />}>Connect Genosis Safe</Button>
 
       <p color="#CECFD2" style={{ display: "flex", gap: "0.5rem" }}>
         <img src={infoIcon} alt="info" />
         Copy the link and import into your safe wallet
-      </p>
+      </p> */}
       <ConnectKitButton.Custom>
         {({ isConnected, show, truncatedAddress, ensName }) => {
           return (
             <Button onClick={show} endIcon={<img src={walletIcon} />}>
-              Connect Test Wallet
+              Connect Genosis Safe
             </Button>
           );
         }}
       </ConnectKitButton.Custom>
-      <p style={{ textDecoration: "underline" }}>
+      {/* <p style={{ textDecoration: "underline" }}>
         Or, recover existing wallet instead ➔
-      </p>
+      </p> */}
     </div>
   );
 };
