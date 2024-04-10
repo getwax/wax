@@ -107,36 +107,32 @@ const RequestGuardian = () => {
         subject
       );
 
-      console.debug('accpet req id', requestId);
+      console.debug('accept req id', requestId);
   
       // TODO Use polling instead
       stepsContext?.setStep(STEPS.REQUESTED_RECOVERIES);
+      // let checkGuardianAcceptanceInterval = null
+
+      // const checkGuardianAcceptance = async () => {
+      //   if (!requestId) {
+      //     throw new Error("missing guardian request id");
+      //   }
+      //   const resBody = await relayer.requestStatus(requestId);
+      //   console.debug("guardian req res body", resBody);
+      //   if(resBody?.is_success) {
+      //     stepsContext?.setStep(STEPS.REQUESTED_RECOVERIES);
+      //     checkGuardianAcceptanceInterval?.clearInterval()
+      //   }
+      // }
+      // checkGuardianAcceptanceInterval = setInterval(async () => {
+      //     const res = await checkGuardianAcceptance();
+      //     console.log(res)
+      // }, 5000);
     } catch (err) {
       console.error(err);
     } finally {
       setLoading(false);
     }
-
-    // let checkGuardianAcceptanceInterval = null
-
-    // const checkGuardianAcceptance = async () => {
-    //   if (!requestId) {
-    //     throw new Error("missing guardian request id");
-    //   }
-
-    //   const resBody = await relayer.requestStatus(requestId);
-    //   console.debug("guardian req res body", resBody);
-
-    //   if(resBody?.is_success) {
-    //       stepsContext?.setStep(STEPS.REQUESTED_RECOVERIES);
-    //     checkGuardianAcceptanceInterval?.clearInterval()
-    //   }
-    // }
-
-    // checkGuardianAcceptanceInterval = setInterval(async () => {
-    //     const res = await checkGuardianAcceptance();
-    //     console.log(res)
-    // }, 5000);
   }, [
     address,
     firstSafeOwner,
@@ -200,7 +196,7 @@ const RequestGuardian = () => {
               />
             </div>
             <div>
-              <span>Recovery Delay</span>
+              <span>Recovery Delay (seconds)</span>
               <input
                 style={{ width: "1.875rem", marginLeft: "1rem" }}
                 type="number"

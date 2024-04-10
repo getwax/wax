@@ -85,6 +85,8 @@ const RequestedRecoveries = () => {
     //   console.debug("guardian req res body", resBody);
 
     //   if(resBody?.is_success) {
+    //     setLoading(false);
+    //     setButtonState(BUTTON_STATES.COMPLETE_RECOVERY);
     //     checkRequestRecoveryStatusInterval?.clearInterval()
     //   }
     // }

@@ -29,7 +29,7 @@ const ConnectWallets = () => {
         {({ isConnected, show, truncatedAddress, ensName }) => {
           return (
             <Button onClick={show} endIcon={<img src={walletIcon} />}>
-              Connect Genosis Safe
+              Connect Safe
             </Button>
           );
         }}
