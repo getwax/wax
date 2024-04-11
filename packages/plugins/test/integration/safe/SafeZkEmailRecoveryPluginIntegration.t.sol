@@ -4,7 +4,9 @@ pragma solidity ^0.8.12;
 import "forge-std/Test.sol";
 import "forge-std/console2.sol";
 import {TestHelper} from "../../unit/utils/TestHelper.sol";
-import {SafeZkEmailRecoveryPlugin, RecoveryRequest, GuardianRequest} from "../../../src/safe/SafeZkEmailRecoveryPlugin.sol";
+import {SafeZkEmailRecoveryPlugin} from "../../../src/safe/SafeZkEmailRecoveryPlugin.sol";
+import {ISafeZkEmailRecoveryPlugin} from "../../../src/safe/interface/ISafeZkEmailRecoveryPlugin.sol";
+
 import {IEmailAccountRecovery} from "../../../src/safe/EmailAccountRecoveryRouter.sol";
 import {MockGroth16Verifier} from "../../../src/safe/utils/MockGroth16Verifier.sol";
 import {Safe} from "safe-contracts/contracts/Safe.sol";
@@ -176,8 +178,9 @@ contract SafeZkEmailRecoveryPlugin_Integration_Test is TestHelper {
         IEmailAccountRecovery(emailAccountRecoveryRouterAddress)
             .handleAcceptance(emailAuthMsg, templateIdx);
 
-        GuardianRequest memory guardianRequest = safeZkEmailRecoveryPlugin
-            .getGuardianRequest(guardian);
+        ISafeZkEmailRecoveryPlugin.GuardianRequest
+            memory guardianRequest = safeZkEmailRecoveryPlugin
+                .getGuardianRequest(guardian);
         assertTrue(guardianRequest.accepted);
         assertEq(guardianRequest.safe, safeAddress);
 

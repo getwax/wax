@@ -4,7 +4,8 @@ pragma solidity ^0.8.12;
 import "forge-std/Test.sol";
 import "forge-std/console2.sol";
 import {TestHelper} from "../utils/TestHelper.sol";
-import {SafeZkEmailRecoveryPlugin, RecoveryRequest, RecoveryConfig} from "../../../src/safe/SafeZkEmailRecoveryPlugin.sol";
+import {SafeZkEmailRecoveryPlugin} from "../../../src/safe/SafeZkEmailRecoveryPlugin.sol";
+import {ISafeZkEmailRecoveryPlugin} from "../../../src/safe/interface/ISafeZkEmailRecoveryPlugin.sol";
 import {SafeZkEmailRecoveryPluginHarness} from "../utils/SafeZkEmailRecoveryPluginHarness.sol";
 import {Safe} from "safe-contracts/contracts/Safe.sol";
 import {SafeProxy} from "safe-contracts/contracts/proxies/SafeProxy.sol";
@@ -174,7 +175,7 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
         safe.disableModule(prevModuleInLinkedList, moduleToDisable);
 
         // Assert
-        vm.expectRevert(SafeZkEmailRecoveryPlugin.MODULE_NOT_ENABLED.selector);
+        vm.expectRevert(ISafeZkEmailRecoveryPlugin.ModuleNotFound.selector);
         safeZkEmailRecoveryPlugin.configureRecovery(
             owner,
             guardian,
@@ -198,7 +199,7 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
         vm.startPrank(safeAddress);
         vm.expectRevert(
             abi.encodeWithSelector(
-                SafeZkEmailRecoveryPlugin.INVALID_OWNER.selector,
+                ISafeZkEmailRecoveryPlugin.InvalidOwner.selector,
                 owner,
                 invalidOwner
             )
@@ -249,7 +250,7 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
         // Assert
         vm.startPrank(safeAddress);
         vm.expectRevert(
-            SafeZkEmailRecoveryPlugin.RECOVERY_ALREADY_INITIATED.selector
+            ISafeZkEmailRecoveryPlugin.RecoveryAlreadyInitiated.selector
         );
         safeZkEmailRecoveryPlugin.configureRecovery(
             owner,
@@ -284,11 +285,14 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
             threshold
         );
 
-        RecoveryRequest memory recoveryRequest = safeZkEmailRecoveryPlugin
-            .getRecoveryRequest(safeAddress);
+        ISafeZkEmailRecoveryPlugin.RecoveryRequest
+            memory recoveryRequest = safeZkEmailRecoveryPlugin
+                .getRecoveryRequest(safeAddress);
 
-        RecoveryConfig memory recoveryConfig = safeZkEmailRecoveryPlugin
-            .getRecoveryConfig(safeAddress);
+        ISafeZkEmailRecoveryPlugin.RecoveryConfig
+            memory recoveryConfig = safeZkEmailRecoveryPlugin.getRecoveryConfig(
+                safeAddress
+            );
 
         // Assert
         assertEq(recoveryRequest.executeAfter, 0);
@@ -318,10 +322,13 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
             threshold
         );
 
-        RecoveryRequest memory recoveryRequest = safeZkEmailRecoveryPlugin
-            .getRecoveryRequest(safeAddress);
-        RecoveryConfig memory recoveryConfig = safeZkEmailRecoveryPlugin
-            .getRecoveryConfig(safeAddress);
+        ISafeZkEmailRecoveryPlugin.RecoveryRequest
+            memory recoveryRequest = safeZkEmailRecoveryPlugin
+                .getRecoveryRequest(safeAddress);
+        ISafeZkEmailRecoveryPlugin.RecoveryConfig
+            memory recoveryConfig = safeZkEmailRecoveryPlugin.getRecoveryConfig(
+                safeAddress
+            );
 
         // Assert
         assertEq(recoveryRequest.executeAfter, 0);
@@ -390,10 +397,12 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
         );
 
         // Assert
-        RecoveryRequest memory recoveryRequest1 = safeZkEmailRecoveryPlugin
-            .getRecoveryRequest(safeAddress);
-        RecoveryRequest memory recoveryRequest2 = safeZkEmailRecoveryPlugin
-            .getRecoveryRequest(safe2Address);
+        ISafeZkEmailRecoveryPlugin.RecoveryRequest
+            memory recoveryRequest1 = safeZkEmailRecoveryPlugin
+                .getRecoveryRequest(safeAddress);
+        ISafeZkEmailRecoveryPlugin.RecoveryRequest
+            memory recoveryRequest2 = safeZkEmailRecoveryPlugin
+                .getRecoveryRequest(safe2Address);
 
         assertEq(recoveryRequest1.executeAfter, 0);
         assertEq(recoveryRequest1.pendingNewOwner, address(0));
@@ -436,7 +445,7 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
 
         // Act & Assert
         vm.expectRevert(
-            SafeZkEmailRecoveryPlugin.RECOVERY_ALREADY_INITIATED.selector
+            ISafeZkEmailRecoveryPlugin.RecoveryAlreadyInitiated.selector
         );
         safeZkEmailRecoveryPlugin.exposedProcessRecovery(
             guardian,
@@ -489,8 +498,9 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
             bytes32(0)
         );
 
-        RecoveryRequest memory recoveryRequest = safeZkEmailRecoveryPlugin
-            .getRecoveryRequest(safeAddress);
+        ISafeZkEmailRecoveryPlugin.RecoveryRequest
+            memory recoveryRequest = safeZkEmailRecoveryPlugin
+                .getRecoveryRequest(safeAddress);
 
         // Assert
         assertEq(recoveryRequest.executeAfter, expectedExecuteAfter);
@@ -503,7 +513,7 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
 
         // Act & Assert
         vm.expectRevert(
-            SafeZkEmailRecoveryPlugin.RECOVERY_NOT_INITIATED.selector
+            ISafeZkEmailRecoveryPlugin.RecoveryNotInitiated.selector
         );
         safeZkEmailRecoveryPlugin.recoverPlugin(
             safeAddress,
@@ -545,7 +555,7 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
 
         // Act
         vm.startPrank(recoveryAccount);
-        vm.expectRevert(SafeZkEmailRecoveryPlugin.DELAY_NOT_PASSED.selector);
+        vm.expectRevert(ISafeZkEmailRecoveryPlugin.DelayNotPassed.selector);
         safeZkEmailRecoveryPlugin.recoverPlugin(
             safeAddress,
             previousOwnerInLinkedList
@@ -601,8 +611,9 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
         bool isOwner = Safe(payable(safeAddress)).isOwner(newOwner.addr);
         assertTrue(isOwner);
 
-        RecoveryRequest memory recoveryRequest = safeZkEmailRecoveryPlugin
-            .getRecoveryRequest(safeAddress);
+        ISafeZkEmailRecoveryPlugin.RecoveryRequest
+            memory recoveryRequest = safeZkEmailRecoveryPlugin
+                .getRecoveryRequest(safeAddress);
         assertEq(recoveryRequest.executeAfter, 0);
         assertEq(recoveryRequest.pendingNewOwner, address(0));
     }
@@ -634,8 +645,9 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
             threshold
         );
 
-        RecoveryRequest memory recoveryRequest = safeZkEmailRecoveryPlugin
-            .getRecoveryRequest(safeAddress);
+        ISafeZkEmailRecoveryPlugin.RecoveryRequest
+            memory recoveryRequest = safeZkEmailRecoveryPlugin
+                .getRecoveryRequest(safeAddress);
 
         Vm.Wallet memory newOwner = Carol;
 
@@ -698,8 +710,9 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
             bytes32(0)
         );
 
-        RecoveryRequest memory recoveryRequestBefore = safeZkEmailRecoveryPlugin
-            .getRecoveryRequest(safeAddress);
+        ISafeZkEmailRecoveryPlugin.RecoveryRequest
+            memory recoveryRequestBefore = safeZkEmailRecoveryPlugin
+                .getRecoveryRequest(safeAddress);
 
         // Act
         vm.startPrank(safeAddress);
@@ -707,8 +720,9 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
         emit RecoveryCancelled(safeAddress);
         safeZkEmailRecoveryPlugin.cancelRecovery();
 
-        RecoveryRequest memory recoveryRequestAfter = safeZkEmailRecoveryPlugin
-            .getRecoveryRequest(safeAddress);
+        ISafeZkEmailRecoveryPlugin.RecoveryRequest
+            memory recoveryRequestAfter = safeZkEmailRecoveryPlugin
+                .getRecoveryRequest(safeAddress);
 
         // Assert
         assertEq(recoveryRequestBefore.pendingNewOwner, newOwner.addr);
