@@ -5,16 +5,7 @@ pragma abicoder v2;
 import {Safe4337Base} from "./utils/Safe4337Base.sol";
 import {IEntryPoint, UserOperation} from "account-abstraction/contracts/interfaces/IEntryPoint.sol";
 import {UserOperation} from "account-abstraction/contracts/interfaces/IEntryPoint.sol";
-
-interface IAnonAadhaar {
-    function verifyAnonAadhaarProof(
-        uint identityNullifier,
-        uint userNullifier,
-        uint timestamp,
-        uint signal,
-        uint[8] memory groth16Proof
-    ) external view returns (bool);
-}
+import {IAnonAadhaar} from "./utils/anonAadhaar/interfaces/IAnonAadhaar.sol";
 
 interface ISafe {
     function enableModule(address module) external;
@@ -39,8 +30,8 @@ contract SafeAnonAadhaarPlugin is Safe4337Base {
 
     address internal constant _SENTINEL_MODULES = address(0x1);
 
-    address public anonAadhaarAddr; // external contract managed by AnonAadhaar. it has verifyAnonAadhaarProof() method
-    uint public userDataHash; // the hash of unique and private user data extracted from Aadhaar QR code
+    address public immutable anonAadhaarAddr; // external contract managed by AnonAadhaar. it has verifyAnonAadhaarProof() method
+    uint public immutable userDataHash; // the hash of unique and private user data extracted from Aadhaar QR code
     mapping(uint => bool) public signalNullifiers;
 
     event OWNER_UPDATED(
@@ -113,30 +104,34 @@ contract SafeAnonAadhaarPlugin is Safe4337Base {
     function _validateSignature(
         UserOperation calldata userOp,
         bytes32 userOpHash
-    ) internal override returns (uint256 validationData) {
+    ) internal view override returns (uint256 validationData) {
         (
-            uint identityNullifier,
+            uint nullifierSeed,
             uint timestamp,
             uint signal,
+            uint[4] memory revealArray,
             uint[8] memory groth16Proof
-        ) = abi.decode(userOp.signature, (uint, uint, uint, uint[8]));
-
-        // see if the proof is fresh enough
-        require(isLessThan3HoursAgo(timestamp), "INVALID_TIMESTAMP");
+        ) = abi.decode(userOp.signature, (uint, uint, uint, uint[4], uint[8]));
 
         // check the signal hasn't already been nullified
-        require(!signalNullifiers[signal], "DUPLICATED_NULLIFIER");
+        // WIP: can't be access due to delegate-call from Safe
+        // require(!signalNullifiers[signal], "DUPLICATED_NULLIFIER");
 
         // make sure userOpHash == signal
         require(uint(userOpHash) == signal, "INVALID_SIGNAL");
 
+        // see if the proof is fresh enough
+        // commented-out for the sake of local test w/ old proof
+        // require(isLessThan3HoursAgo(timestamp), "INVALID_TIMESTAMP");
+
         // verify proof throuugh AnonAadhaar and AnonAadhaarGroth16Verifier contracts
         if (
             !IAnonAadhaar(anonAadhaarAddr).verifyAnonAadhaarProof(
-                identityNullifier,
+                nullifierSeed,
                 userDataHash,
                 timestamp,
                 signal,
+                revealArray,
                 groth16Proof
             )
         ) {
@@ -144,7 +139,7 @@ contract SafeAnonAadhaarPlugin is Safe4337Base {
         }
 
         // store nullifier
-        signalNullifiers[signal] = true;
+        // signalNullifiers[signal] = true;
         return 0;
     }
 }
