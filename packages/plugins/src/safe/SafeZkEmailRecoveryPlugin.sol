@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {EmailAccountRecovery} from "ether-email-auth/packages/contracts/src/EmailAccountRecovery.sol";
+import {GuardianManager} from "./GuardianManager.sol";
 import {ISafeZkEmailRecoveryPlugin} from "./interface/ISafeZkEmailRecoveryPlugin.sol";
 import {ISafe} from "./utils/Safe4337Base.sol";
 import {EmailAccountRecoveryRouter} from "./EmailAccountRecoveryRouter.sol";
@@ -23,6 +24,7 @@ import "forge-std/console2.sol";
  * NOT FOR PRODUCTION USE
  */
 contract SafeZkEmailRecoveryPlugin is
+    GuardianManager,
     ISafeZkEmailRecoveryPlugin,
     EmailAccountRecovery
 {
@@ -66,7 +68,7 @@ contract SafeZkEmailRecoveryPlugin is
         return recoveryRequests[safe];
     }
 
-    /// @inheritdoc ISafeZkEmailRecoveryPlugin
+    // /// @inheritdoc ISafeZkEmailRecoveryPlugin
     function getGuardianRequest(
         address safe
     ) external view returns (GuardianRequest memory) {
@@ -104,41 +106,42 @@ contract SafeZkEmailRecoveryPlugin is
         returns (string[][] memory)
     {
         string[][] memory templates = new string[][](1);
-        templates[0] = new string[](7);
+        templates[0] = new string[](9);
         templates[0][0] = "Update";
         templates[0][1] = "owner";
-        templates[0][2] = "to";
+        templates[0][2] = "from";
         templates[0][3] = "{ethAddr}";
-        templates[0][4] = "on";
-        templates[0][5] = "account";
-        templates[0][6] = "{ethAddr}";
+        templates[0][4] = "to";
+        templates[0][5] = "{ethAddr}";
+        templates[0][6] = "on";
+        templates[0][7] = "account";
+        templates[0][8] = "{ethAddr}";
         return templates;
     }
 
     /// @inheritdoc ISafeZkEmailRecoveryPlugin
     function configureRecovery(
-        address owner,
-        address guardian,
+        address[] memory guardians,
         address previousOwnerInLinkedList, // TODO: We should try fetch this automatically when needed. It is possible that owners are changed without going through the recovery plugin and this value could be outdated
         uint256 recoveryDelay,
-        uint256 guardianCount,
         uint256 threshold
     ) external returns (address emailAccountRecoveryRouterAddress) {
         address safe = msg.sender;
+
+        // Check this module is enabled on the calling Safe account
         bool moduleEnabled = ISafe(safe).isModuleEnabled(address(this));
         if (!moduleEnabled) revert ModuleNotFound();
 
-        require(
-            guardianRequests[guardian].safe == address(0),
-            "guardian already requested"
-        );
+        if (threshold < 1) revert InvalidThreshold();
+        if (guardians.length < threshold) revert InvalidGuardianCount();
 
-        bool isOwner = ISafe(safe).isOwner(owner);
-        if (!isOwner) revert InvalidOwner(owner);
+        setupGuardians(safe, guardians, threshold);
 
-        if (recoveryRequests[guardian].executeAfter > 0) {
+        // FIXME: Should be for safe not guardian
+        if (recoveryRequests[guardians[0]].executeAfter > 0) {
             revert RecoveryAlreadyInitiated();
         }
+
         require(
             safeAddrToRecoveryRouter[safe] == address(0),
             "router contract for safe already exits"
@@ -159,22 +162,18 @@ contract SafeZkEmailRecoveryPlugin is
         ] = SafeAccountInfo(safe, previousOwnerInLinkedList);
         safeAddrToRecoveryRouter[safe] = emailAccountRecoveryRouterAddress;
 
-        if (threshold < 1) revert InvalidThreshold();
-        if (guardianCount < threshold) revert InvalidGuardianCount();
+        recoveryConfigs[safe] = RecoveryConfig({recoveryDelay: recoveryDelay});
 
-        recoveryConfigs[safe] = RecoveryConfig({
-            guardianCount: guardianCount,
-            threshold: threshold,
-            recoveryDelay: recoveryDelay,
-            ownerToSwap: owner
-        });
+        // FIXME: loop over properly
+        guardianRequests[guardians[0]] = GuardianRequest({safe: safe});
+        guardianRequests[guardians[1]] = GuardianRequest({safe: safe});
 
-        guardianRequests[guardian] = GuardianRequest({
-            safe: safe,
-            accepted: false
-        });
-
-        emit RecoveryConfigured(safe, owner, recoveryDelay);
+        emit RecoveryConfigured(
+            safe,
+            guardians.length,
+            threshold,
+            recoveryDelay
+        );
     }
 
     // TODO: add natspec to interface or inherit from EmailAccountRecovery
@@ -190,10 +189,6 @@ contract SafeZkEmailRecoveryPlugin is
             guardianRequests[guardian].safe != address(0),
             "guardian not requested"
         );
-        require(
-            !guardianRequests[guardian].accepted,
-            "guardian has already accepted"
-        );
         require(templateIdx == 0, "invalid template index");
         require(subjectParams.length == 1, "invalid subject params");
 
@@ -205,7 +200,10 @@ contract SafeZkEmailRecoveryPlugin is
             "invalid account in email"
         );
 
-        guardianRequests[guardian].accepted = true;
+        bool acceptedRecovery = getRecoveryAcceptance(safeInEmail, guardian);
+        require(!acceptedRecovery, "guardian has already accepted");
+
+        changeRecoveryAcceptance(safeInEmail, guardian, true);
     }
 
     // TODO: add natspec to interface or inherit from EmailAccountRecovery
@@ -220,23 +218,24 @@ contract SafeZkEmailRecoveryPlugin is
             guardianRequests[guardian].safe != address(0),
             "guardian not requested"
         );
-        require(
-            guardianRequests[guardian].accepted,
-            "guardian has not accepted"
-        );
         require(templateIdx == 0, "invalid template index");
-        require(subjectParams.length == 2, "invalid subject params");
+        require(subjectParams.length == 3, "invalid subject params");
 
-        address newOwnerInEmail = abi.decode(subjectParams[0], (address));
+        address ownerToSwapInEmail = abi.decode(subjectParams[0], (address));
+
+        address newOwnerInEmail = abi.decode(subjectParams[1], (address));
         require(newOwnerInEmail != address(0), "invalid new owner in email");
 
-        address safeInEmail = abi.decode(subjectParams[1], (address));
+        address safeInEmail = abi.decode(subjectParams[2], (address));
         address safeForRouter = recoveryRouterToSafeInfo[msg.sender].safe;
         require(safeForRouter == safeInEmail, "invalid account for router");
         require(
             guardianRequests[guardian].safe == safeInEmail,
             "invalid account in email"
         );
+
+        bool acceptedRecovery = getRecoveryAcceptance(safeInEmail, guardian);
+        require(acceptedRecovery, "guardian has not accepted");
 
         bool isExistingOwner = ISafe(safeInEmail).isOwner(newOwnerInEmail);
         if (isExistingOwner) revert InvalidNewOwner();
@@ -248,16 +247,15 @@ contract SafeZkEmailRecoveryPlugin is
         }
 
         recoveryRequests[safeInEmail].approvalCount++;
+        recoveryRequests[safeInEmail].pendingNewOwner = newOwnerInEmail;
+        recoveryRequests[safeInEmail].ownerToSwap = ownerToSwapInEmail;
 
-        if (
-            recoveryRequests[safeInEmail].approvalCount >=
-            recoveryConfig.threshold
-        ) {
+        uint256 threshold = getThreshold(safeInEmail);
+        if (recoveryRequests[safeInEmail].approvalCount >= threshold) {
             uint256 executeAfter = block.timestamp +
                 recoveryConfigs[safeInEmail].recoveryDelay;
 
             recoveryRequests[safeInEmail].executeAfter = executeAfter;
-            recoveryRequests[safeInEmail].pendingNewOwner = newOwnerInEmail;
 
             emit RecoveryInitiated(safeInEmail, newOwnerInEmail, executeAfter);
         }
@@ -277,11 +275,10 @@ contract SafeZkEmailRecoveryPlugin is
     /// @inheritdoc ISafeZkEmailRecoveryPlugin
     function recoverPlugin(address safe, address previousOwner) public {
         RecoveryRequest memory recoveryRequest = recoveryRequests[safe];
-        RecoveryConfig memory recoveryConfig = recoveryConfigs[safe];
 
-        if (recoveryConfig.ownerToSwap == address(0)) {
-            revert RecoveryNotInitiated();
-        }
+        uint256 threshold = getThreshold(safe);
+        if (recoveryRequest.approvalCount < threshold)
+            revert NotEnoughApprovals();
 
         if (block.timestamp >= recoveryRequest.executeAfter) {
             delete recoveryRequests[safe];
@@ -289,7 +286,7 @@ contract SafeZkEmailRecoveryPlugin is
             bytes memory data = abi.encodeWithSignature(
                 "swapOwner(address,address,address)",
                 previousOwner,
-                recoveryConfig.ownerToSwap,
+                recoveryRequest.ownerToSwap,
                 recoveryRequest.pendingNewOwner
             );
 
@@ -297,9 +294,11 @@ contract SafeZkEmailRecoveryPlugin is
 
             emit OwnerRecovered(
                 safe,
-                recoveryConfig.ownerToSwap,
+                recoveryRequest.ownerToSwap,
                 recoveryRequest.pendingNewOwner
             );
+
+            // changeRecoveryAcceptance(safeInEmail, guardian, false); // FIXME: can't access guardians
         } else {
             revert DelayNotPassed();
         }

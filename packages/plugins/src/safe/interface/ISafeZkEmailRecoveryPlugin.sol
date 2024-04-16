@@ -3,21 +3,18 @@ pragma solidity ^0.8.0;
 
 interface ISafeZkEmailRecoveryPlugin {
     struct RecoveryConfig {
-        uint256 guardianCount; // the number of guardians configured for the specific recovery config
-        uint256 threshold; // the number of approvals needed to execute a recovery request
         uint256 recoveryDelay; // the delay from the recovery request being initiated with enough appovals until it can be executed. Protects against malicious recovery attempts
-        address ownerToSwap; // the old owner that will be swapped out for pendingNewOwner
     }
 
     struct RecoveryRequest {
         uint256 executeAfter; // the timestamp from which the recovery request can be executed
         address pendingNewOwner; // the pending new owner to be rotated
         uint256 approvalCount; // number of guardian approvals for the recovery request
+        address ownerToSwap; // the old owner that will be swapped out for pendingNewOwner
     }
 
     struct GuardianRequest {
         address safe;
-        bool accepted;
     }
 
     struct SafeAccountInfo {
@@ -50,6 +47,11 @@ interface ISafeZkEmailRecoveryPlugin {
     /**
      * TODO:
      */
+    error InvalidGuardian();
+
+    /**
+     * TODO:
+     */
     error InvalidNewOwner();
 
     /**
@@ -65,6 +67,11 @@ interface ISafeZkEmailRecoveryPlugin {
     /**
      * TODO:
      */
+    error NotEnoughApprovals();
+
+    /**
+     * TODO:
+     */
     error DelayNotPassed();
 
     /** Events */
@@ -74,8 +81,9 @@ interface ISafeZkEmailRecoveryPlugin {
      */
     event RecoveryConfigured(
         address indexed safe,
-        address indexed owner,
-        uint256 customDelay
+        uint256 guardianCount,
+        uint256 threshold,
+        uint256 recoveryDelay
     );
 
     /**
@@ -119,13 +127,13 @@ interface ISafeZkEmailRecoveryPlugin {
         address safe
     ) external view returns (RecoveryRequest memory);
 
-    /**
-     * @notice Returns guardian request accociated with a safe address
-     * @param safe address to query storage with
-     */
-    function getGuardianRequest(
-        address safe
-    ) external view returns (GuardianRequest memory);
+    // /**
+    //  * @notice Returns guardian request accociated with a safe address
+    //  * @param safe address to query storage with
+    //  */
+    // function getGuardianRequest(
+    //     address safe
+    // ) external view returns (GuardianRequest memory);
 
     /**
      * @notice Returns the recovery router address that corresponds to the specified Safe account
@@ -140,18 +148,15 @@ interface ISafeZkEmailRecoveryPlugin {
      *      defaultDkimRegistry. customDelay can be 0 if the user wants to use defaultDelay
      *      This function assumes it is being called from a safe - see how msg.sender
      *      is interpreted. This is the first function that must be called when setting up recovery.
-     * @param owner Owner on the safe being recovered
-     * @param guardian The EmailAuth guardian address that has permissions to recover an owner on the account
+     * @param guardians The EmailAuth guardian address that has permissions to recover an owner on the account
      * @param recoveryDelay A custom delay for recovery that is associated with a safe.
      * @param previousOwnerInLinkedList The previous owner stored in the Safe owners linked list.
      * This is needed to rotate the owner at the end of the recovery flow
      */
     function configureRecovery(
-        address owner,
-        address guardian,
+        address[] memory guardians,
         address previousOwnerInLinkedList,
         uint256 recoveryDelay,
-        uint256 guardianCount,
         uint256 threshold
     ) external returns (address emailAccountRecoveryRouterAddress);
 

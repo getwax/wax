@@ -38,7 +38,11 @@ contract SafeZkEmailRecoveryPlugin_Integration_Test is TestHelper {
     // EmailAuth emailAuth;
     ECDSAOwnedDKIMRegistry ecdsaOwnedDkimRegistry;
     MockGroth16Verifier verifier;
-    bytes32 accountSalt;
+    bytes32 accountSalt1;
+    bytes32 accountSalt2;
+
+    address guardian1;
+    address guardian2;
 
     string selector = "12345";
     string domainName = "gmail.com";
@@ -69,7 +73,8 @@ contract SafeZkEmailRecoveryPlugin_Integration_Test is TestHelper {
         );
 
         verifier = new MockGroth16Verifier();
-        accountSalt = 0x2c3abbf3d1171bfefee99c13bf9c47f1e8447576afd89096652a34f27b297971;
+        accountSalt1 = keccak256(abi.encode("account salt 1"));
+        accountSalt2 = keccak256(abi.encode("account salt 2"));
 
         EmailAuth emailAuthImpl = new EmailAuth();
         ERC1967Proxy emailAuthProxy = new ERC1967Proxy(
@@ -77,7 +82,7 @@ contract SafeZkEmailRecoveryPlugin_Integration_Test is TestHelper {
             abi.encodeWithSelector(
                 emailAuthImpl.initialize.selector,
                 signer,
-                accountSalt
+                accountSalt1
             )
         );
         // emailAuth = EmailAuth(payable(address(emailAuthProxy)));
@@ -121,34 +126,20 @@ contract SafeZkEmailRecoveryPlugin_Integration_Test is TestHelper {
         vm.startPrank(safeAddress);
         safe.enableModule(address(safeZkEmailRecoveryPlugin));
         vm.stopPrank();
+
+        guardian1 = safeZkEmailRecoveryPlugin.computeEmailAuthAddress(
+            accountSalt1
+        );
+        guardian2 = safeZkEmailRecoveryPlugin.computeEmailAuthAddress(
+            accountSalt2
+        );
     }
 
-    function testIntegration_AccountRecovery() public {
-        Vm.Wallet memory newOwner = Carol;
-        address guardian = safeZkEmailRecoveryPlugin.computeEmailAuthAddress(
-            accountSalt
-        );
-        address previousOwnerInLinkedList = address(0x1);
-        uint256 recoveryDelay = 1 seconds;
-        uint256 guardianCount = 1;
-        uint256 threshold = 1;
-
-        uint templateIdx = 0;
-
-        // Configure recovery
-        vm.startPrank(safeAddress);
-        address emailAccountRecoveryRouterAddress = safeZkEmailRecoveryPlugin
-            .configureRecovery(
-                owner,
-                guardian,
-                previousOwnerInLinkedList,
-                recoveryDelay,
-                guardianCount,
-                threshold
-            );
-        vm.stopPrank();
-
-        // Create email proof for guardian acceptance
+    function generateEmailProof(
+        string memory subject,
+        bytes32 nullifier,
+        bytes32 accountSalt
+    ) public returns (EmailProof memory) {
         EmailProof memory emailProof;
         emailProof.domainName = "gmail.com";
         emailProof.publicKeyHash = bytes32(
@@ -157,12 +148,30 @@ contract SafeZkEmailRecoveryPlugin_Integration_Test is TestHelper {
             )
         );
         emailProof.timestamp = block.timestamp;
-        emailProof
-            .maskedSubject = "Accept guardian request for 0x78cA0A67bF6Cbe8Bf2429f0c7934eE5Dd687a32c";
-        emailProof.emailNullifier = keccak256(abi.encode("nullifier 1"));
+        emailProof.maskedSubject = subject;
+        emailProof.emailNullifier = nullifier;
         emailProof.accountSalt = accountSalt;
         emailProof.isCodeExist = true;
         emailProof.proof = bytes("0");
+
+        return emailProof;
+    }
+
+    function generateEmailAuthMsg() public {}
+
+    function acceptGuardian(
+        address safeAddress,
+        address emailAccountRecoveryRouterAddress,
+        string memory subject,
+        bytes32 nullifier,
+        bytes32 accountSalt,
+        uint256 templateIdx
+    ) public {
+        EmailProof memory emailProof = generateEmailProof(
+            subject,
+            nullifier,
+            accountSalt
+        );
 
         // Handle acceptance
         bytes[] memory subjectParamsForAcceptance = new bytes[](1);
@@ -177,37 +186,29 @@ contract SafeZkEmailRecoveryPlugin_Integration_Test is TestHelper {
         });
         IEmailAccountRecovery(emailAccountRecoveryRouterAddress)
             .handleAcceptance(emailAuthMsg, templateIdx);
+    }
 
-        ISafeZkEmailRecoveryPlugin.GuardianRequest
-            memory guardianRequest = safeZkEmailRecoveryPlugin
-                .getGuardianRequest(guardian);
-        assertTrue(guardianRequest.accepted);
-        assertEq(guardianRequest.safe, safeAddress);
-
-        // Create email proof for recovery
-        emailProof.domainName = "gmail.com";
-        emailProof.publicKeyHash = bytes32(
-            vm.parseUint(
-                "6632353713085157925504008443078919716322386156160602218536961028046468237192"
-            )
+    function handleRecovery(
+        address safeAddress,
+        address newOwner,
+        address emailAccountRecoveryRouterAddress,
+        string memory subject,
+        bytes32 nullifier,
+        bytes32 accountSalt,
+        uint256 templateIdx
+    ) public {
+        EmailProof memory emailProof = generateEmailProof(
+            subject,
+            nullifier,
+            accountSalt
         );
-        emailProof.timestamp = block.timestamp + 1;
-        emailProof
-            .maskedSubject = "Update owner to 0xDdF4497d39b10cf50Af640942cc15233970dA0c2 on account 0x78cA0A67bF6Cbe8Bf2429f0c7934eE5Dd687a32c";
-        emailProof.emailNullifier = keccak256(abi.encode("nullifier 2"));
-        emailProof.accountSalt = accountSalt;
-        require(
-            emailProof.accountSalt == accountSalt,
-            "accountSalt should be the same"
-        );
-        emailProof.isCodeExist = true;
-        emailProof.proof = bytes("0");
 
-        // Handle recovery
-        bytes[] memory subjectParamsForRecovery = new bytes[](2);
-        subjectParamsForRecovery[0] = abi.encode(newOwner.addr);
-        subjectParamsForRecovery[1] = abi.encode(safeAddress);
-        emailAuthMsg = EmailAuthMsg({
+        bytes[] memory subjectParamsForRecovery = new bytes[](3);
+        subjectParamsForRecovery[0] = abi.encode(owner);
+        subjectParamsForRecovery[1] = abi.encode(newOwner);
+        subjectParamsForRecovery[2] = abi.encode(safeAddress);
+
+        EmailAuthMsg memory emailAuthMsg = EmailAuthMsg({
             templateId: safeZkEmailRecoveryPlugin.computeRecoveryTemplateId(
                 templateIdx
             ),
@@ -217,6 +218,82 @@ contract SafeZkEmailRecoveryPlugin_Integration_Test is TestHelper {
         });
         IEmailAccountRecovery(emailAccountRecoveryRouterAddress).handleRecovery(
             emailAuthMsg,
+            templateIdx
+        );
+    }
+
+    function testIntegration_AccountRecovery() public {
+        Vm.Wallet memory newOwner = Carol;
+
+        address[] memory guardians = new address[](2);
+
+        guardians[0] = guardian1;
+        guardians[1] = guardian2;
+
+        address previousOwnerInLinkedList = address(0x1);
+        uint256 recoveryDelay = 1 seconds;
+        uint256 threshold = 2;
+        uint templateIdx = 0;
+
+        // Configure recovery
+        vm.startPrank(safeAddress);
+        address emailAccountRecoveryRouterAddress = safeZkEmailRecoveryPlugin
+            .configureRecovery(
+                guardians,
+                previousOwnerInLinkedList,
+                recoveryDelay,
+                threshold
+            );
+        vm.stopPrank();
+
+        // Create email proof for guardian acceptance
+
+        // Accept guardian 1
+        acceptGuardian(
+            safeAddress,
+            emailAccountRecoveryRouterAddress,
+            "Accept guardian request for 0x78cA0A67bF6Cbe8Bf2429f0c7934eE5Dd687a32c",
+            keccak256(abi.encode("nullifier 1")),
+            accountSalt1,
+            templateIdx
+        );
+        // Accept guardian 2
+        acceptGuardian(
+            safeAddress,
+            emailAccountRecoveryRouterAddress,
+            "Accept guardian request for 0x78cA0A67bF6Cbe8Bf2429f0c7934eE5Dd687a32c",
+            keccak256(abi.encode("nullifier 1")),
+            accountSalt2,
+            templateIdx
+        );
+
+        ISafeZkEmailRecoveryPlugin.GuardianRequest
+            memory guardianRequest = safeZkEmailRecoveryPlugin
+                .getGuardianRequest(guardians[0]);
+        // assertTrue(guardianRequest.accepted);
+        assertEq(guardianRequest.safe, safeAddress);
+
+        vm.warp(12 seconds);
+
+        // Create email proof for recovery & handle recovery
+        // handle recovery request for guardian 1
+        handleRecovery(
+            safeAddress,
+            newOwner.addr,
+            emailAccountRecoveryRouterAddress,
+            "Update owner from 0xBf0b5A4099F0bf6c8bC4252eBeC548Bae95602Ea to 0xDdF4497d39b10cf50Af640942cc15233970dA0c2 on account 0x78cA0A67bF6Cbe8Bf2429f0c7934eE5Dd687a32c",
+            keccak256(abi.encode("nullifier 2")),
+            accountSalt1,
+            templateIdx
+        );
+        // handle recovery request for guardian 2
+        handleRecovery(
+            safeAddress,
+            newOwner.addr,
+            emailAccountRecoveryRouterAddress,
+            "Update owner from 0xBf0b5A4099F0bf6c8bC4252eBeC548Bae95602Ea to 0xDdF4497d39b10cf50Af640942cc15233970dA0c2 on account 0x78cA0A67bF6Cbe8Bf2429f0c7934eE5Dd687a32c",
+            keccak256(abi.encode("nullifier 2")),
+            accountSalt2,
             templateIdx
         );
 
