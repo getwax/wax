@@ -20,61 +20,60 @@ interface ISafeZkEmailRecoveryPlugin {
 
     /** Errors */
 
-    /**
-     * TODO:
-     */
+    /** TODO: */
     error ModuleNotFound();
 
-    /**
-     * TODO:
-     */
+    /** TODO: */
     error InvalidOwner(address owner);
 
-    /**
-     * TODO:
-     */
+    /** TODO: */
     error InvalidThreshold();
 
-    /**
-     * TODO:
-     */
+    /** TODO: */
     error InvalidGuardianCount();
 
-    /**
-     * TODO:
-     */
+    /** TODO: */
     error InvalidGuardian();
 
-    /**
-     * TODO:
-     */
+    /** TODO: */
+    error InvalidTemplateIndex();
+
+    /** TODO: */
+    error InvalidSubjectParams();
+
+    /** TODO: */
     error InvalidNewOwner();
 
-    /**
-     * TODO:
-     */
+    /** TODO: */
+    error InvalidAccountForRouter();
+
+    /** TODO: */
+    error GuardianInvalidForSafeInEmail();
+
+    /** TODO: */
+    error GuardianAlreadyAccepted();
+
+    /** TODO: */
+    error GuardianHasNotAccepted();
+
+    /** TODO: */
     error RecoveryAlreadyInitiated();
 
-    /**
-     * TODO:
-     */
+    /** TODO: */
+    error RouterAlreadyDeployed();
+
+    /** TODO: */
     error RecoveryNotInitiated();
 
-    /**
-     * TODO:
-     */
+    /** TODO: */
     error NotEnoughApprovals();
 
-    /**
-     * TODO:
-     */
+    /** TODO: */
     error DelayNotPassed();
 
     /** Events */
 
-    /**
-     * TODO:
-     */
+    /** TODO: */
     event RecoveryConfigured(
         address indexed safe,
         uint256 guardianCount,
@@ -82,27 +81,21 @@ interface ISafeZkEmailRecoveryPlugin {
         uint256 recoveryDelay
     );
 
-    /**
-     * TODO:
-     */
+    /** TODO: */
     event RecoveryInitiated(
         address indexed safe,
         address newOwner,
         uint256 executeAfter
     );
 
-    /**
-     * TODO:
-     */
+    /** TODO: */
     event OwnerRecovered(
         address indexed safe,
         address oldOwner,
         address newOwner
     );
 
-    /**
-     * TODO:
-     */
+    /** TODO: */
     event RecoveryCancelled(address indexed safe);
 
     /** Functions */

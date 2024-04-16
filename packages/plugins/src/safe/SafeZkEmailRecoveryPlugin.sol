@@ -39,7 +39,7 @@ contract SafeZkEmailRecoveryPlugin is
 
     /** Mapping of safe account addresses to email account recovery router contracts**/
     /** These are stored for frontends to easily find the router contract address from the given safe account address**/
-    mapping(address => address) public safeAddrToRecoveryRouter;
+    mapping(address => address) public safeToRecoveryRouter;
 
     constructor(
         address _verifier,
@@ -68,7 +68,7 @@ contract SafeZkEmailRecoveryPlugin is
     // TODO: test
     /// @inheritdoc ISafeZkEmailRecoveryPlugin
     function getRouterForSafe(address safe) external view returns (address) {
-        return safeAddrToRecoveryRouter[safe];
+        return safeToRecoveryRouter[safe];
     }
 
     /// @inheritdoc EmailAccountRecovery
@@ -115,7 +115,7 @@ contract SafeZkEmailRecoveryPlugin is
         address previousOwnerInLinkedList, // TODO: We should try fetch this automatically when needed. It is possible that owners are changed without going through the recovery plugin and this value could be outdated
         uint256 recoveryDelay,
         uint256 threshold
-    ) external returns (address emailAccountRecoveryRouterAddress) {
+    ) external returns (address routerAddress) {
         address safe = msg.sender;
 
         // Check this module is enabled on the calling Safe account
@@ -132,25 +132,19 @@ contract SafeZkEmailRecoveryPlugin is
             revert RecoveryAlreadyInitiated();
         }
 
-        require(
-            safeAddrToRecoveryRouter[safe] == address(0),
-            "router contract for safe already exits"
-        );
+        if (safeToRecoveryRouter[safe] != address(0))
+            revert RouterAlreadyDeployed();
 
         EmailAccountRecoveryRouter emailAccountRecoveryRouter = new EmailAccountRecoveryRouter(
                 address(this)
             );
-        emailAccountRecoveryRouterAddress = address(emailAccountRecoveryRouter);
+        routerAddress = address(emailAccountRecoveryRouter);
 
-        require(
-            recoveryRouterToSafeInfo[emailAccountRecoveryRouterAddress].safe ==
-                address(0),
-            "safe for the router contract already exits"
+        recoveryRouterToSafeInfo[routerAddress] = SafeAccountInfo(
+            safe,
+            previousOwnerInLinkedList
         );
-        recoveryRouterToSafeInfo[
-            emailAccountRecoveryRouterAddress
-        ] = SafeAccountInfo(safe, previousOwnerInLinkedList);
-        safeAddrToRecoveryRouter[safe] = emailAccountRecoveryRouterAddress;
+        safeToRecoveryRouter[safe] = routerAddress;
 
         recoveryConfigs[safe] = RecoveryConfig({recoveryDelay: recoveryDelay});
 
@@ -169,19 +163,20 @@ contract SafeZkEmailRecoveryPlugin is
         bytes[] memory subjectParams,
         bytes32
     ) internal override {
-        require(guardian != address(0), "invalid guardian");
-        require(templateIdx == 0, "invalid template index");
-        require(subjectParams.length == 1, "invalid subject params");
+        if (guardian == address(0)) revert InvalidGuardian();
+        if (templateIdx != 0) revert InvalidTemplateIndex();
+        if (subjectParams.length != 1) revert InvalidSubjectParams();
 
         address safeInEmail = abi.decode(subjectParams[0], (address));
+
         address safeForRouter = recoveryRouterToSafeInfo[msg.sender].safe;
-        require(safeForRouter == safeInEmail, "invalid account for router");
+        if (safeForRouter != safeInEmail) revert InvalidAccountForRouter();
 
         if (!isGuardian(guardian, safeInEmail))
-            revert("guardian invalid for safe in email");
+            revert GuardianInvalidForSafeInEmail();
 
         bool acceptedRecovery = getRecoveryAcceptance(safeInEmail, guardian);
-        require(!acceptedRecovery, "guardian has already accepted");
+        if (acceptedRecovery) revert GuardianAlreadyAccepted();
 
         changeRecoveryAcceptance(safeInEmail, guardian, true);
     }
@@ -193,24 +188,22 @@ contract SafeZkEmailRecoveryPlugin is
         bytes[] memory subjectParams,
         bytes32
     ) internal override {
-        require(guardian != address(0), "invalid guardian");
-        require(templateIdx == 0, "invalid template index");
-        require(subjectParams.length == 3, "invalid subject params");
+        if (guardian == address(0)) revert InvalidGuardian();
+        if (templateIdx != 0) revert InvalidTemplateIndex();
+        if (subjectParams.length != 3) revert InvalidSubjectParams();
 
         address ownerToSwapInEmail = abi.decode(subjectParams[0], (address));
-
         address newOwnerInEmail = abi.decode(subjectParams[1], (address));
-        require(newOwnerInEmail != address(0), "invalid new owner in email");
-
         address safeInEmail = abi.decode(subjectParams[2], (address));
+
         address safeForRouter = recoveryRouterToSafeInfo[msg.sender].safe;
-        require(safeForRouter == safeInEmail, "invalid account for router");
+        if (safeForRouter != safeInEmail) revert InvalidAccountForRouter();
 
         if (!isGuardian(guardian, safeInEmail))
-            revert("guardian invalid for safe in email");
+            revert GuardianInvalidForSafeInEmail();
 
         bool acceptedRecovery = getRecoveryAcceptance(safeInEmail, guardian);
-        require(acceptedRecovery, "guardian has not accepted");
+        if (!acceptedRecovery) revert GuardianHasNotAccepted();
 
         bool isExistingOwner = ISafe(safeInEmail).isOwner(newOwnerInEmail);
         if (isExistingOwner) revert InvalidNewOwner();
