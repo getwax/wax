@@ -77,17 +77,6 @@ contract SafeZkEmailRecoveryPlugin_Integration_Test is TestHelper {
         accountSalt2 = keccak256(abi.encode("account salt 2"));
 
         EmailAuth emailAuthImpl = new EmailAuth();
-        ERC1967Proxy emailAuthProxy = new ERC1967Proxy(
-            address(emailAuthImpl),
-            abi.encodeWithSelector(
-                emailAuthImpl.initialize.selector,
-                signer,
-                accountSalt1
-            )
-        );
-        // emailAuth = EmailAuth(payable(address(emailAuthProxy)));
-        // emailAuth.updateVerifier(address(verifier));
-        // emailAuth.updateDKIMRegistry(address(ecdsaOwnedDkimRegistry));
         vm.stopPrank();
 
         safeZkEmailRecoveryPlugin = new SafeZkEmailRecoveryPlugin(
@@ -135,7 +124,7 @@ contract SafeZkEmailRecoveryPlugin_Integration_Test is TestHelper {
         );
     }
 
-    function generateEmailProof(
+    function generateMockEmailProof(
         string memory subject,
         bytes32 nullifier,
         bytes32 accountSalt
@@ -167,7 +156,7 @@ contract SafeZkEmailRecoveryPlugin_Integration_Test is TestHelper {
         bytes32 accountSalt,
         uint256 templateIdx
     ) public {
-        EmailProof memory emailProof = generateEmailProof(
+        EmailProof memory emailProof = generateMockEmailProof(
             subject,
             nullifier,
             accountSalt
@@ -197,7 +186,7 @@ contract SafeZkEmailRecoveryPlugin_Integration_Test is TestHelper {
         bytes32 accountSalt,
         uint256 templateIdx
     ) public {
-        EmailProof memory emailProof = generateEmailProof(
+        EmailProof memory emailProof = generateMockEmailProof(
             subject,
             nullifier,
             accountSalt
@@ -267,11 +256,7 @@ contract SafeZkEmailRecoveryPlugin_Integration_Test is TestHelper {
             templateIdx
         );
 
-        ISafeZkEmailRecoveryPlugin.GuardianRequest
-            memory guardianRequest = safeZkEmailRecoveryPlugin
-                .getGuardianRequest(guardians[0]);
         // assertTrue(guardianRequest.accepted);
-        assertEq(guardianRequest.safe, safeAddress);
 
         vm.warp(12 seconds);
 

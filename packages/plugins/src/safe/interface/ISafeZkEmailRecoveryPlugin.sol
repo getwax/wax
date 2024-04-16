@@ -13,10 +13,6 @@ interface ISafeZkEmailRecoveryPlugin {
         address ownerToSwap; // the old owner that will be swapped out for pendingNewOwner
     }
 
-    struct GuardianRequest {
-        address safe;
-    }
-
     struct SafeAccountInfo {
         address safe;
         address previousOwnerInLinkedList;
@@ -126,14 +122,6 @@ interface ISafeZkEmailRecoveryPlugin {
     function getRecoveryRequest(
         address safe
     ) external view returns (RecoveryRequest memory);
-
-    // /**
-    //  * @notice Returns guardian request accociated with a safe address
-    //  * @param safe address to query storage with
-    //  */
-    // function getGuardianRequest(
-    //     address safe
-    // ) external view returns (GuardianRequest memory);
 
     /**
      * @notice Returns the recovery router address that corresponds to the specified Safe account

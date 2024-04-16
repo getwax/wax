@@ -34,9 +34,6 @@ contract SafeZkEmailRecoveryPlugin is
     /** Mapping of safe address to recovery request */
     mapping(address => RecoveryRequest) public recoveryRequests;
 
-    /** Mapping of guardian address to guardian request */
-    mapping(address => GuardianRequest) public guardianRequests;
-
     /** Mapping of email account recovery router contracts to safe details needed to complete recovery */
     mapping(address => SafeAccountInfo) public recoveryRouterToSafeInfo;
 
@@ -66,13 +63,6 @@ contract SafeZkEmailRecoveryPlugin is
         address safe
     ) external view returns (RecoveryRequest memory) {
         return recoveryRequests[safe];
-    }
-
-    // /// @inheritdoc ISafeZkEmailRecoveryPlugin
-    function getGuardianRequest(
-        address safe
-    ) external view returns (GuardianRequest memory) {
-        return guardianRequests[safe];
     }
 
     // TODO: test
@@ -164,10 +154,6 @@ contract SafeZkEmailRecoveryPlugin is
 
         recoveryConfigs[safe] = RecoveryConfig({recoveryDelay: recoveryDelay});
 
-        // FIXME: loop over properly
-        guardianRequests[guardians[0]] = GuardianRequest({safe: safe});
-        guardianRequests[guardians[1]] = GuardianRequest({safe: safe});
-
         emit RecoveryConfigured(
             safe,
             guardians.length,
@@ -184,21 +170,15 @@ contract SafeZkEmailRecoveryPlugin is
         bytes32
     ) internal override {
         require(guardian != address(0), "invalid guardian");
-        // TODO extract to function or modifier?
-        require(
-            guardianRequests[guardian].safe != address(0),
-            "guardian not requested"
-        );
         require(templateIdx == 0, "invalid template index");
         require(subjectParams.length == 1, "invalid subject params");
 
         address safeInEmail = abi.decode(subjectParams[0], (address));
         address safeForRouter = recoveryRouterToSafeInfo[msg.sender].safe;
         require(safeForRouter == safeInEmail, "invalid account for router");
-        require(
-            guardianRequests[guardian].safe == safeInEmail,
-            "invalid account in email"
-        );
+
+        if (!isGuardian(guardian, safeInEmail))
+            revert("guardian invalid for safe in email");
 
         bool acceptedRecovery = getRecoveryAcceptance(safeInEmail, guardian);
         require(!acceptedRecovery, "guardian has already accepted");
@@ -214,10 +194,6 @@ contract SafeZkEmailRecoveryPlugin is
         bytes32
     ) internal override {
         require(guardian != address(0), "invalid guardian");
-        require(
-            guardianRequests[guardian].safe != address(0),
-            "guardian not requested"
-        );
         require(templateIdx == 0, "invalid template index");
         require(subjectParams.length == 3, "invalid subject params");
 
@@ -229,10 +205,9 @@ contract SafeZkEmailRecoveryPlugin is
         address safeInEmail = abi.decode(subjectParams[2], (address));
         address safeForRouter = recoveryRouterToSafeInfo[msg.sender].safe;
         require(safeForRouter == safeInEmail, "invalid account for router");
-        require(
-            guardianRequests[guardian].safe == safeInEmail,
-            "invalid account in email"
-        );
+
+        if (!isGuardian(guardian, safeInEmail))
+            revert("guardian invalid for safe in email");
 
         bool acceptedRecovery = getRecoveryAcceptance(safeInEmail, guardian);
         require(acceptedRecovery, "guardian has not accepted");
