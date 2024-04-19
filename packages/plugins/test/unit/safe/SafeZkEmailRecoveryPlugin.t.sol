@@ -322,15 +322,13 @@ contract SafeZkEmailRecoveryPluginTest is TestHelper {
         ISafeZkEmailRecoveryPlugin.RecoveryRequest
             memory recoveryRequest = safeZkEmailRecoveryPlugin
                 .getRecoveryRequest(safeAddress);
-        ISafeZkEmailRecoveryPlugin.RecoveryConfig
-            memory recoveryConfig = safeZkEmailRecoveryPlugin.getRecoveryConfig(
-                safeAddress
-            );
+        uint256 fetchedRecoveryDelay = safeZkEmailRecoveryPlugin
+            .getRecoveryDelay(safeAddress);
 
         // Assert
         assertEq(recoveryRequest.executeAfter, 0);
         assertEq(recoveryRequest.pendingNewOwner, address(0));
-        assertEq(recoveryConfig.recoveryDelay, recoveryDelay);
+        assertEq(fetchedRecoveryDelay, recoveryDelay);
     }
 
     function test_configureRecovery_addMultipleRecoveryAccountsToSamePlugin()

@@ -28,7 +28,7 @@ contract SafeZkEmailRecoveryPlugin_Integration_Test is TestHelper {
 
     SafeZkEmailRecoveryPlugin public safeZkEmailRecoveryPlugin;
     Safe public safeSingleton;
-    Safe public safe;
+    Safe public safeAccount;
     address public safeAddress;
 
     address zkEmailDeployer = vm.addr(1);
@@ -95,10 +95,10 @@ contract SafeZkEmailRecoveryPlugin_Integration_Test is TestHelper {
         owner = Alice.addr;
         owners[0] = owner;
 
-        safe = Safe(payable(address(safeProxy)));
-        safeAddress = address(safe);
+        safeAccount = Safe(payable(address(safeProxy)));
+        safeAddress = address(safeAccount);
 
-        safe.setup(
+        safeAccount.setup(
             owners,
             1,
             address(0),
@@ -113,7 +113,7 @@ contract SafeZkEmailRecoveryPlugin_Integration_Test is TestHelper {
         );
 
         vm.startPrank(safeAddress);
-        safe.enableModule(address(safeZkEmailRecoveryPlugin));
+        safeAccount.enableModule(address(safeZkEmailRecoveryPlugin));
         vm.stopPrank();
 
         guardian1 = safeZkEmailRecoveryPlugin.computeEmailAuthAddress(
@@ -149,7 +149,7 @@ contract SafeZkEmailRecoveryPlugin_Integration_Test is TestHelper {
     function generateEmailAuthMsg() public {}
 
     function acceptGuardian(
-        address safeAddress,
+        address safe,
         address emailAccountRecoveryRouterAddress,
         string memory subject,
         bytes32 nullifier,
@@ -164,7 +164,7 @@ contract SafeZkEmailRecoveryPlugin_Integration_Test is TestHelper {
 
         // Handle acceptance
         bytes[] memory subjectParamsForAcceptance = new bytes[](1);
-        subjectParamsForAcceptance[0] = abi.encode(safeAddress);
+        subjectParamsForAcceptance[0] = abi.encode(safe);
         EmailAuthMsg memory emailAuthMsg = EmailAuthMsg({
             templateId: safeZkEmailRecoveryPlugin.computeAcceptanceTemplateId(
                 templateIdx
@@ -178,7 +178,7 @@ contract SafeZkEmailRecoveryPlugin_Integration_Test is TestHelper {
     }
 
     function handleRecovery(
-        address safeAddress,
+        address safe,
         address newOwner,
         address emailAccountRecoveryRouterAddress,
         string memory subject,
@@ -195,7 +195,7 @@ contract SafeZkEmailRecoveryPlugin_Integration_Test is TestHelper {
         bytes[] memory subjectParamsForRecovery = new bytes[](3);
         subjectParamsForRecovery[0] = abi.encode(owner);
         subjectParamsForRecovery[1] = abi.encode(newOwner);
-        subjectParamsForRecovery[2] = abi.encode(safeAddress);
+        subjectParamsForRecovery[2] = abi.encode(safe);
 
         EmailAuthMsg memory emailAuthMsg = EmailAuthMsg({
             templateId: safeZkEmailRecoveryPlugin.computeRecoveryTemplateId(

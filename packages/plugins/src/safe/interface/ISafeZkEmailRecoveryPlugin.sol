@@ -2,20 +2,11 @@
 pragma solidity ^0.8.0;
 
 interface ISafeZkEmailRecoveryPlugin {
-    struct RecoveryConfig {
-        uint256 recoveryDelay; // the delay from the recovery request being initiated with enough appovals until it can be executed. Protects against malicious recovery attempts
-    }
-
     struct RecoveryRequest {
         uint256 executeAfter; // the timestamp from which the recovery request can be executed
         address pendingNewOwner; // the pending new owner to be rotated
         uint256 approvalCount; // number of guardian approvals for the recovery request
         address ownerToSwap; // the old owner that will be swapped out for pendingNewOwner
-    }
-
-    struct SafeAccountInfo {
-        address safe;
-        address previousOwnerInLinkedList;
     }
 
     /** Errors */
@@ -101,14 +92,6 @@ interface ISafeZkEmailRecoveryPlugin {
     /** Functions */
 
     /**
-     * @notice Returns recovery config accociated with a safe address
-     * @param safe address to query storage with
-     */
-    function getRecoveryConfig(
-        address safe
-    ) external view returns (RecoveryConfig memory);
-
-    /**
      * @notice Returns recovery request accociated with a safe address
      * @param safe address to query storage with
      */
@@ -117,10 +100,10 @@ interface ISafeZkEmailRecoveryPlugin {
     ) external view returns (RecoveryRequest memory);
 
     /**
-     * @notice Returns the recovery router address that corresponds to the specified Safe account
+     * @notice Returns the recovery delay that corresponds to the specified Safe account
      * @param safe address to query storage with
      */
-    function getRouterForSafe(address safe) external view returns (address);
+    function getRecoveryDelay(address safe) external view returns (uint256);
 
     /**
      * @notice Stores a recovery hash that can be used to recover a safe owner
@@ -160,11 +143,7 @@ interface ISafeZkEmailRecoveryPlugin {
     function cancelRecovery() external;
 
     // TODO: add natspec
-    function updateRecoveryConfig(
-        uint256 guardianCount,
-        uint256 threshold,
-        uint256 recoveryDelay
-    ) external;
+    function updateRecoveryDelay(uint256 recoveryDelay) external;
 
     // TODO: add natspec
     function updateGuardian() external;

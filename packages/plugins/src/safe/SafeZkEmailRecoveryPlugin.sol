@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import {EmailAccountRecovery} from "ether-email-auth/packages/contracts/src/EmailAccountRecovery.sol";
 import {GuardianManager} from "./GuardianManager.sol";
+import {RouterManager} from "./RouterManager.sol";
 import {ISafeZkEmailRecoveryPlugin} from "./interface/ISafeZkEmailRecoveryPlugin.sol";
 import {ISafe} from "./utils/Safe4337Base.sol";
 import {EmailAccountRecoveryRouter} from "./EmailAccountRecoveryRouter.sol";
@@ -25,21 +26,15 @@ import "forge-std/console2.sol";
  */
 contract SafeZkEmailRecoveryPlugin is
     GuardianManager,
+    RouterManager,
     ISafeZkEmailRecoveryPlugin,
     EmailAccountRecovery
 {
-    /** Mapping of safe address to recovery config */
-    mapping(address => RecoveryConfig) public recoveryConfigs;
+    /** Mapping of safe address to recovery delay */
+    mapping(address => uint256) public recoveryDelays;
 
     /** Mapping of safe address to recovery request */
     mapping(address => RecoveryRequest) public recoveryRequests;
-
-    /** Mapping of email account recovery router contracts to safe details needed to complete recovery */
-    mapping(address => SafeAccountInfo) public recoveryRouterToSafeInfo;
-
-    /** Mapping of safe account addresses to email account recovery router contracts**/
-    /** These are stored for frontends to easily find the router contract address from the given safe account address**/
-    mapping(address => address) public safeToRecoveryRouter;
 
     constructor(
         address _verifier,
@@ -52,10 +47,8 @@ contract SafeZkEmailRecoveryPlugin is
     }
 
     /// @inheritdoc ISafeZkEmailRecoveryPlugin
-    function getRecoveryConfig(
-        address safe
-    ) external view returns (RecoveryConfig memory) {
-        return recoveryConfigs[safe];
+    function getRecoveryDelay(address safe) external view returns (uint256) {
+        return recoveryDelays[safe];
     }
 
     /// @inheritdoc ISafeZkEmailRecoveryPlugin
@@ -63,12 +56,6 @@ contract SafeZkEmailRecoveryPlugin is
         address safe
     ) external view returns (RecoveryRequest memory) {
         return recoveryRequests[safe];
-    }
-
-    // TODO: test
-    /// @inheritdoc ISafeZkEmailRecoveryPlugin
-    function getRouterForSafe(address safe) external view returns (address) {
-        return safeToRecoveryRouter[safe];
     }
 
     /// @inheritdoc EmailAccountRecovery
@@ -146,7 +133,7 @@ contract SafeZkEmailRecoveryPlugin is
         );
         safeToRecoveryRouter[safe] = routerAddress;
 
-        recoveryConfigs[safe] = RecoveryConfig({recoveryDelay: recoveryDelay});
+        recoveryDelays[safe] = recoveryDelay;
 
         emit RecoveryConfigured(
             safe,
@@ -209,7 +196,6 @@ contract SafeZkEmailRecoveryPlugin is
         if (isExistingOwner) revert InvalidNewOwner();
 
         RecoveryRequest memory recoveryRequest = recoveryRequests[safeInEmail];
-        RecoveryConfig memory recoveryConfig = recoveryConfigs[safeInEmail];
         if (recoveryRequest.executeAfter > 0) {
             revert RecoveryAlreadyInitiated();
         }
@@ -221,7 +207,7 @@ contract SafeZkEmailRecoveryPlugin is
         uint256 threshold = getThreshold(safeInEmail);
         if (recoveryRequests[safeInEmail].approvalCount >= threshold) {
             uint256 executeAfter = block.timestamp +
-                recoveryConfigs[safeInEmail].recoveryDelay;
+                recoveryDelays[safeInEmail];
 
             recoveryRequests[safeInEmail].executeAfter = executeAfter;
 
@@ -280,11 +266,7 @@ contract SafeZkEmailRecoveryPlugin is
     }
 
     /// @inheritdoc ISafeZkEmailRecoveryPlugin
-    function updateRecoveryConfig(
-        uint256 guardianCount,
-        uint256 threshold,
-        uint256 recoveryDelay
-    ) external {
+    function updateRecoveryDelay(uint256 recoveryDelay) external {
         // TODO: add implementation
     }
 
