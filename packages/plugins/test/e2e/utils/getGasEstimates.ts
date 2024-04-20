@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/comma-dangle */
+/* eslint-disable prettier/prettier */
 import { ethers } from "ethers";
 import { UserOperation } from "./userOpUtils";
 

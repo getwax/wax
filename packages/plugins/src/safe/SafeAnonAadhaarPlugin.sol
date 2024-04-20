@@ -2,9 +2,9 @@
 pragma solidity >=0.7.0 <0.9.0;
 pragma abicoder v2;
 
-import {Safe4337Base} from "./utils/Safe4337Base.sol";
-import {IEntryPoint, UserOperation} from "account-abstraction/contracts/interfaces/IEntryPoint.sol";
-import {UserOperation} from "account-abstraction/contracts/interfaces/IEntryPoint.sol";
+import {Safe4337Base, SIG_VALIDATION_FAILED} from "./utils/Safe4337Base.sol";
+import {IEntryPoint, PackedUserOperation} from "account-abstraction/interfaces/IEntryPoint.sol";
+import {PackedUserOperation} from "account-abstraction/interfaces/IEntryPoint.sol";
 import {IAnonAadhaar} from "./utils/anonAadhaar/interfaces/IAnonAadhaar.sol";
 
 interface ISafe {
@@ -102,7 +102,7 @@ contract SafeAnonAadhaarPlugin is Safe4337Base {
     }
 
     function _validateSignature(
-        UserOperation calldata userOp,
+        PackedUserOperation calldata userOp,
         bytes32 userOpHash
     ) internal view override returns (uint256 validationData) {
         (

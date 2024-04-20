@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/comma-dangle */
+/* eslint-disable prettier/prettier */
 import { ethers, getBytes, NonceManager, Signer } from "ethers";
 import { AddressZero } from "@ethersproject/constants";
 
@@ -10,7 +12,7 @@ import {
 } from "../../../typechain-types";
 import receiptOf from "./receiptOf";
 import { calculateProxyAddress } from "./calculateProxyAddress";
-import { getGasEstimates } from "./getGasEstimates";
+import { getFeeData, getGasEstimates } from "./getGasEstimates";
 import sendUserOpAndWait from "./sendUserOpAndWait";
 import {
 	FactoryParams,
@@ -193,16 +195,15 @@ export const createAnonAadhaarOperation = async (
 	const unsignedUserOperation = {
 		sender: accountAddress,
 		nonce: nonceHex,
-		initCode: "0x",
 		callData: userOpCallData,
 		callGasLimit: ethers.toBeHex(150000n),
 		verificationGasLimit: ethers.toBeHex(1000000n),
 		preVerificationGas: ethers.toBeHex(200000n),
 		maxFeePerGas,
 		maxPriorityFeePerGas,
-		paymasterAndData: "0x",
+		paymasterData: "0x",
 		signature: "0x",
-	} satisfies UserOperationStruct;
+	} satisfies UserOperation;
 
 	return await ethers.resolveProperties(unsignedUserOperation);
 };
@@ -210,8 +211,8 @@ export const createAnonAadhaarOperation = async (
 export const sendUserOpWithAnonAadhaarSig = async (
 	bundlerProvider: ethers.JsonRpcProvider,
 	entryPointAddress: string,
-	unsignedUserOperation: UserOperationStruct,
-	userOpSignature: BytesLike
+	unsignedUserOperation: UserOperation,
+	userOpSignature: string
 ) => {
 	const userOperation = {
 		...unsignedUserOperation,
