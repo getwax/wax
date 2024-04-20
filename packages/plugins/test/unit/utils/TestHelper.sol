@@ -2,7 +2,7 @@
 pragma solidity ^0.8.12;
 
 import "forge-std/Test.sol";
-import {EntryPoint, UserOperation} from "account-abstraction/contracts/core/EntryPoint.sol";
+import {EntryPoint, PackedUserOperation} from "account-abstraction/core/EntryPoint.sol";
 
 /* solhint-disable private-vars-leading-underscore */
 /* solhint-disable var-name-mixedcase */
@@ -26,29 +26,29 @@ abstract contract TestHelper is Test {
         Dave = vm.createWallet("Dave");
     }
 
-    function buildUserOp() public view returns (UserOperation memory userOp) {
+    function buildUserOp()
+        public
+        view
+        returns (PackedUserOperation memory userOp)
+    {
         address sender = Alice.addr;
         uint256 nonce = 0;
         bytes memory initCode = hex"00";
         bytes memory callData = hex"00";
-        uint256 callGasLimit = 0;
-        uint256 verificationGasLimit = 0;
+        bytes32 accountGasLimits = hex"00";
         uint256 preVerificationGas = 0;
-        uint256 maxFeePerGas = 0;
-        uint256 maxPriorityFeePerGas = 0;
+        bytes32 gasFees = hex"00";
         bytes memory paymasterAndData = hex"00";
         bytes memory signature = hex"00";
 
-        userOp = UserOperation(
+        userOp = PackedUserOperation(
             sender,
             nonce,
             initCode,
             callData,
-            callGasLimit,
-            verificationGasLimit,
+            accountGasLimits,
             preVerificationGas,
-            maxFeePerGas,
-            maxPriorityFeePerGas,
+            gasFees,
             paymasterAndData,
             signature
         );

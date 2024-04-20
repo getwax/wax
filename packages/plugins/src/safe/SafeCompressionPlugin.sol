@@ -4,13 +4,18 @@ pragma abicoder v2;
 
 import {HandlerContext} from "safe-contracts/contracts/handler/HandlerContext.sol";
 
-import {IEntryPoint, UserOperation} from "account-abstraction/contracts/interfaces/IEntryPoint.sol";
-import {BLS} from "account-abstraction/contracts/samples/bls/lib/hubble-contracts/contracts/libs/BLS.sol";
-import {IBLSAccount} from "account-abstraction/contracts/samples/bls/IBLSAccount.sol";
+import {IEntryPoint, PackedUserOperation} from "account-abstraction/interfaces/IEntryPoint.sol";
+import {BLS} from "account-abstraction/samples/bls/lib/hubble-contracts/contracts/libs/BLS.sol";
+import {IBLSAccount} from "account-abstraction/samples/bls/IBLSAccount.sol";
+import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
-import {Safe4337Base, ISafe} from "./utils/Safe4337Base.sol";
+import {Safe4337Base, ISafe, SIG_VALIDATION_FAILED} from "./utils/Safe4337Base.sol";
 import {WaxLib as W} from "../compression/WaxLib.sol";
 import {IDecompressor} from "../compression/decompressors/IDecompressor.sol";
+
+/*//////////////////////////////////////////////////////////////////////////
+    THIS CONTRACT IS STILL IN ACTIVE DEVELOPMENT. NOT FOR PRODUCTION USE        
+//////////////////////////////////////////////////////////////////////////*/
 
 error IncorrectSignatureLength(uint256 length);
 
@@ -38,12 +43,10 @@ contract SafeCompressionPlugin is Safe4337Base, IBLSAccount {
         _decompressor = decompressorParam;
     }
 
-    function decompressAndPerform(
-        bytes calldata stream
-    ) public {
+    function decompressAndPerform(bytes calldata stream) public {
         _requireFromEntryPoint();
 
-        (W.Action[] memory actions,) = _decompressor.decompress(stream);
+        (W.Action[] memory actions, ) = _decompressor.decompress(stream);
 
         ISafe safe = _currentSafe();
 
@@ -57,9 +60,7 @@ contract SafeCompressionPlugin is Safe4337Base, IBLSAccount {
         }
     }
 
-    function setDecompressor(
-        IDecompressor decompressorParam
-    ) public {
+    function setDecompressor(IDecompressor decompressorParam) public {
         _requireFromCurrentSafeOrEntryPoint();
         _decompressor = decompressorParam;
     }
@@ -77,14 +78,15 @@ contract SafeCompressionPlugin is Safe4337Base, IBLSAccount {
     }
 
     function _validateSignature(
-        UserOperation calldata userOp,
+        PackedUserOperation calldata userOp,
         bytes32 /* userOpHash */
     ) internal view override returns (uint256) {
         uint256 initCodeLen = userOp.initCode.length;
 
         if (initCodeLen > 0) {
-            bytes32 claimedKeyHash =
-                keccak256(userOp.initCode[initCodeLen - 128:]);
+            bytes32 claimedKeyHash = keccak256(
+                userOp.initCode[initCodeLen - 128:]
+            );
 
             // See appendKeyToInitCode.ts for a detailed explanation.
             require(

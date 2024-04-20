@@ -6,6 +6,10 @@ import {MockDKIMRegsitry} from "./utils/MockDKIMRegsitry.sol";
 import {IDKIMRegsitry} from "./interface/IDKIMRegsitry.sol";
 import {ISafe} from "./utils/Safe4337Base.sol";
 
+/*//////////////////////////////////////////////////////////////////////////
+    THIS CONTRACT IS STILL IN ACTIVE DEVELOPMENT. NOT FOR PRODUCTION USE        
+//////////////////////////////////////////////////////////////////////////*/
+
 interface ISafeECDSAPlugin {
     function getOwner(address safe) external view returns (address);
 }

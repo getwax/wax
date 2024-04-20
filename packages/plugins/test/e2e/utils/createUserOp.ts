@@ -1,7 +1,5 @@
-import { BytesLike, ethers, getBytes, NonceManager, Signer } from "ethers";
+import { ethers, getBytes, NonceManager, Signer } from "ethers";
 import { AddressZero } from "@ethersproject/constants";
-import { UserOperationStruct } from "@account-abstraction/contracts";
-import { getUserOpHash } from "@account-abstraction/utils";
 
 import { SafeProxyFactory } from "../../../typechain-types/lib/safe-contracts/contracts/proxies/SafeProxyFactory";
 import { Safe } from "../../../typechain-types/lib/safe-contracts/contracts/Safe";
@@ -12,12 +10,19 @@ import {
 } from "../../../typechain-types";
 import receiptOf from "./receiptOf";
 import { calculateProxyAddress } from "./calculateProxyAddress";
-import { getFeeData, getGasEstimates } from "./getGasEstimates";
+import { getGasEstimates } from "./getGasEstimates";
 import sendUserOpAndWait from "./sendUserOpAndWait";
+import {
+	FactoryParams,
+	getUserOpHash,
+	PackedUserOperation,
+	packUserOp,
+	UserOperation,
+} from "./userOpUtils";
 
 type Plugin = SafeBlsPlugin | SafeWebAuthnPlugin;
 
-export const generateInitCodeAndAddress = async (
+export const generateFactoryParamsAndAddress = async (
 	admin: NonceManager,
 	owner: NonceManager,
 	plugin: Plugin,
@@ -58,25 +63,24 @@ export const generateInitCodeAndAddress = async (
 		})
 	);
 
-	// The initCode contains 20 bytes of the factory address and the rest is the
-	// calldata to be forwarded
-	const initCode = ethers.concat([
-		factoryAddress,
-		safeProxyFactory.interface.encodeFunctionData("createProxyWithNonce", [
-			singletonAddress,
-			encodedInitializer,
-			73,
-		]),
-	]);
+	const factoryData = safeProxyFactory.interface.encodeFunctionData(
+		"createProxyWithNonce",
+		[singletonAddress, encodedInitializer, 73]
+	);
 
-	return { initCode, deployedAddress };
+	const factoryParams = {
+		factory: factoryAddress,
+		factoryData,
+	};
+
+	return { factoryParams, deployedAddress };
 };
 
 export const createUserOperation = async (
 	provider: ethers.JsonRpcProvider,
 	bundlerProvider: ethers.JsonRpcProvider,
 	accountAddress: string,
-	initCode: string,
+	factoryParams: FactoryParams,
 	userOpCallData: string,
 	entryPointAddress: string,
 	dummySignature: string
@@ -88,15 +92,18 @@ export const createUserOperation = async (
 	const nonce = await entryPoint.getNonce(accountAddress, "0x00");
 	const nonceHex = "0x0" + nonce.toString();
 
-	const userOperationWithoutGasFields = {
+	let userOp: Partial<UserOperation> = {
 		sender: accountAddress,
 		nonce: nonceHex,
-		initCode,
 		callData: userOpCallData,
 		callGasLimit: "0x00",
-		paymasterAndData: "0x",
 		signature: dummySignature,
 	};
+
+	if (factoryParams.factory !== "0x") {
+		userOp.factory = factoryParams.factory;
+		userOp.factoryData = factoryParams.factoryData;
+	}
 
 	const {
 		callGasLimit,
@@ -107,23 +114,23 @@ export const createUserOperation = async (
 	} = await getGasEstimates(
 		provider,
 		bundlerProvider,
-		userOperationWithoutGasFields,
+		userOp,
 		entryPointAddress
 	);
 
 	const unsignedUserOperation = {
 		sender: accountAddress,
 		nonce: nonceHex,
-		initCode,
+		factory: userOp.factory,
+		factoryData: userOp.factoryData,
 		callData: userOpCallData,
 		callGasLimit,
 		verificationGasLimit,
 		preVerificationGas,
 		maxFeePerGas,
 		maxPriorityFeePerGas,
-		paymasterAndData: "0x",
 		signature: dummySignature,
-	} satisfies UserOperationStruct;
+	} satisfies UserOperation;
 
 	return await ethers.resolveProperties(unsignedUserOperation);
 };
@@ -133,7 +140,7 @@ export const createAndSendUserOpWithEcdsaSig = async (
 	bundlerProvider: ethers.JsonRpcProvider,
 	owner: Signer,
 	accountAddress: string,
-	initCode: string,
+	factoryParams: FactoryParams,
 	userOpCallData: string,
 	entryPointAddress: string,
 	dummySignature: string
@@ -142,7 +149,7 @@ export const createAndSendUserOpWithEcdsaSig = async (
 		provider,
 		bundlerProvider,
 		accountAddress,
-		initCode,
+		factoryParams,
 		userOpCallData,
 		entryPointAddress,
 		dummySignature

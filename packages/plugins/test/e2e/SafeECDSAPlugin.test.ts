@@ -64,11 +64,14 @@ describe("SafeECDSAPlugin", () => {
       [recipient.address, transferAmount, "0x00"],
     );
 
-    // Note: initCode is not used because we need to create both the safe
+    // Note: factoryParams is not used because we need to create both the safe
     // proxy and the plugin, and 4337 currently only allows one contract
     // creation in this step. Since we need an extra step anyway, it's simpler
     // to do the whole create outside of 4337.
-    const initCode = "0x";
+    const factoryParams = {
+      factory: "0x",
+      factoryData: "0x",
+    };
 
     // Send userOp
     await createAndSendUserOpWithEcdsaSig(
@@ -76,7 +79,7 @@ describe("SafeECDSAPlugin", () => {
       bundlerProvider,
       owner,
       accountAddress,
-      initCode,
+      factoryParams,
       userOpCallData,
       entryPointAddress,
       dummySignature,

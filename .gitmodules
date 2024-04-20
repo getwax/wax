@@ -9,7 +9,7 @@
 	url = https://github.com/foundry-rs/forge-std
 [submodule "packages/plugins/lib/openzeppelin-contracts"]
 	path = packages/plugins/lib/openzeppelin-contracts
-	url = https://github.com/OpenZeppelin/openzeppelin-contracts
+	url = https://github.com/openzeppelin/openzeppelin-contracts
 [submodule "packages/plugins/lib/safe-contracts"]
 	path = packages/plugins/lib/safe-contracts
 	url = https://github.com/safe-global/safe-contracts
@@ -28,3 +28,9 @@
 [submodule "packages/plugins/lib/kernel"]
 	path = packages/plugins/lib/kernel
 	url = https://github.com/zerodevapp/kernel
+[submodule "packages/plugins/lib/erc7579-implementation"]
+	path = packages/plugins/lib/erc7579-implementation
+	url = https://github.com/erc7579/erc7579-implementation
+[submodule "packages/plugins/lib/reference-implementation"]
+	path = packages/plugins/lib/reference-implementation
+	url = https://github.com/erc6900/reference-implementation

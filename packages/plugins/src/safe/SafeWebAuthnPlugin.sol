@@ -2,11 +2,15 @@
 pragma solidity >=0.8.0 <0.9.0;
 
 import {HandlerContext} from "safe-contracts/contracts/handler/HandlerContext.sol";
-import {BaseAccount} from "account-abstraction/contracts/core/BaseAccount.sol";
-import {IEntryPoint, UserOperation} from "account-abstraction/contracts/interfaces/IEntryPoint.sol";
+import {BaseAccount} from "account-abstraction/core/BaseAccount.sol";
+import {IEntryPoint, PackedUserOperation} from "account-abstraction/interfaces/IEntryPoint.sol";
 import {WebAuthn} from "../primitives/WebAuthn.sol";
 
-import {Safe4337Base} from "./utils/Safe4337Base.sol";
+import {Safe4337Base, SIG_VALIDATION_FAILED} from "./utils/Safe4337Base.sol";
+
+/*//////////////////////////////////////////////////////////////////////////
+    THIS CONTRACT IS STILL IN ACTIVE DEVELOPMENT. NOT FOR PRODUCTION USE        
+//////////////////////////////////////////////////////////////////////////*/
 
 interface ISafe {
     function enableModule(address module) external;
@@ -66,7 +70,7 @@ contract SafeWebAuthnPlugin is Safe4337Base, WebAuthn {
     }
 
     function _validateSignature(
-        UserOperation calldata userOp,
+        PackedUserOperation calldata userOp,
         bytes32 /*userOpHash*/
     ) internal override returns (uint256 validationData) {
         bytes calldata authenticatorData;
@@ -80,7 +84,10 @@ contract SafeWebAuthnPlugin is Safe4337Base, WebAuthn {
             // parse length of all fixed-length params (including length)
             uint i = 0;
             uint dataLen = 32;
-            uint256 paramLen = abi.decode(userOp.signature[i:i+dataLen], (uint256));
+            uint256 paramLen = abi.decode(
+                userOp.signature[i:i + dataLen],
+                (uint256)
+            );
             // Fixed-length params (bytes1, (uint256?), bytes32, uint256, uint256[2], uint256[2]). Expect 9 slots (288 bytes)
             i += dataLen; // advance index
 
@@ -88,12 +95,12 @@ contract SafeWebAuthnPlugin is Safe4337Base, WebAuthn {
             dataLen = paramLen - 32; // length already read
             dataLen -= 2 * 2 * 32; // exclude fixed length arrays
             (
-                wrapper.authenticatorDataFlagMask,
-                , // some number
+                wrapper.authenticatorDataFlagMask, // some number
+                ,
                 wrapper.clientChallenge,
                 wrapper.clientChallengeDataOffset
             ) = abi.decode(
-                userOp.signature[i:i+dataLen],
+                userOp.signature[i:i + dataLen],
                 (
                     bytes1,
                     uint256, //not sure what is encoded here
@@ -103,38 +110,37 @@ contract SafeWebAuthnPlugin is Safe4337Base, WebAuthn {
             );
             i += dataLen; // advance index
 
-
             bytes calldata calldataLocation;
             // load fixed length array params (pointers to calldata)
             dataLen = 2 * 32;
-            calldataLocation = userOp.signature[i:i+dataLen];
-            assembly{
+            calldataLocation = userOp.signature[i:i + dataLen];
+            assembly {
                 signature := calldataLocation.offset
             }
             i += dataLen; // advance index
 
-            calldataLocation = userOp.signature[i:i+dataLen];
-            assembly{
+            calldataLocation = userOp.signature[i:i + dataLen];
+            assembly {
                 pubKey := calldataLocation.offset
             }
             i += dataLen; // advance index
 
             // parse length of authenticatorData
             dataLen = 32;
-            paramLen = abi.decode(userOp.signature[i:i+dataLen], (uint256));
+            paramLen = abi.decode(userOp.signature[i:i + dataLen], (uint256));
             i += dataLen; // advance index
             // assign authenticatorData to sig splice
             dataLen = paramLen;
-            authenticatorData = userOp.signature[i:i+dataLen];
+            authenticatorData = userOp.signature[i:i + dataLen];
             i += ((dataLen >> 5) + 1) << 5; // advance index (round up to next slot)
 
             // parse length of clientData
             dataLen = 32;
-            paramLen = abi.decode(userOp.signature[i:i+dataLen], (uint256));
+            paramLen = abi.decode(userOp.signature[i:i + dataLen], (uint256));
             i += dataLen; // advance index
             // assign clientData to sig splice
             dataLen = paramLen;
-            clientData = userOp.signature[i:i+dataLen];
+            clientData = userOp.signature[i:i + dataLen];
             // i += ((dataLen >> 5) + 1) << 5; // advance index (round up to next slot)
         } // end scope to free vars from stack
 

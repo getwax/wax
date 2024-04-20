@@ -1,14 +1,15 @@
 import { ethers } from "ethers";
+import { UserOperation } from "./userOpUtils";
 
 export const getGasEstimates = async (
 	provider: ethers.JsonRpcProvider,
 	bundlerProvider: ethers.JsonRpcProvider,
-	userOperationWithoutGasFields: any,
+	partialUserOperation: Partial<UserOperation>,
 	entryPointAddress: string
 ) => {
 	const gasEstimate = (await bundlerProvider.send(
 		"eth_estimateUserOperationGas",
-		[userOperationWithoutGasFields, entryPointAddress]
+		[partialUserOperation, entryPointAddress]
 	)) as {
 		verificationGasLimit: string;
 		preVerificationGas: string;

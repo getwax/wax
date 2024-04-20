@@ -6,9 +6,13 @@ import {Safe} from "safe-contracts/contracts/Safe.sol";
 import {SafeProxyFactory} from "safe-contracts/contracts/proxies/SafeProxyFactory.sol";
 import {SafeProxy} from "safe-contracts/contracts/proxies/SafeProxy.sol";
 
-import {EntryPoint} from "account-abstraction/contracts/core/EntryPoint.sol";
+import {EntryPoint} from "account-abstraction/core/EntryPoint.sol";
 
 import {SafeECDSAPlugin} from "./SafeECDSAPlugin.sol";
+
+/*//////////////////////////////////////////////////////////////////////////
+    THIS CONTRACT IS STILL IN ACTIVE DEVELOPMENT. NOT FOR PRODUCTION USE        
+//////////////////////////////////////////////////////////////////////////*/
 
 contract SafeECDSAFactory {
     function create(
@@ -19,9 +23,9 @@ contract SafeECDSAFactory {
     ) external returns (SafeECDSAPlugin) {
         bytes32 salt = keccak256(abi.encodePacked(owner, saltNonce));
 
-        Safe safe = Safe(payable(new SafeProxy{salt: salt}(
-            address(safeSingleton)
-        )));
+        Safe safe = Safe(
+            payable(new SafeProxy{salt: salt}(address(safeSingleton)))
+        );
 
         address[] memory owners = new address[](1);
         owners[0] = owner;

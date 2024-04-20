@@ -3,7 +3,6 @@ import DeterministicDeployer from "../lib-ts/deterministic-deployer/Deterministi
 import {
   SimulateTxAccessor__factory,
   SafeProxyFactory__factory,
-  TokenCallbackHandler__factory,
   CompatibilityFallbackHandler__factory,
   CreateCall__factory,
   MultiSend__factory,
@@ -16,6 +15,8 @@ import {
   BLSOpen__factory,
 } from "../typechain-types";
 import makeDevFaster from "../test/e2e/utils/makeDevFaster";
+import { TokenCallbackHandler__factory } from "../typechain-types/factories/lib/safe-contracts/contracts/handler/TokenCallbackHandler__factory";
+import bundlerConfig from "./../config/bundler.config.json";
 
 async function deploy() {
   const { NODE_URL, MNEMONIC } = process.env;
@@ -36,12 +37,6 @@ async function deploy() {
     MultiSendCallOnly__factory,
     SignMessageLib__factory,
     BLSOpen__factory,
-    DeterministicDeployer.link(BLSSignatureAggregator__factory, [
-      {
-        "lib/account-abstraction/contracts/samples/bls/lib/BLSOpen.sol:BLSOpen":
-          deployer.calculateAddress(BLSOpen__factory, []),
-      },
-    ]),
   ];
 
   for (const contractFactory of contractFactories) {
@@ -50,6 +45,25 @@ async function deploy() {
     const contractName = contractFactory.name.split("_")[0];
     console.log(`deployed ${contractName} to ${await contract.getAddress()}`);
   }
+
+  const blsSignatureAggregatorFactory = DeterministicDeployer.link(
+    BLSSignatureAggregator__factory,
+    [
+      {
+        "lib/account-abstraction/contracts/samples/bls/lib/BLSOpen.sol:BLSOpen":
+          deployer.calculateAddress(BLSOpen__factory, []),
+      },
+    ],
+  );
+  const blsSignatureAggregator = await deployer.connectOrDeploy(
+    blsSignatureAggregatorFactory,
+    [bundlerConfig.entryPoint],
+  );
+  console.log(
+    `deployed ${
+      BLSSignatureAggregator__factory.name.split("_")[0]
+    } to ${await blsSignatureAggregator.getAddress()}`,
+  );
 
   const safeDeployer = await DeterministicDeployer.initSafeVersion(wallet);
 

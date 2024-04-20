@@ -51,7 +51,6 @@ describe("SafeZkEmailRecoveryPlugin", () => {
       SafeECDSAFactory__factory,
       [],
     );
-    await safeECDSAFactory.waitForDeployment();
 
     const createArgs = [
       safeSingleton,
@@ -94,7 +93,6 @@ describe("SafeZkEmailRecoveryPlugin", () => {
         await defaultDkimRegistry.getAddress(),
       ],
     );
-    await recoveryPlugin.waitForDeployment();
   });
 
   it("Should use recovery plugin via EOA and then send tx with new key.", async () => {
@@ -173,7 +171,10 @@ describe("SafeZkEmailRecoveryPlugin", () => {
       [await recoveryPlugin.getAddress(), "0x00", configureRecoveryCalldata],
     );
 
-    const initCode = "0x";
+    const factoryParams = {
+      factory: "0x",
+      factoryData: "0x",
+    };
     const dummySignature = await owner.signMessage("dummy sig");
 
     // Send userOp to add recovery account
@@ -182,7 +183,7 @@ describe("SafeZkEmailRecoveryPlugin", () => {
       bundlerProvider,
       owner,
       safeProxyAddress,
-      initCode,
+      factoryParams,
       userOpCallData,
       entryPointAddress,
       dummySignature,
@@ -291,7 +292,7 @@ describe("SafeZkEmailRecoveryPlugin", () => {
       bundlerProvider,
       newEcdsaPluginSigner,
       safeProxyAddress,
-      initCode,
+      factoryParams,
       userOpCallData,
       entryPointAddress,
       dummySignature,
@@ -393,7 +394,10 @@ describe("SafeZkEmailRecoveryPlugin", () => {
       [await recoveryPlugin.getAddress(), "0x00", addRecoveryHashCalldata],
     );
 
-    const initCode = "0x";
+    const factoryParams = {
+      factory: "0x",
+      factoryData: "0x",
+    };
     const dummySignature = await owner.signMessage("dummy sig");
 
     // Send userOp to add recovery account
@@ -402,7 +406,7 @@ describe("SafeZkEmailRecoveryPlugin", () => {
       bundlerProvider,
       owner,
       safeProxyAddress,
-      initCode,
+      factoryParams,
       userOpCallData,
       entryPointAddress,
       dummySignature,
@@ -471,7 +475,7 @@ describe("SafeZkEmailRecoveryPlugin", () => {
       bundlerProvider,
       otherAccount,
       otherSimpleAccountAddress,
-      initCode,
+      factoryParams,
       userOpCallData,
       entryPointAddress,
       dummySignature,
@@ -508,7 +512,7 @@ describe("SafeZkEmailRecoveryPlugin", () => {
       bundlerProvider,
       otherAccount,
       otherSimpleAccountAddress,
-      initCode,
+      factoryParams,
       userOpCallData,
       entryPointAddress,
       dummySignature,
@@ -531,7 +535,7 @@ describe("SafeZkEmailRecoveryPlugin", () => {
       bundlerProvider,
       newEcdsaPluginSigner,
       safeProxyAddress,
-      initCode,
+      factoryParams,
       userOpCallData,
       entryPointAddress,
       dummySignature,
