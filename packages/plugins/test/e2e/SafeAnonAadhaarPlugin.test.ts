@@ -1,17 +1,5 @@
-/* eslint-disable @typescript-eslint/naming-convention */
-/* eslint-disable @typescript-eslint/comma-dangle */
-/* eslint-disable prettier/prettier */
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { expect } from "chai";
-import {
-	BytesLike,
-	JsonRpcProvider,
-	NonceManager,
-	Signer,
-	ethers,
-} from "ethers";
+import { JsonRpcProvider, NonceManager, Signer, ethers } from "ethers";
 import DeterministicDeployer from "../../lib-ts/deterministic-deployer/DeterministicDeployer";
 import {
 	SafeAnonAadhaarFactory__factory,
@@ -31,22 +19,29 @@ import {
 	init,
 	generateArgs,
 	prove,
-	verify,
 	artifactUrls,
 	packGroth16Proof,
 	ArtifactsOrigin,
 } from "@anon-aadhaar/core";
-import { testQRData } from "./utils/assets/dataInput.json";
 import fs from "fs";
+import { getUserOpHash } from "./utils/userOpUtils";
 import { copmuteUserNullifier } from "./utils/computeNullifier";
-import { getUserOpHash } from "@account-abstraction/utils";
+import { testQRData } from "./utils/assets/dataInput.json";
 
-export const testPublicKeyHash =
-	"15134874015316324267425466444584014077184337590635665158241104437045239495873";
-const oneEther = ethers.parseEther("1");
-// what is nullifier seed: https://anon-aadhaar-documentation.vercel.app/docs/nullifiers
+/*
+
+This uses test Aadhaar QR code along with test Indian government's public key and certificate.
+
+*/
+
+// Nullifier seed: https://anon-aadhaar-documentation.vercel.app/docs/nullifiers
 // using wallet address makes sense...?
 const nullifierSeed = 1234;
+
+// test version of UIDAI public key
+// more info: https://anon-aadhaar-documentation.vercel.app/docs/how-does-it-work#1-extract-and-process-the-data-from-the-qr-code
+const testPublicKeyHash =
+	"15134874015316324267425466444584014077184337590635665158241104437045239495873";
 
 describe("SafeAnonAadhaarPlugin", () => {
 	let bundlerProvider: JsonRpcProvider;
@@ -72,26 +67,18 @@ describe("SafeAnonAadhaarPlugin", () => {
 			safeSingleton,
 		} = setup);
 
-		console.log("admin: ", await admin.getAddress());
-		console.log("owner: ", await owner.getAddress());
-		console.log("entryPointAddress: ", entryPointAddress);
-		console.log("safeSingleton: ", await safeSingleton.getAddress());
-
 		const signer = await provider.getSigner();
+
+		// Deploy AnonAadhaarGroth16Verifier contract
 		const anonAadhaarVerifier = await new Verifier__factory(signer).deploy();
 
-		console.log(
-			"anonAadhaarVerifier: ",
-			await anonAadhaarVerifier.getAddress()
-		);
-
+		// Deploy AnonAadhaar contract
 		const anonAadhaar = await new AnonAadhaar__factory(signer).deploy(
 			await anonAadhaarVerifier.getAddress(),
 			BigInt(testPublicKeyHash).toString()
 		);
 
 		anonAadhaarAddress = await anonAadhaar.getAddress();
-		console.log("anonAadhaarAddress: ", anonAadhaarAddress);
 
 		// load test certificate
 		const certificateDirName = __dirname + "/utils/assets";
@@ -99,6 +86,7 @@ describe("SafeAnonAadhaarPlugin", () => {
 			.readFileSync(certificateDirName + "/testCertificate.pem")
 			.toString();
 
+		// load files needed for proof generation and verification
 		const anonAadhaarInitArgs: InitArgs = {
 			wasmURL: artifactUrls.v2.wasm,
 			zkeyURL: artifactUrls.v2.zkey,
@@ -106,18 +94,20 @@ describe("SafeAnonAadhaarPlugin", () => {
 			artifactsOrigin: ArtifactsOrigin.server,
 		};
 
+		// pass initArgs
 		await init(anonAadhaarInitArgs);
 	});
 
 	it("should pass the ERC4337 validation", async () => {
+		// Deploy SafeAnonAadhaarFactory contract
 		const safeAnonAadhaarFactory = await deployer.connectOrDeploy(
 			SafeAnonAadhaarFactory__factory,
 			[]
 		);
 
-		// get user_data_hash
+		// get userDataHash out of nullifier seed and test QR data
+		// userDataHash is an unique identifier that is specific to each user and stored the plugin contract
 		const userDataHash = await copmuteUserNullifier(nullifierSeed, testQRData);
-		console.log("userDataHash: ", userDataHash);
 
 		const createArgs = [
 			safeSingleton,
@@ -131,8 +121,6 @@ describe("SafeAnonAadhaarPlugin", () => {
 		const accountAddress = await safeAnonAadhaarFactory.create.staticCall(
 			...createArgs
 		);
-
-		console.log("accountAddress: ", accountAddress);
 
 		await receiptOf(safeAnonAadhaarFactory.create(...createArgs));
 
@@ -157,9 +145,7 @@ describe("SafeAnonAadhaarPlugin", () => {
 			[recipient.address, transferAmount, "0x00"]
 		);
 
-		console.log("userOpCallData: ", userOpCallData);
-
-		// get userOp
+		// create User Operation
 		const unsignedUserOperation = await createAnonAadhaarOperation(
 			provider,
 			accountAddress,
@@ -174,9 +160,7 @@ describe("SafeAnonAadhaarPlugin", () => {
 			Number((await provider.getNetwork()).chainId)
 		);
 
-		console.log("userOpHash: ", userOpHash);
-
-		// prove
+		// prove with userOpHash as signal
 		const args = await generateArgs({
 			qrData: testQRData,
 			certificateFile: certificate,
@@ -184,22 +168,12 @@ describe("SafeAnonAadhaarPlugin", () => {
 			signal: userOpHash, // user op hash
 		});
 
-		console.log("args: ", args);
-
+		// proving
 		const anonAadhaarCore = await prove(args);
-		const ret = await verify(anonAadhaarCore);
-		console.log("ret: ", ret);
 		const anonAadhaarProof = anonAadhaarCore.proof;
 		const packedGroth16Proof = packGroth16Proof(anonAadhaarProof.groth16Proof);
 
-		console.log("anonAadhaarCore: ", anonAadhaarCore);
-
-		console.log("nullifierSeed: ", anonAadhaarCore.proof.nullifierSeed);
-		console.log("nullifier: ", anonAadhaarProof.nullifier);
-		console.log("nullifier bg: ", BigInt(anonAadhaarProof.nullifier));
-		console.log("timestamp: ", Number(anonAadhaarCore?.proof.timestamp));
-
-		// encode signautre
+		// encode proof data into userOpSignature
 		const encoder = ethers.AbiCoder.defaultAbiCoder();
 		const userOpSignature = encoder.encode(
 			["uint", "uint", "uint", "uint[4]", "uint[8]"],
@@ -217,8 +191,6 @@ describe("SafeAnonAadhaarPlugin", () => {
 			]
 		);
 
-		console.log("userOpSignature: ", userOpSignature);
-
 		// send userOp
 		await sendUserOpWithAnonAadhaarSig(
 			bundlerProvider,
@@ -227,61 +199,8 @@ describe("SafeAnonAadhaarPlugin", () => {
 			userOpSignature
 		);
 
-		console.log("userOp sent");
-
-		expect(await provider.getBalance(recipient.address)).to.equal(oneEther);
+		expect(await provider.getBalance(recipient.address)).to.equal(
+			ethers.parseEther("1")
+		);
 	}).timeout(0);
-
-	// it("should not allow execTransaction from unrelated address", async () => {
-	// 	const {
-	// 		provider,
-	// 		admin,
-	// 		owner,
-	// 		entryPointAddress,
-	// 		deployer,
-	// 		safeSingleton,
-	// 	} = await setupTests();
-
-	// 	const safeAnonAadhaarFactory = await deployer.connectOrDeploy(
-	// 		SafeAnonAadhaarFactory__factory,
-	// 		[]
-	// 	);
-
-	// 	const createArgs = [
-	// 		safeSingleton,
-	// 		entryPointAddress,
-	// 		await owner.getAddress(),
-	// 		0,
-	// 		"0x", // _anonAadhaarAddr
-	// 		"0x", // _userDataHash
-	// 	] satisfies Parameters<typeof safeAnonAadhaarFactory.create.staticCall>;
-
-	// 	const accountAddress = await safeAnonAadhaarFactory.create.staticCall(
-	// 		...createArgs
-	// 	);
-
-	// 	await receiptOf(safeAnonAadhaarFactory.create(...createArgs));
-
-	// 	const unrelatedWallet = ethers.Wallet.createRandom(provider);
-
-	// 	await receiptOf(
-	// 		admin.sendTransaction({
-	// 			to: unrelatedWallet.address,
-	// 			value: 100n * oneEther,
-	// 		})
-	// 	);
-
-	// 	const account = SafeAnonAadhaarPlugin__factory.connect(
-	// 		accountAddress,
-	// 		unrelatedWallet
-	// 	);
-
-	// 	const recipient = ethers.Wallet.createRandom(provider);
-
-	// 	await expect(
-	// 		receiptOf(account.execTransaction(recipient.address, oneEther, "0x"))
-	// 	).to.eventually.rejected;
-
-	// 	await expect(provider.getBalance(recipient)).to.eventually.equal(0n);
-	// });
 });

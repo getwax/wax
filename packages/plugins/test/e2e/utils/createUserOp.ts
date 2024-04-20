@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/comma-dangle */
-/* eslint-disable prettier/prettier */
 import { ethers, getBytes, NonceManager, Signer } from "ethers";
 import { AddressZero } from "@ethersproject/constants";
 
