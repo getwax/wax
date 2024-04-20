@@ -34,15 +34,15 @@
   resolved "https://registry.yarnpkg.com/@adraffy/ens-normalize/-/ens-normalize-1.10.1.tgz#63430d04bd8c5e74f8d7d049338f1cd9d4f02069"
   integrity sha512-96Z2IP3mYmF1Xg2cDm8f1gWGf/HUVedQ3FMifV4kG/PQ4yEP51xDtRAEfhVNt5f/uzpNkZHwWQuUcu6D6K+Ekw==
 
-"@anon-aadhaar/contracts@^2.0.2":
-  version "2.0.2"
-  resolved "https://registry.yarnpkg.com/@anon-aadhaar/contracts/-/contracts-2.0.2.tgz#d89bb3eaadad70b6c5c998013445b6825e999760"
-  integrity sha512-JrIFflrbNV0ngYIJJFOMfvryMLk3Oz/Vo/e3xF7VLXyY+LlV39AikF4I3W01G+OnuPB2+rI/xuNP+y2Mx83zJg==
+"@anon-aadhaar/contracts@^2.0.3":
+  version "2.0.3"
+  resolved "https://registry.yarnpkg.com/@anon-aadhaar/contracts/-/contracts-2.0.3.tgz#ab7e2b5b2209d41465df7148f90c27224f46ffdb"
+  integrity sha512-7Eqq7vdEDWcMy0tn5GWKk3uMntrnGztVBgve+ppuRqgZ1m2hol5OnDo9GTPe3eGfwaDiPY+11iQW9Xu8GIerSA==
 
-"@anon-aadhaar/core@^2.0.2":
-  version "2.0.2"
-  resolved "https://registry.yarnpkg.com/@anon-aadhaar/core/-/core-2.0.2.tgz#03da5b3307d9d12173dd967cdbf74646c2969251"
-  integrity sha512-RAhV3Pr47AeGfqmqoLjBR5kJt+uUZQaL9ozMNRrhHexkcmRrUeaGcjAqPfHnH9v1Va50EL4IxMK4m4Phq2NAbQ==
+"@anon-aadhaar/core@^2.0.3":
+  version "2.0.3"
+  resolved "https://registry.yarnpkg.com/@anon-aadhaar/core/-/core-2.0.3.tgz#23b17f6687c7712579cfb8052aea7995093659a4"
+  integrity sha512-8TLaRxuOiFoVf8Q6ipK2sduUlqpsWVfzWFsVz7Bai4XHnSUCF4rA0rksfQlB6bvugosE9OekzZA9BESE7NtDhQ==
   dependencies:
     "@pcd/pcd-types" "^0.10.0"
     "@pcd/tsconfig" "^0.6.0"

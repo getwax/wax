@@ -10,14 +10,13 @@
     "lint": "eslint . --ext js,jsx,ts,tsx --report-unused-disable-directives --max-warnings 0"
   },
   "dependencies": {
-    "@getwax/circuits": "../zkp",
-    "circomlibjs": "0.1.1"
+    "@getwax/circuits": "../zkp"
   },
   "devDependencies": {
     "@account-abstraction/contracts": "^0.6.0",
     "@account-abstraction/utils": "^0.6.0",
-    "@anon-aadhaar/contracts": "^2.0.2",
-    "@anon-aadhaar/core": "^2.0.2",
+    "@anon-aadhaar/contracts": "^2.0.3",
+    "@anon-aadhaar/core": "^2.0.3",
     "@nomicfoundation/hardhat-chai-matchers": "^2.0.0",
     "@nomicfoundation/hardhat-ethers": "^3.0.0",
     "@nomicfoundation/hardhat-network-helpers": "^1.0.0",
@@ -34,6 +33,7 @@
     "@typescript-eslint/eslint-plugin": ">=6.0.0",
     "@typescript-eslint/parser": ">=6.0.0",
     "chai": "^4.2.0",
+    "circomlibjs": "0.1.1",
     "dotenv": "^16.3.1",
     "eslint": ">=8.0.0",
     "eslint-config-prettier": "^9.0.0",
