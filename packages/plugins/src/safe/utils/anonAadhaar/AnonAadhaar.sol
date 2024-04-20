@@ -4,9 +4,13 @@ pragma solidity ^0.8.19;
 import "./interfaces/IAnonAadhaarGroth16Verifier.sol";
 import "./interfaces/IAnonAadhaar.sol";
 
+// https://github.com/anon-aadhaar/anon-aadhaar/blob/main/packages/contracts/src/AnonAadhaar.sol
+// Note: This is a AnonAadhaar contract with modifications, where `verifier` and `storedPublicKeyHash` are not mutable
+// so that verification doesn't fail due to invalid storage access
+
 contract AnonAadhaar is IAnonAadhaar {
-    address public verifier;
-    uint256 public storedPublicKeyHash;
+    address public immutable verifier;
+    uint256 public immutable storedPublicKeyHash;
 
     constructor(address _verifier, uint256 _pubkeyHash) {
         verifier = _verifier;

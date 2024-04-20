@@ -13,35 +13,28 @@ import {
 } from "@anon-aadhaar/core";
 import { buildPoseidon } from "circomlibjs";
 
+// Method to extract a nullifier specific to each Aadhaar ID owner from Aadhaar QR code
+// https://github.com/anon-aadhaar/anon-aadhaar/blob/main/packages/circuits/test/aadhaar-verifier.test.ts#L140
 export async function copmuteUserNullifier(
 	nullifierSeed: number,
 	qrData: string
 ): Promise<bigint> {
 	const QRDataBytes = convertBigIntToByteArray(BigInt(qrData));
-	console.log("QRDataBytes: ", QRDataBytes);
 	const QRDataDecode = decompressByteArray(QRDataBytes);
-	console.log("QRDataDecode: ", QRDataDecode);
 	const signedData = QRDataDecode.slice(0, QRDataDecode.length - 256);
-	console.log("signedData: ", signedData);
 
 	const { bytes: photoBytes } = extractPhoto(Array.from(signedData));
-	console.log("photoBytes: ", photoBytes);
+
 	const photoBytesPacked = padArrayWithZeros(
 		bytesToIntChunks(new Uint8Array(photoBytes), 31),
 		32
 	);
 
-	console.log("photoBytesPacked: ", photoBytesPacked);
-
 	const poseidon = await buildPoseidon();
 
 	const first16 = poseidon([...photoBytesPacked.slice(0, 16)]);
-	console.log("first16: ", first16);
 	const last16 = poseidon([...photoBytesPacked.slice(16, 32)]);
-	console.log("last16: ", last16);
 	const nullifier = poseidon([nullifierSeed, first16, last16]);
-	console.log("nullifier: ", nullifier);
-	console.log("nullifier str: ", nullifier.toString());
 
 	return BigInt(poseidon.F.toString(nullifier));
 }

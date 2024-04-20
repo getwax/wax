@@ -10,6 +10,10 @@ import {EntryPoint} from "account-abstraction/core/EntryPoint.sol";
 
 import {SafeAnonAadhaarPlugin} from "./SafeAnonAadhaarPlugin.sol";
 
+/*//////////////////////////////////////////////////////////////////////////
+    THIS CONTRACT IS STILL IN ACTIVE DEVELOPMENT. NOT FOR PRODUCTION USE        
+//////////////////////////////////////////////////////////////////////////*/
+
 contract SafeAnonAadhaarFactory {
     function create(
         Safe safeSingleton,

@@ -22,6 +22,10 @@ struct AnonAadhaarOwnerStorage {
     address owner;
 }
 
+/*//////////////////////////////////////////////////////////////////////////
+    THIS CONTRACT IS STILL IN ACTIVE DEVELOPMENT. NOT FOR PRODUCTION USE        
+//////////////////////////////////////////////////////////////////////////*/
+
 contract SafeAnonAadhaarPlugin is Safe4337Base {
     mapping(address => AnonAadhaarOwnerStorage) public anonAadhaarOwnerStorage;
 
@@ -30,8 +34,17 @@ contract SafeAnonAadhaarPlugin is Safe4337Base {
 
     address internal constant _SENTINEL_MODULES = address(0x1);
 
-    address public immutable anonAadhaarAddr; // external contract managed by AnonAadhaar. it has verifyAnonAadhaarProof() method
-    uint public immutable userDataHash; // the hash of unique and private user data extracted from Aadhaar QR code
+    // Note: the following state variables `anonAadhaarAddr` and `userDataHash` are set to immutable
+    // to immutable to bypass invalid storage access error and make it accessible via delegatecall.
+    // And `signalNullifiers` is currently unused as it can't be immutable.
+
+    // external contract managed by Anon Aadhaar with verifyAnonAadhaarProof() method
+    address public immutable anonAadhaarAddr;
+
+    // the hash of unique and private user data extracted from Aadhaar QR code
+    uint public immutable userDataHash;
+
+    // nullifier for each signal(userOpHash) to prevent on-chain front-running
     mapping(uint => bool) public signalNullifiers;
 
     event OWNER_UPDATED(
@@ -105,6 +118,7 @@ contract SafeAnonAadhaarPlugin is Safe4337Base {
         PackedUserOperation calldata userOp,
         bytes32 userOpHash
     ) internal view override returns (uint256 validationData) {
+        // decode proof verification params
         (
             uint nullifierSeed,
             uint timestamp,
@@ -113,15 +127,14 @@ contract SafeAnonAadhaarPlugin is Safe4337Base {
             uint[8] memory groth16Proof
         ) = abi.decode(userOp.signature, (uint, uint, uint, uint[4], uint[8]));
 
-        // check the signal hasn't already been nullified
-        // WIP: can't be access due to delegate-call from Safe
+        // Check if the signal value has already been nullified
         // require(!signalNullifiers[signal], "DUPLICATED_NULLIFIER");
 
         // make sure userOpHash == signal
         require(uint(userOpHash) == signal, "INVALID_SIGNAL");
 
         // see if the proof is fresh enough
-        // commented-out for the sake of local test w/ old proof
+        // not called to avoid invalid opcode: the use of block.timestamp.
         // require(isLessThan3HoursAgo(timestamp), "INVALID_TIMESTAMP");
 
         // verify proof throuugh AnonAadhaar and AnonAadhaarGroth16Verifier contracts
@@ -138,8 +151,7 @@ contract SafeAnonAadhaarPlugin is Safe4337Base {
             return SIG_VALIDATION_FAILED;
         }
 
-        // store nullifier
-        // signalNullifiers[signal] = true;
+        // signalNullifiers[signal] = true; // store nullifier
         return 0;
     }
 }

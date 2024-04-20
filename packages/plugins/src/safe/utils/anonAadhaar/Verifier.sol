@@ -18,6 +18,11 @@
     along with snarkJS. If not, see <https://www.gnu.org/licenses/>.
 */
 
+// https://github.com/anon-aadhaar/anon-aadhaar/blob/main/packages/contracts/src/Verifier.sol
+// Note: This Verifier contract has slight modifications that replace
+// `sub(gas(), 2000)` with `gas()` in each elliptic curve precompiles
+// so that it doesn't fail due to invalid opcode: the use of GAS
+
 pragma solidity >=0.7.0 <0.9.0;
 
 contract Verifier {
@@ -137,7 +142,7 @@ contract Verifier {
                 mstore(add(mIn, 64), s)
 
                 // success := staticcall(sub(gas(), 2000), 7, mIn, 96, mIn, 64)
-                success := staticcall(not(0), 7, mIn, 96, mIn, 64)
+                success := staticcall(gas(), 7, mIn, 96, mIn, 64)
 
                 if iszero(success) {
                     mstore(0, 0)
@@ -148,7 +153,7 @@ contract Verifier {
                 mstore(add(mIn, 96), mload(add(pR, 32)))
 
                 // success := staticcall(sub(gas(), 2000), 6, mIn, 128, pR, 64)
-                success := staticcall(not(0), 6, mIn, 128, pR, 64)
+                success := staticcall(gas(), 6, mIn, 128, pR, 64)
 
                 if iszero(success) {
                     mstore(0, 0)
@@ -235,8 +240,7 @@ contract Verifier {
                 //     0x20
                 // )
                 let success := staticcall(
-                    // sub(gas(), 2000),
-                    // 100000,
+                    gas(),
                     not(0),
                     8,
                     _pPairing,

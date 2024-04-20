@@ -192,16 +192,31 @@ export const createAnonAadhaarOperation = async (
 
 	const { maxFeePerGas, maxPriorityFeePerGas } = await getFeeData(provider);
 
+	// Note that gas amount params, such as callGasLimit, verificationGasLimit, preVerificationGas, are constant.
+	// This is because it's challenging to have dynamic gas values for userOp due to the following dependency loop issue.
+	// Doing gas estimation requires a valid signature in the userOp. Otherwise, the estimation fails.
+	// The signautre is an encoded value of zk-proof and signal (userOp Hash), which means signature needs a complete userOp including gas values.
+	// If gas values are changed after creating signature, on-chain verification fails as the new userOp hash doesn't match the proof anymore.
+
+	// solution 1: re-create proof but this takes too much time
+	// solution 2: have fixed gas values
+	// solution 3:
+	// - gas estimation with dummy sig to get at least dynamic callGasLimit. ( pimlico offers such an API call )
+	// - keep verificationGasLimit & preVerificationGas fixed as they are more or less constant
+
+	// this issue is also problematic when simulation call with valid sig is necessary, e.g. userOp w/ paymaster.
+
 	const unsignedUserOperation = {
 		sender: accountAddress,
 		nonce: nonceHex,
+		factory: undefined,
+		factoryData: undefined,
 		callData: userOpCallData,
 		callGasLimit: ethers.toBeHex(150000n),
 		verificationGasLimit: ethers.toBeHex(1000000n),
 		preVerificationGas: ethers.toBeHex(200000n),
 		maxFeePerGas,
 		maxPriorityFeePerGas,
-		paymasterData: "0x",
 		signature: "0x",
 	} satisfies UserOperation;
 
