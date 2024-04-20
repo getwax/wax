@@ -13,9 +13,11 @@
 [submodule "packages/plugins/lib/safe-contracts"]
 	path = packages/plugins/lib/safe-contracts
 	url = https://github.com/safe-global/safe-contracts
+	commit = bf943f8
 [submodule "packages/plugins/lib/account-abstraction"]
 	path = packages/plugins/lib/account-abstraction
 	url = https://github.com/eth-infinitism/account-abstraction
+	commit = 7af70c8
 [submodule "packages/zkp/lib/circom"]
 	path = packages/zkp/lib/circom
 	url = https://github.com/iden3/circom.git
@@ -31,9 +33,7 @@
 [submodule "packages/plugins/lib/erc7579-implementation"]
 	path = packages/plugins/lib/erc7579-implementation
 	url = https://github.com/erc7579/erc7579-implementation
+	commit = 42aa538
 [submodule "packages/plugins/lib/reference-implementation"]
 	path = packages/plugins/lib/reference-implementation
 	url = https://github.com/erc6900/reference-implementation
-[submodule "packages/plugins/lib/safe-smart-account"]
-	path = packages/plugins/lib/safe-smart-account
-	url = https://github.com/safe-global/safe-smart-account
