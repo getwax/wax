@@ -4,9 +4,11 @@
 [submodule "compression/lib/openzeppelin-contracts"]
 	path = packages/compression/lib/openzeppelin-contracts
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts
+	commit = dbb6104
 [submodule "packages/plugins/lib/forge-std"]
 	path = packages/plugins/lib/forge-std
 	url = https://github.com/foundry-rs/forge-std
+	commit = f73c73d
 [submodule "packages/plugins/lib/openzeppelin-contracts"]
 	path = packages/plugins/lib/openzeppelin-contracts
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts
@@ -30,6 +32,7 @@
 [submodule "packages/plugins/lib/kernel"]
 	path = packages/plugins/lib/kernel
 	url = https://github.com/zerodevapp/kernel
+	commit = 90fa72e
 [submodule "packages/plugins/lib/erc7579-implementation"]
 	path = packages/plugins/lib/erc7579-implementation
 	url = https://github.com/erc7579/erc7579-implementation
@@ -37,3 +40,4 @@
 [submodule "packages/plugins/lib/reference-implementation"]
 	path = packages/plugins/lib/reference-implementation
 	url = https://github.com/erc6900/reference-implementation
+	commit = 8b9ba71
