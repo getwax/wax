@@ -12,16 +12,10 @@ interface ISafeZkEmailRecoveryPlugin {
     /** Errors */
 
     /** TODO: */
-    error ModuleNotFound();
+    error ModuleNotEnabled();
 
     /** TODO: */
     error InvalidOwner(address owner);
-
-    /** TODO: */
-    error InvalidThreshold();
-
-    /** TODO: */
-    error InvalidGuardianCount();
 
     /** TODO: */
     error InvalidGuardian();
@@ -49,9 +43,6 @@ interface ISafeZkEmailRecoveryPlugin {
 
     /** TODO: */
     error RecoveryAlreadyInitiated();
-
-    /** TODO: */
-    error RouterAlreadyDeployed();
 
     /** TODO: */
     error RecoveryNotInitiated();

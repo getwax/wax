@@ -5,10 +5,10 @@ import {IGuardianManager} from "./interface/IGuardianManager.sol";
 
 abstract contract GuardianManager is IGuardianManager {
     /** Account to guardian to guardian status */
-    mapping(address => mapping(address => GuardianStatus)) public guardians;
+    mapping(address => mapping(address => GuardianStatus)) internal guardians;
 
     /** Account to guardian storage */
-    mapping(address => GuardianConfig) public guardianConfigs;
+    mapping(address => GuardianConfig) internal guardianConfigs;
 
     /**
      * @notice Sets the initial storage of the contract.

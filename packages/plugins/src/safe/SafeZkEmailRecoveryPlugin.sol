@@ -107,31 +107,15 @@ contract SafeZkEmailRecoveryPlugin is
 
         // Check this module is enabled on the calling Safe account
         bool moduleEnabled = ISafe(safe).isModuleEnabled(address(this));
-        if (!moduleEnabled) revert ModuleNotFound();
-
-        if (threshold < 1) revert InvalidThreshold();
-        if (guardians.length < threshold) revert InvalidGuardianCount();
+        if (!moduleEnabled) revert ModuleNotEnabled();
 
         setupGuardians(safe, guardians, threshold);
 
-        // FIXME: Should be for safe not guardian
-        if (recoveryRequests[guardians[0]].executeAfter > 0) {
+        if (recoveryRequests[safe].executeAfter > 0) {
             revert RecoveryAlreadyInitiated();
         }
 
-        if (safeToRecoveryRouter[safe] != address(0))
-            revert RouterAlreadyDeployed();
-
-        EmailAccountRecoveryRouter emailAccountRecoveryRouter = new EmailAccountRecoveryRouter(
-                address(this)
-            );
-        routerAddress = address(emailAccountRecoveryRouter);
-
-        recoveryRouterToSafeInfo[routerAddress] = SafeAccountInfo(
-            safe,
-            previousOwnerInLinkedList
-        );
-        safeToRecoveryRouter[safe] = routerAddress;
+        routerAddress = deployRouterForAccount(safe, previousOwnerInLinkedList);
 
         recoveryDelays[safe] = recoveryDelay;
 
@@ -156,7 +140,7 @@ contract SafeZkEmailRecoveryPlugin is
 
         address safeInEmail = abi.decode(subjectParams[0], (address));
 
-        address safeForRouter = recoveryRouterToSafeInfo[msg.sender].safe;
+        address safeForRouter = getSafeAccountInfo(msg.sender).safe;
         if (safeForRouter != safeInEmail) revert InvalidAccountForRouter();
 
         if (!isGuardian(guardian, safeInEmail))
@@ -187,7 +171,7 @@ contract SafeZkEmailRecoveryPlugin is
         address newOwnerInEmail = abi.decode(subjectParams[1], (address));
         address safeInEmail = abi.decode(subjectParams[2], (address));
 
-        address safeForRouter = recoveryRouterToSafeInfo[msg.sender].safe;
+        address safeForRouter = getSafeAccountInfo(msg.sender).safe;
         if (safeForRouter != safeInEmail) revert InvalidAccountForRouter();
 
         if (!isGuardian(guardian, safeInEmail))
@@ -225,9 +209,7 @@ contract SafeZkEmailRecoveryPlugin is
 
     // TODO: add natspec to interface or inherit from EmailAccountRecovery
     function completeRecovery() public override {
-        SafeAccountInfo memory safeAccountInfo = recoveryRouterToSafeInfo[
-            msg.sender
-        ];
+        SafeAccountInfo memory safeAccountInfo = getSafeAccountInfo(msg.sender);
         recoverPlugin(
             safeAccountInfo.safe,
             safeAccountInfo.previousOwnerInLinkedList
