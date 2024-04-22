@@ -162,10 +162,14 @@ contract SafeZkEmailRecoveryPlugin is
         if (!isGuardian(guardian, safeInEmail))
             revert GuardianInvalidForSafeInEmail();
 
-        bool acceptedRecovery = getRecoveryAcceptance(safeInEmail, guardian);
-        if (acceptedRecovery) revert GuardianAlreadyAccepted();
+        GuardianStatus guardianStatus = getGuardianStatus(
+            safeInEmail,
+            guardian
+        );
+        if (guardianStatus == GuardianStatus.ACCEPTED)
+            revert GuardianAlreadyAccepted();
 
-        changeRecoveryAcceptance(safeInEmail, guardian, true);
+        updateGuardian(safeInEmail, guardian, GuardianStatus.ACCEPTED);
     }
 
     // TODO: add natspec to interface or inherit from EmailAccountRecovery
@@ -189,8 +193,12 @@ contract SafeZkEmailRecoveryPlugin is
         if (!isGuardian(guardian, safeInEmail))
             revert GuardianInvalidForSafeInEmail();
 
-        bool acceptedRecovery = getRecoveryAcceptance(safeInEmail, guardian);
-        if (!acceptedRecovery) revert GuardianHasNotAccepted();
+        GuardianStatus guardianStatus = getGuardianStatus(
+            safeInEmail,
+            guardian
+        );
+        if (guardianStatus == GuardianStatus.REQUESTED)
+            revert GuardianHasNotAccepted();
 
         bool isExistingOwner = ISafe(safeInEmail).isOwner(newOwnerInEmail);
         if (isExistingOwner) revert InvalidNewOwner();
@@ -251,8 +259,6 @@ contract SafeZkEmailRecoveryPlugin is
                 recoveryRequest.ownerToSwap,
                 recoveryRequest.pendingNewOwner
             );
-
-            // changeRecoveryAcceptance(safeInEmail, guardian, false); // FIXME: can't access guardians
         } else {
             revert DelayNotPassed();
         }
