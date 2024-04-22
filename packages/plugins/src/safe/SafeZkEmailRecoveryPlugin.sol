@@ -196,7 +196,7 @@ contract SafeZkEmailRecoveryPlugin is
         recoveryRequests[safeInEmail].pendingNewOwner = newOwnerInEmail;
         recoveryRequests[safeInEmail].ownerToSwap = ownerToSwapInEmail;
 
-        uint256 threshold = getThreshold(safeInEmail);
+        uint256 threshold = getGuardianConfig(safeInEmail).threshold;
         if (recoveryRequests[safeInEmail].approvalCount >= threshold) {
             uint256 executeAfter = block.timestamp +
                 recoveryDelays[safeInEmail];
@@ -220,7 +220,7 @@ contract SafeZkEmailRecoveryPlugin is
     function recoverPlugin(address safe, address previousOwner) public {
         RecoveryRequest memory recoveryRequest = recoveryRequests[safe];
 
-        uint256 threshold = getThreshold(safe);
+        uint256 threshold = getGuardianConfig(safe).threshold;
         if (recoveryRequest.approvalCount < threshold)
             revert NotEnoughApprovals();
 

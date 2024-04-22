@@ -177,10 +177,10 @@ abstract contract GuardianManager is IGuardianManager {
     }
 
     // @inheritdoc IGuardianManager
-    function getThreshold(
+    function getGuardianConfig(
         address account
-    ) public view override returns (uint256) {
-        return guardianConfigs[account].threshold;
+    ) public view override returns (GuardianConfig memory) {
+        return guardianConfigs[account];
     }
 
     // @inheritdoc IGuardianManager

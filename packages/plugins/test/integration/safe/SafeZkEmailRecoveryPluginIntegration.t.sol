@@ -5,6 +5,8 @@ import "forge-std/Test.sol";
 import "forge-std/console2.sol";
 import {TestHelper} from "../../unit/utils/TestHelper.sol";
 import {SafeZkEmailRecoveryPlugin} from "../../../src/safe/SafeZkEmailRecoveryPlugin.sol";
+import {IRouterManager} from "../../../src/safe/interface/IRouterManager.sol";
+import {IGuardianManager} from "../../../src/safe/interface/IGuardianManager.sol";
 import {ISafeZkEmailRecoveryPlugin} from "../../../src/safe/interface/ISafeZkEmailRecoveryPlugin.sol";
 
 import {IEmailAccountRecovery} from "../../../src/safe/EmailAccountRecoveryRouter.sol";
@@ -235,7 +237,41 @@ contract SafeZkEmailRecoveryPlugin_Integration_Test is TestHelper {
             );
         vm.stopPrank();
 
-        // Create email proof for guardian acceptance
+        IGuardianManager.GuardianStatus guardianStatus1 = safeZkEmailRecoveryPlugin
+                .getGuardianStatus(safeAddress, guardian1);
+        IGuardianManager.GuardianStatus guardianStatus2 = safeZkEmailRecoveryPlugin
+                .getGuardianStatus(safeAddress, guardian2);
+        IGuardianManager.GuardianConfig
+            memory guardianConfig = safeZkEmailRecoveryPlugin.getGuardianConfig(
+                safeAddress
+            );
+        IRouterManager.SafeAccountInfo
+            memory safeAccountInfo = safeZkEmailRecoveryPlugin
+                .getSafeAccountInfo(emailAccountRecoveryRouterAddress);
+
+        assertEq(
+            uint256(guardianStatus1),
+            uint256(IGuardianManager.GuardianStatus.REQUESTED)
+        );
+        assertEq(
+            uint256(guardianStatus2),
+            uint256(IGuardianManager.GuardianStatus.REQUESTED)
+        );
+        assertEq(guardianConfig.threshold, threshold);
+        assertEq(guardianConfig.guardianCount, guardians.length);
+        assertEq(safeAddress, safeAccountInfo.safe);
+        assertEq(
+            previousOwnerInLinkedList,
+            safeAccountInfo.previousOwnerInLinkedList
+        );
+        assertEq(
+            emailAccountRecoveryRouterAddress,
+            safeZkEmailRecoveryPlugin.getRouterForSafe(safeAddress)
+        );
+        assertEq(
+            recoveryDelay,
+            safeZkEmailRecoveryPlugin.getRecoveryDelay(safeAddress)
+        );
 
         // Accept guardian 1
         acceptGuardian(
@@ -246,6 +282,15 @@ contract SafeZkEmailRecoveryPlugin_Integration_Test is TestHelper {
             accountSalt1,
             templateIdx
         );
+        guardianStatus1 = safeZkEmailRecoveryPlugin.getGuardianStatus(
+            safeAddress,
+            guardian1
+        );
+        assertEq(
+            uint256(guardianStatus1),
+            uint256(IGuardianManager.GuardianStatus.ACCEPTED)
+        );
+
         // Accept guardian 2
         acceptGuardian(
             safeAddress,
@@ -255,12 +300,18 @@ contract SafeZkEmailRecoveryPlugin_Integration_Test is TestHelper {
             accountSalt2,
             templateIdx
         );
+        guardianStatus2 = safeZkEmailRecoveryPlugin.getGuardianStatus(
+            safeAddress,
+            guardian2
+        );
+        assertEq(
+            uint256(guardianStatus2),
+            uint256(IGuardianManager.GuardianStatus.ACCEPTED)
+        );
 
-        // assertTrue(guardianRequest.accepted);
-
+        // Time travel so that EmailAuth timestamp is valid
         vm.warp(12 seconds);
 
-        // Create email proof for recovery & handle recovery
         // handle recovery request for guardian 1
         handleRecovery(
             safeAddress,
@@ -271,7 +322,16 @@ contract SafeZkEmailRecoveryPlugin_Integration_Test is TestHelper {
             accountSalt1,
             templateIdx
         );
+        ISafeZkEmailRecoveryPlugin.RecoveryRequest
+            memory recoveryRequest = safeZkEmailRecoveryPlugin
+                .getRecoveryRequest(safeAddress);
+        assertEq(recoveryRequest.executeAfter, 0);
+        assertEq(recoveryRequest.pendingNewOwner, newOwner.addr);
+        assertEq(recoveryRequest.approvalCount, 1);
+        assertEq(recoveryRequest.ownerToSwap, owner);
+
         // handle recovery request for guardian 2
+        uint256 executeAfter = block.timestamp + recoveryDelay;
         handleRecovery(
             safeAddress,
             newOwner.addr,
@@ -281,12 +341,27 @@ contract SafeZkEmailRecoveryPlugin_Integration_Test is TestHelper {
             accountSalt2,
             templateIdx
         );
+        recoveryRequest = safeZkEmailRecoveryPlugin.getRecoveryRequest(
+            safeAddress
+        );
+        assertEq(recoveryRequest.executeAfter, executeAfter);
+        assertEq(recoveryRequest.pendingNewOwner, newOwner.addr);
+        assertEq(recoveryRequest.approvalCount, 2);
+        assertEq(recoveryRequest.ownerToSwap, owner);
 
         vm.warp(block.timestamp + recoveryDelay);
 
         // Complete recovery
         IEmailAccountRecovery(emailAccountRecoveryRouterAddress)
             .completeRecovery();
+
+        recoveryRequest = safeZkEmailRecoveryPlugin.getRecoveryRequest(
+            safeAddress
+        );
+        assertEq(recoveryRequest.executeAfter, 0);
+        assertEq(recoveryRequest.pendingNewOwner, address(0));
+        assertEq(recoveryRequest.approvalCount, 0);
+        assertEq(recoveryRequest.ownerToSwap, address(0));
 
         bool isOwner = Safe(payable(safeAddress)).isOwner(newOwner.addr);
         assertTrue(isOwner, "New owner has not been added to the Safe");

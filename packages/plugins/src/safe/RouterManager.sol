@@ -1,23 +1,8 @@
 // SPDX-License.Idenitifer: MIT
 pragma solidity ^0.8.0;
 
+import {IRouterManager} from "./interface/IRouterManager.sol";
 import {EmailAccountRecoveryRouter} from "./EmailAccountRecoveryRouter.sol";
-
-interface IRouterManager {
-    struct SafeAccountInfo {
-        address safe;
-        address previousOwnerInLinkedList;
-    }
-
-    /** TODO: */
-    error RouterAlreadyDeployed();
-
-    function getSafeAccountInfo(
-        address recoveryRouter
-    ) external view returns (SafeAccountInfo memory);
-
-    function getRouterForSafe(address safe) external view returns (address);
-}
 
 abstract contract RouterManager is IRouterManager {
     /** Mapping of email account recovery router contracts to safe details needed to complete recovery */

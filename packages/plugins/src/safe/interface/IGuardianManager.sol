@@ -94,7 +94,9 @@ interface IGuardianManager {
      * @param account The Account account that the guardians should recover.
      * @return Threshold number.
      */
-    function getThreshold(address account) external view returns (uint256);
+    function getGuardianConfig(
+        address account
+    ) external view returns (GuardianConfig memory);
 
     /**
      * @notice Returns the status of the guardian for the account
