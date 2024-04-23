@@ -43,6 +43,3 @@
 [submodule "packages/plugins/lib/zk-email-verify"]
 	path = packages/plugins/lib/zk-email-verify
 	url = https://github.com/zkemail/zk-email-verify
-[submodule "packages/plugins/lib/modulekit"]
-	path = packages/plugins/lib/modulekit
-	url = https://github.com/rhinestonewtf/modulekit
