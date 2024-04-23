@@ -1,0 +1,7 @@
+{
+    "verifier": "0xEdC642bbaD91E21cCE6cd436Fdc6F040FD0fF998",
+    "dkimRegistry": "0xC83256CCf7B94d310e49edA05077899ca036eb78",
+    "emailAuthImpl": "0x1C76Aa365c17B40c7E944DcCdE4dC6e6D2A7b748",
+    "simpleWalletImpl": "0xabAA8B42d053a57DeC990906ebdF3efF6844A861",
+    "safeZkSafeZkEmailRecoveryPlugin": "0xFcfE6030952326c90fc615DDD15a3945f62AfCef"
+}

@@ -5,8 +5,9 @@ Please note, these plugins are in a pre-alpha state and are not ready for produc
 # Getting Started
 
 1. `cd packages/plugins`
-2. Run `yarn` to install hardhat dependencies
-3. Run `forge install` to install foundry dependencies
+2. Run `yarn submodules` to initialize git submodules
+3. Run `yarn` to install hardhat dependencies
+4. Run `forge install` to install foundry dependencies
 
 ## (optional) ZKP Plugins
 
