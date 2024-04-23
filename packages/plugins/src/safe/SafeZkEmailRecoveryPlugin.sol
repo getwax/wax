@@ -257,9 +257,4 @@ contract SafeZkEmailRecoveryPlugin is
     function updateRecoveryDelay(uint256 recoveryDelay) external {
         // TODO: add implementation
     }
-
-    /// @inheritdoc ISafeZkEmailRecoveryPlugin
-    function updateGuardian() external {
-        // TODO: add implementation
-    }
 }

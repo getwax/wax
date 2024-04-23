@@ -135,7 +135,4 @@ interface ISafeZkEmailRecoveryPlugin {
 
     // TODO: add natspec
     function updateRecoveryDelay(uint256 recoveryDelay) external;
-
-    // TODO: add natspec
-    function updateGuardian() external;
 }
