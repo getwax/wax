@@ -1,34 +1,36 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {MockGroth16Verifier} from "./utils/MockGroth16Verifier.sol";
-import {MockDKIMRegsitry} from "./utils/MockDKIMRegsitry.sol";
-import {IDKIMRegsitry} from "./interface/IDKIMRegsitry.sol";
 import {ISafe} from "./utils/Safe4337Base.sol";
+import {EmailAccountRecoveryRouter} from "./EmailAccountRecoveryRouter.sol";
+import {EmailAccountRecovery} from "ether-email-auth/packages/contracts/src/EmailAccountRecovery.sol";
 
 /*//////////////////////////////////////////////////////////////////////////
     THIS CONTRACT IS STILL IN ACTIVE DEVELOPMENT. NOT FOR PRODUCTION USE        
 //////////////////////////////////////////////////////////////////////////*/
 
-interface ISafeECDSAPlugin {
-    function getOwner(address safe) external view returns (address);
+struct RecoveryRequest {
+    uint256 executeAfter;
+    address ownerToSwap;
+    address pendingNewOwner;
+    uint256 delay;
 }
 
-struct RecoveryRequest {
-    bytes32 recoveryHash;
-    bytes32 dkimPublicKeyHash;
-    uint256 executeAfter;
-    address pendingNewOwner;
+struct GuardianRequest {
+    address safe;
+    bool accepted;
+}
+
+struct SafeAccountInfo {
+    address safe;
+    address previousOwnerInLinkedList;
 }
 
 /**
- * A safe plugin that recovers a safe ecdsa plugin owner via a zkp of an email.
+ * A safe plugin that recovers a safe owner via a zkp of an email.
  * NOT FOR PRODUCTION USE
  */
-contract SafeZkEmailRecoveryPlugin {
-    /** Default DKIM public key hashes registry */
-    IDKIMRegsitry public immutable defaultDkimRegistry;
-
+contract SafeZkEmailRecoveryPlugin is EmailAccountRecovery {
     /** Default delay has been set to a large timeframe on purpose. Please use a default delay suited to your specific context */
     uint256 public constant defaultDelay = 2 weeks;
 
@@ -37,32 +39,32 @@ contract SafeZkEmailRecoveryPlugin {
     /** Mapping of safe address to recovery request */
     mapping(address => RecoveryRequest) public recoveryRequests;
 
-    /** Mapping of safe address to a custom recovery delay */
-    mapping(address => uint256) public recoveryDelay;
+    /** Mapping of guardian address to guardian request */
+    mapping(address => GuardianRequest) public guardianRequests;
+
+    /** Mapping of email account recovery router contracts to safe details needed to complete recovery */
+    mapping(address => SafeAccountInfo) public recoveryRouterToSafeInfo;
+
+    /** Mapping of safe account addresses to email account recovery router contracts**/
+    /** These are stored for frontends to easily find the router contract address from the given safe account address**/
+    mapping(address => address) public safeAddrToRecoveryRouter;
 
     /** Mapping of safe address to dkim registry address */
-    mapping(address => address) public dkimRegistryOfSafe;
+    // TODO How can we use a custom DKIM reigstry/key with email auth?
+    // mapping(address => address) public dkimRegistryOfSafe;
 
+    /** Errors */
     error MODULE_NOT_ENABLED();
-    error INVALID_OWNER(address expectedOwner, address owner);
+    error INVALID_OWNER(address owner);
+    error INVALID_NEW_OWNER();
     error RECOVERY_ALREADY_INITIATED();
-    error RECOVERY_NOT_CONFIGURED();
-    error INVALID_DKIM_KEY_HASH(
-        address safe,
-        string emailDomain,
-        bytes32 dkimPublicKeyHash
-    );
-    error INVALID_PROOF();
     error RECOVERY_NOT_INITIATED();
     error DELAY_NOT_PASSED();
 
+    /** Events */
     event RecoveryConfigured(
         address indexed safe,
-        address ecsdaPlugin,
         address indexed owner,
-        bytes32 recoveryHash,
-        bytes32 dkimPublicKeyHash,
-        address dkimRegistry,
         uint256 customDelay
     );
     event RecoveryInitiated(
@@ -70,32 +72,156 @@ contract SafeZkEmailRecoveryPlugin {
         address newOwner,
         uint256 executeAfter
     );
-    event PluginRecovered(
+    event OwnerRecovered(
         address indexed safe,
-        address ecdsaPlugin,
+        address oldOwner,
         address newOwner
     );
     event RecoveryCancelled(address indexed safe);
-    event RecoveryDelaySet(address indexed safe, uint256 delay);
 
-    MockGroth16Verifier public immutable verifier;
+    constructor(
+        address _verifier,
+        address _dkimRegistry,
+        address _emailAuthImpl
+    ) {
+        verifierAddr = _verifier;
+        dkimAddr = _dkimRegistry;
+        emailAuthImplementationAddr = _emailAuthImpl;
+    }
 
-    constructor(address _verifier, address _defaultDkimRegistry) {
-        verifier = MockGroth16Verifier(_verifier);
-        defaultDkimRegistry = IDKIMRegsitry(_defaultDkimRegistry);
+    /**
+     * EmailAccountRecovery implementations
+     */
 
-        RECOVERY_HASH_DOMAIN = keccak256(
-            abi.encode(
-                keccak256(
-                    "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
-                ),
-                keccak256("SafeZKEmailRecoveryPlugin"),
-                keccak256("1"),
-                block.chainid,
-                address(this)
-            )
+    /**
+     * @inheritdoc EmailAccountRecovery
+     */
+    function acceptanceSubjectTemplates()
+        public
+        pure
+        override
+        returns (string[][] memory)
+    {
+        string[][] memory templates = new string[][](1);
+        templates[0] = new string[](5);
+        templates[0][0] = "Accept";
+        templates[0][1] = "guardian";
+        templates[0][2] = "request";
+        templates[0][3] = "for";
+        templates[0][4] = "{ethAddr}";
+        return templates;
+    }
+
+    /**
+     * @inheritdoc EmailAccountRecovery
+     */
+    function recoverySubjectTemplates()
+        public
+        pure
+        override
+        returns (string[][] memory)
+    {
+        string[][] memory templates = new string[][](1);
+        templates[0] = new string[](7);
+        templates[0][0] = "Update";
+        templates[0][1] = "owner";
+        templates[0][2] = "to";
+        templates[0][3] = "{ethAddr}";
+        templates[0][4] = "on";
+        templates[0][5] = "account";
+        templates[0][6] = "{ethAddr}";
+        return templates;
+    }
+
+    function acceptGuardian(
+        address guardian,
+        uint templateIdx,
+        bytes[] memory subjectParams,
+        bytes32
+    ) internal override {
+        require(guardian != address(0), "invalid guardian");
+        // TODO extract to function or modifier?
+        require(
+            guardianRequests[guardian].safe != address(0),
+            "guardian not requested"
+        );
+        require(
+            !guardianRequests[guardian].accepted,
+            "guardian has already accepted"
+        );
+        require(templateIdx == 0, "invalid template index");
+        require(subjectParams.length == 1, "invalid subject params");
+
+        address safeInEmail = abi.decode(subjectParams[0], (address));
+        address safeForRouter = recoveryRouterToSafeInfo[msg.sender].safe;
+        require(safeForRouter == safeInEmail, "invalid account for router");
+        require(
+            guardianRequests[guardian].safe == safeInEmail,
+            "invalid account in email"
+        );
+
+        guardianRequests[guardian].accepted = true;
+    }
+
+    function processRecovery(
+        address guardian,
+        uint templateIdx,
+        bytes[] memory subjectParams,
+        bytes32
+    ) internal override {
+        require(guardian != address(0), "invalid guardian");
+        require(
+            guardianRequests[guardian].safe != address(0),
+            "guardian not requested"
+        );
+        require(
+            guardianRequests[guardian].accepted,
+            "guardian has not accepted"
+        );
+        require(templateIdx == 0, "invalid template index");
+        require(subjectParams.length == 2, "invalid subject params");
+
+        address newOwnerInEmail = abi.decode(subjectParams[0], (address));
+        require(newOwnerInEmail != address(0), "invalid new owner in email");
+
+        address safeInEmail = abi.decode(subjectParams[1], (address));
+        address safeForRouter = recoveryRouterToSafeInfo[msg.sender].safe;
+        require(safeForRouter == safeInEmail, "invalid account for router");
+        require(
+            guardianRequests[guardian].safe == safeInEmail,
+            "invalid account in email"
+        );
+
+        bool isExistingOwner = ISafe(safeInEmail).isOwner(newOwnerInEmail);
+        if (isExistingOwner) revert INVALID_NEW_OWNER();
+
+        RecoveryRequest memory recoveryRequest = recoveryRequests[safeInEmail];
+        if (recoveryRequest.executeAfter > 0) {
+            revert RECOVERY_ALREADY_INITIATED();
+        }
+
+        uint256 executeAfter = block.timestamp +
+            recoveryRequests[safeInEmail].delay;
+
+        recoveryRequests[safeInEmail].executeAfter = executeAfter;
+        recoveryRequests[safeInEmail].pendingNewOwner = newOwnerInEmail;
+
+        emit RecoveryInitiated(safeInEmail, newOwnerInEmail, executeAfter);
+    }
+
+    function completeRecovery() public override {
+        SafeAccountInfo memory safeAccountInfo = recoveryRouterToSafeInfo[
+            msg.sender
+        ];
+        recoverPlugin(
+            safeAccountInfo.safe,
+            safeAccountInfo.previousOwnerInLinkedList
         );
     }
+
+    /**
+     * Plugin
+     */
 
     /**
      * @notice Returns recovery request accociated with a safe address
@@ -108,156 +234,129 @@ contract SafeZkEmailRecoveryPlugin {
     }
 
     /**
-     * @notice Stores a recovery hash that can be used to recover a ecdsa plugin
+     * @notice Returns guardian request accociated with a safe address
+     * @param safe address to query storage with
+     */
+    function getGuardianRequest(
+        address safe
+    ) external view returns (GuardianRequest memory) {
+        return guardianRequests[safe];
+    }
+
+    // TODO test
+    /**
+     * @notice Returns the recovery router address that corresponds to the specified Safe account
+     * @param safe address to query storage with
+     */
+    function getRouterForSafe(address safe) external view returns (address) {
+        return safeAddrToRecoveryRouter[safe];
+    }
+
+    /**
+     * @notice Stores a recovery hash that can be used to recover a safe owner
      *         at a later stage.
      * @dev dkimRegistry can be a zero address if the user wants to use the
      *      defaultDkimRegistry. customDelay can be 0 if the user wants to use defaultDelay
      *      This function assumes it is being called from a safe - see how msg.sender
      *      is interpreted. This is the first function that must be called when setting up recovery.
-     * @param ecsdaPlugin Safe ecsda plugin address that this function will be adding a recovery option for
-     * @param owner Owner of the ecdsa plugin
-     * @param recoveryHash Hash of domain, email and salt - keccak256(abi.encodePacked(RECOVERY_HASH_DOMAIN, email, salt))
-     * @param dkimPublicKeyHash Hash of DKIM public key - keccak256(abi.encodePacked(dkimPublicKey))
-     * @param dkimRegistry Address of a user-defined DKIM registry
+     * @param owner Owner on the safe being recovered
+     * @param guardian The EmailAuth guardian address that has permissions to recover an owner on the account
      * @param customDelay A custom delay to set the recoveryDelay value that is associated with a safe.
+     * @param previousOwnerInLinkedList The previous owner stored in the Safe owners linked list.
+     * This is needed to rotate the owner at the end of the recovery flow
      */
     function configureRecovery(
-        address ecsdaPlugin,
         address owner,
-        bytes32 recoveryHash,
-        bytes32 dkimPublicKeyHash,
-        address dkimRegistry,
-        uint256 customDelay
-    ) external {
+        address guardian,
+        uint256 customDelay,
+        address previousOwnerInLinkedList // TODO: We should try fetch this automatically when needed. It is possible that owners are changed without going through the recovery plugin and this value could be outdated
+    ) external returns (address emailAccountRecoveryRouterAddress) {
         address safe = msg.sender;
-
         bool moduleEnabled = ISafe(safe).isModuleEnabled(address(this));
         if (!moduleEnabled) revert MODULE_NOT_ENABLED();
 
-        address expectedOwner = ISafeECDSAPlugin(ecsdaPlugin).getOwner(safe);
-        if (owner != expectedOwner) revert INVALID_OWNER(expectedOwner, owner);
+        require(
+            guardianRequests[guardian].safe == address(0),
+            "guardian already requested"
+        );
 
-        if (recoveryRequests[safe].executeAfter > 0) {
+        bool isOwner = ISafe(safe).isOwner(owner);
+        if (!isOwner) revert INVALID_OWNER(owner);
+
+        if (recoveryRequests[guardian].executeAfter > 0) {
             revert RECOVERY_ALREADY_INITIATED();
         }
+        require(
+            safeAddrToRecoveryRouter[safe] == address(0),
+            "router contract for safe already exits"
+        );
 
+        EmailAccountRecoveryRouter emailAccountRecoveryRouter = new EmailAccountRecoveryRouter(
+                address(this)
+            );
+        emailAccountRecoveryRouterAddress = address(emailAccountRecoveryRouter);
+
+        require(
+            recoveryRouterToSafeInfo[emailAccountRecoveryRouterAddress].safe ==
+                address(0),
+            "safe for the router contract already exits"
+        );
+        recoveryRouterToSafeInfo[
+            emailAccountRecoveryRouterAddress
+        ] = SafeAccountInfo(safe, previousOwnerInLinkedList);
+        safeAddrToRecoveryRouter[safe] = emailAccountRecoveryRouterAddress;
+
+        uint256 delay = defaultDelay;
         if (customDelay > 0) {
-            recoveryDelay[safe] = customDelay;
-        } else {
-            recoveryDelay[safe] = defaultDelay;
+            delay = customDelay;
         }
 
         recoveryRequests[safe] = RecoveryRequest({
-            recoveryHash: recoveryHash,
-            dkimPublicKeyHash: dkimPublicKeyHash,
             executeAfter: 0,
-            pendingNewOwner: address(0)
+            ownerToSwap: owner,
+            pendingNewOwner: address(0),
+            delay: delay
         });
-        dkimRegistryOfSafe[safe] = dkimRegistry;
 
-        emit RecoveryConfigured(
-            safe,
-            ecsdaPlugin,
-            owner,
-            recoveryHash,
-            dkimPublicKeyHash,
-            dkimRegistry,
-            customDelay
-        );
+        guardianRequests[guardian] = GuardianRequest({
+            safe: safe,
+            accepted: false
+        });
+
+        emit RecoveryConfigured(safe, owner, delay);
     }
 
     /**
-     * @notice Initiates a recovery of a safe ecdsa plugin using a zk email proof.
-     * @dev Rotates the safe ecdsa plugin owner address to a new address. Uses the
-     *      default delay period if no custom delay has been set. This is the second
-     *      function that should be called in the recovery process - after configureRecovery
-     * @param safe The safe that manages the safe ecdsa plugin being recovered
-     * @param newOwner The new owner address of the safe ecdsa plugin
-     * @param emailDomain Domain name of the sender's email
-     * @param a Part of the proof
-     * @param b Part of the proof
-     * @param c Part of the proof
-     */
-    function initiateRecovery(
-        address safe,
-        address newOwner,
-        string memory emailDomain,
-        uint256[2] memory a,
-        uint256[2][2] memory b,
-        uint256[2] memory c
-    ) external {
-        RecoveryRequest memory recoveryRequest = recoveryRequests[safe];
-
-        if (recoveryRequest.recoveryHash == bytes32(0)) {
-            revert RECOVERY_NOT_CONFIGURED();
-        }
-
-        if (recoveryRequest.executeAfter > 0) {
-            revert RECOVERY_ALREADY_INITIATED();
-        }
-
-        if (
-            !this.isDKIMPublicKeyHashValid(
-                safe,
-                emailDomain,
-                recoveryRequest.dkimPublicKeyHash
-            )
-        ) {
-            revert INVALID_DKIM_KEY_HASH(
-                safe,
-                emailDomain,
-                recoveryRequest.dkimPublicKeyHash
-            );
-        }
-
-        uint256[4] memory publicSignals = [
-            uint256(uint160(safe)),
-            uint256(recoveryRequest.recoveryHash),
-            uint256(uint160(newOwner)),
-            uint256(recoveryRequest.dkimPublicKeyHash)
-        ];
-
-        // verify proof
-        bool verified = verifier.verifyProof(a, b, c, publicSignals);
-        if (!verified) revert INVALID_PROOF();
-
-        uint256 executeAfter = block.timestamp + recoveryDelay[safe];
-
-        recoveryRequests[safe].executeAfter = executeAfter;
-        recoveryRequests[safe].pendingNewOwner = newOwner;
-
-        emit RecoveryInitiated(safe, newOwner, executeAfter);
-    }
-
-    /**
-     * @notice Recovers a safe ecdsa plugin using a zk email proof.
-     * @dev Rotates the safe ecdsa plugin owner address to a new address.
+     * @notice Recovers a safe owner using a zk email proof.
+     * @dev Rotates the safe owner address to a new address.
      *      This function is designed so it can be called from any account and account type.
      *      This function is the third and final function that needs to be called in the
      *      recovery process. After configureRecovery & initiateRecovery
-     * @param safe The safe that manages the safe ecdsa plugin being recovered
-     * @param ecdsaPlugin Safe ecsda plugin address that this function will be rotating the owner address for
+     * @param safe The safe for the owner being rotated
+     * @param previousOwner The previous owner in the safe owners linked list // TODO: (merge-ok) retrieve this automatically
      */
-    function recoverPlugin(address safe, address ecdsaPlugin) external {
+    function recoverPlugin(address safe, address previousOwner) public {
         RecoveryRequest memory recoveryRequest = recoveryRequests[safe];
 
         if (recoveryRequest.executeAfter == 0) {
             revert RECOVERY_NOT_INITIATED();
         }
 
-        if (block.timestamp > recoveryRequest.executeAfter) {
+        if (block.timestamp >= recoveryRequest.executeAfter) {
             delete recoveryRequests[safe];
 
             bytes memory data = abi.encodeWithSignature(
-                "enable(bytes)",
-                abi.encodePacked(recoveryRequest.pendingNewOwner)
+                "swapOwner(address,address,address)",
+                previousOwner,
+                recoveryRequest.ownerToSwap,
+                recoveryRequest.pendingNewOwner
             );
 
-            ISafe(safe).execTransactionFromModule(ecdsaPlugin, 0, data, 0);
+            ISafe(safe).execTransactionFromModule(safe, 0, data, 0);
 
-            emit PluginRecovered(
+            emit OwnerRecovered(
                 safe,
-                ecdsaPlugin,
+                recoveryRequest.ownerToSwap,
                 recoveryRequest.pendingNewOwner
             );
         } else {
@@ -274,39 +373,5 @@ contract SafeZkEmailRecoveryPlugin {
         address safe = msg.sender;
         delete recoveryRequests[safe];
         emit RecoveryCancelled(safe);
-    }
-
-    /**
-     * @notice Sets a custom delay for recovering a plugin for a specific safe.
-     * @dev Custom delay is used instead of the default delay when recovering a
-     *      plugin. Custom delays should be configured with care as they can be
-     *      used to bypass the default delay.
-     * @param delay The custom delay to be used when recovering a plugin for the safe
-     */
-    function setRecoveryDelay(uint256 delay) external {
-        address safe = msg.sender;
-        recoveryDelay[safe] = delay;
-        emit RecoveryDelaySet(safe, delay);
-    }
-
-    /// @notice Return the DKIM public key hash for a given email domain and safe address
-    /// @param safe The address of the safe that controls the plugin
-    /// @param emailDomain Email domain for which the DKIM public key hash is to be returned
-    function isDKIMPublicKeyHashValid(
-        address safe,
-        string memory emailDomain,
-        bytes32 publicKeyHash
-    ) public view returns (bool) {
-        address dkimRegistry = dkimRegistryOfSafe[safe];
-
-        if (dkimRegistry == address(0)) {
-            dkimRegistry = address(defaultDkimRegistry);
-        }
-
-        return
-            IDKIMRegsitry(dkimRegistry).isDKIMPublicKeyHashValid(
-                emailDomain,
-                publicKeyHash
-            );
     }
 }
