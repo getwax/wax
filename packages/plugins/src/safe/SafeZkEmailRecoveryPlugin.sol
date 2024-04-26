@@ -99,7 +99,6 @@ contract SafeZkEmailRecoveryPlugin is
     /// @inheritdoc ISafeZkEmailRecoveryPlugin
     function configureRecovery(
         address[] memory guardians,
-        address previousOwnerInLinkedList, // TODO: We should try fetch this automatically when needed. It is possible that owners are changed without going through the recovery plugin and this value could be outdated
         uint256 recoveryDelay,
         uint256 threshold
     ) external returns (address routerAddress) {
@@ -115,7 +114,7 @@ contract SafeZkEmailRecoveryPlugin is
             revert RecoveryAlreadyInitiated();
         }
 
-        routerAddress = deployRouterForAccount(safe, previousOwnerInLinkedList);
+        routerAddress = deployRouterForAccount(safe);
 
         recoveryDelays[safe] = recoveryDelay;
 
@@ -140,7 +139,7 @@ contract SafeZkEmailRecoveryPlugin is
 
         address safeInEmail = abi.decode(subjectParams[0], (address));
 
-        address safeForRouter = getSafeAccountInfo(msg.sender).safe;
+        address safeForRouter = getAccountForRouter(msg.sender);
         if (safeForRouter != safeInEmail) revert InvalidAccountForRouter();
 
         if (!isGuardian(guardian, safeInEmail))
@@ -171,7 +170,7 @@ contract SafeZkEmailRecoveryPlugin is
         address newOwnerInEmail = abi.decode(subjectParams[1], (address));
         address safeInEmail = abi.decode(subjectParams[2], (address));
 
-        address safeForRouter = getSafeAccountInfo(msg.sender).safe;
+        address safeForRouter = getAccountForRouter(msg.sender);
         if (safeForRouter != safeInEmail) revert InvalidAccountForRouter();
 
         if (!isGuardian(guardian, safeInEmail))
@@ -194,7 +193,7 @@ contract SafeZkEmailRecoveryPlugin is
 
         recoveryRequests[safeInEmail].approvalCount++;
         recoveryRequests[safeInEmail].pendingNewOwner = newOwnerInEmail;
-        recoveryRequests[safeInEmail].ownerToSwap = ownerToSwapInEmail;
+        recoveryRequests[safeInEmail].oldOwner = ownerToSwapInEmail;
 
         uint256 threshold = getGuardianConfig(safeInEmail).threshold;
         if (recoveryRequests[safeInEmail].approvalCount >= threshold) {
@@ -209,41 +208,63 @@ contract SafeZkEmailRecoveryPlugin is
 
     // TODO: add natspec to interface or inherit from EmailAccountRecovery
     function completeRecovery() public override {
-        SafeAccountInfo memory safeAccountInfo = getSafeAccountInfo(msg.sender);
-        recoverPlugin(
-            safeAccountInfo.safe,
-            safeAccountInfo.previousOwnerInLinkedList
-        );
-    }
+        address safe = getAccountForRouter(msg.sender);
 
-    /// @inheritdoc ISafeZkEmailRecoveryPlugin
-    function recoverPlugin(address safe, address previousOwner) public {
         RecoveryRequest memory recoveryRequest = recoveryRequests[safe];
 
         uint256 threshold = getGuardianConfig(safe).threshold;
         if (recoveryRequest.approvalCount < threshold)
             revert NotEnoughApprovals();
 
-        if (block.timestamp >= recoveryRequest.executeAfter) {
-            delete recoveryRequests[safe];
-
-            bytes memory data = abi.encodeWithSignature(
-                "swapOwner(address,address,address)",
-                previousOwner,
-                recoveryRequest.ownerToSwap,
-                recoveryRequest.pendingNewOwner
-            );
-
-            ISafe(safe).execTransactionFromModule(safe, 0, data, 0);
-
-            emit OwnerRecovered(
-                safe,
-                recoveryRequest.ownerToSwap,
-                recoveryRequest.pendingNewOwner
-            );
-        } else {
+        if (block.timestamp < recoveryRequest.executeAfter) {
             revert DelayNotPassed();
         }
+
+        delete recoveryRequests[safe];
+
+        address previousOwnerInLinkedList = getPreviousOwnerInLinkedList(
+            safe,
+            recoveryRequest.oldOwner
+        );
+
+        bytes memory swapOwnerData = abi.encodeWithSignature(
+            "swapOwner(address,address,address)",
+            previousOwnerInLinkedList,
+            recoveryRequest.oldOwner,
+            recoveryRequest.pendingNewOwner
+        );
+
+        ISafe(safe).execTransactionFromModule(safe, 0, swapOwnerData, 0);
+
+        emit OwnerRecovered(
+            safe,
+            recoveryRequest.oldOwner,
+            recoveryRequest.pendingNewOwner
+        );
+    }
+
+    /**
+     * @notice Helper function that retrieves the owner that points to the owner to be
+     * replaced in the Safe `owners` linked list. Based on the logic used to swap
+     * owners in the safe core sdk.
+     * @param safe the safe account to query
+     * @param oldOwner the old owner to be swapped in the recovery attempt.
+     */
+    function getPreviousOwnerInLinkedList(
+        address safe,
+        address oldOwner
+    ) internal view returns (address) {
+        address[] memory owners = ISafe(safe).getOwners();
+
+        uint256 oldOwnerIndex;
+        for (uint256 i = 0; i < owners.length; i++) {
+            if (owners[i] == oldOwner) {
+                oldOwnerIndex = i;
+                break;
+            }
+        }
+        address sentinelOwner = address(0x1);
+        return oldOwnerIndex == 0 ? sentinelOwner : owners[oldOwnerIndex - 1];
     }
 
     /// @inheritdoc ISafeZkEmailRecoveryPlugin

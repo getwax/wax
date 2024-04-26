@@ -39,6 +39,12 @@ interface ISafe {
      * @return Boolean if owner is an owner of the Safe.
      */
     function isOwner(address owner) external view returns (bool);
+
+    /**
+     * @notice Returns a list of Safe owners.
+     * @return Array of Safe owners.
+     */
+    function getOwners() external view returns (address[] memory);
 }
 
 /**

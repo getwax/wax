@@ -5,32 +5,31 @@ import {IRouterManager} from "./interface/IRouterManager.sol";
 import {EmailAccountRecoveryRouter} from "./EmailAccountRecoveryRouter.sol";
 
 abstract contract RouterManager is IRouterManager {
-    /** Mapping of email account recovery router contracts to safe details needed to complete recovery */
-    mapping(address => SafeAccountInfo) internal recoveryRouterToSafeInfo;
+    /** Mapping of email account recovery router contracts to account */
+    mapping(address => address) internal routerToAccount;
 
-    /** Mapping of safe account addresses to email account recovery router contracts**/
-    /** These are stored for frontends to easily find the router contract address from the given safe account address**/
-    mapping(address => address) internal safeToRecoveryRouter;
+    /** Mapping of account account addresses to email account recovery router contracts**/
+    /** These are stored for frontends to easily find the router contract address from the given account account address**/
+    mapping(address => address) internal accountToRouter;
 
     /// @inheritdoc IRouterManager
-    function getSafeAccountInfo(
+    function getAccountForRouter(
         address recoveryRouter
-    ) public view override returns (SafeAccountInfo memory) {
-        return recoveryRouterToSafeInfo[recoveryRouter];
+    ) public view override returns (address) {
+        return routerToAccount[recoveryRouter];
     }
 
     /// @inheritdoc IRouterManager
-    function getRouterForSafe(
-        address safe
+    function getRouterForAccount(
+        address account
     ) public view override returns (address) {
-        return safeToRecoveryRouter[safe];
+        return accountToRouter[account];
     }
 
     function deployRouterForAccount(
-        address account,
-        address previousOwnerInLinkedList
+        address account
     ) internal returns (address) {
-        if (safeToRecoveryRouter[account] != address(0))
+        if (accountToRouter[account] != address(0))
             revert RouterAlreadyDeployed();
 
         EmailAccountRecoveryRouter emailAccountRecoveryRouter = new EmailAccountRecoveryRouter(
@@ -38,11 +37,8 @@ abstract contract RouterManager is IRouterManager {
             );
         address routerAddress = address(emailAccountRecoveryRouter);
 
-        recoveryRouterToSafeInfo[routerAddress] = SafeAccountInfo(
-            account,
-            previousOwnerInLinkedList
-        );
-        safeToRecoveryRouter[account] = routerAddress;
+        routerToAccount[routerAddress] = account;
+        accountToRouter[account] = routerAddress;
 
         return routerAddress;
     }

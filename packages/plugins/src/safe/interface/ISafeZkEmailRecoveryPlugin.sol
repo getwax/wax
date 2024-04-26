@@ -6,7 +6,7 @@ interface ISafeZkEmailRecoveryPlugin {
         uint256 executeAfter; // the timestamp from which the recovery request can be executed
         address pendingNewOwner; // the pending new owner to be rotated
         uint256 approvalCount; // number of guardian approvals for the recovery request
-        address ownerToSwap; // the old owner that will be swapped out for pendingNewOwner
+        address oldOwner; // the old owner that will be swapped out for pendingNewOwner
     }
 
     /** Errors */
@@ -105,26 +105,13 @@ interface ISafeZkEmailRecoveryPlugin {
      *      is interpreted. This is the first function that must be called when setting up recovery.
      * @param guardians The EmailAuth guardian address that has permissions to recover an owner on the account
      * @param recoveryDelay A custom delay for recovery that is associated with a safe.
-     * @param previousOwnerInLinkedList The previous owner stored in the Safe owners linked list.
      * This is needed to rotate the owner at the end of the recovery flow
      */
     function configureRecovery(
         address[] memory guardians,
-        address previousOwnerInLinkedList,
         uint256 recoveryDelay,
         uint256 threshold
     ) external returns (address emailAccountRecoveryRouterAddress);
-
-    /**
-     * @notice Recovers a safe owner using a zk email proof.
-     * @dev Rotates the safe owner address to a new address.
-     *      This function is designed so it can be called from any account and account type.
-     *      This function is the third and final function that needs to be called in the
-     *      recovery process. After configureRecovery & initiateRecovery
-     * @param safe The safe for the owner being rotated
-     * @param previousOwner The previous owner in the safe owners linked list // TODO: (merge-ok) retrieve this automatically
-     */
-    function recoverPlugin(address safe, address previousOwner) external;
 
     /**
      * @notice Cancels the recovery process of the sender if it exits.
