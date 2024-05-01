@@ -1,4 +1,4 @@
-import { createContext, useEffect, useState } from "react";
+import { createContext, useState } from "react";
 import "./App.css";
 import ConnectWallets from "./components/ConnectWallets";
 import Navbar from "./components/Navbar";
@@ -8,8 +8,6 @@ import SafeModuleRecovery from "./components/SafeModuleRecovery";
 import TriggerAccountRecovery from "./components/TriggerAccountRecovery";
 import { STEPS } from "./constants";
 import { Web3Provider } from "./providers/Web3Provider";
-import { ConnectKitButton } from "connectkit";
-import { useAccount } from "wagmi";
 import { AppContextProvider } from "./context/AppContextProvider";
 
 export const StepsContext = createContext(null);
