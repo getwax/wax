@@ -1,11 +1,10 @@
 import { getDefaultConfig } from "connectkit";
 import { baseSepolia } from "viem/chains";
-import { createConfig, custom } from "wagmi";
+import { createConfig } from "wagmi";
 
-import { ethers } from "ethers";
-import { EthersAdapter } from "@safe-global/protocol-kit";
-
-import { SafeFactory } from "@safe-global/protocol-kit";
+import { ethers, BrowserProvider } from "ethers";
+import { EthersAdapter, SafeFactory } from "@safe-global/protocol-kit";
+import { injected } from "wagmi/connectors";
 
 const RPC_URL = "https://sepolia.base.org";
 const provider = new ethers.JsonRpcProvider(RPC_URL);
@@ -21,6 +20,14 @@ const ethAdapterOwner1 = new EthersAdapter({
   ethers,
   signerOrProvider: owner1Signer,
 });
+
+const eip1173Wrapper = {
+  ...provider,
+  request: ({ method, params }: { method: string, params?: Array<any> | Record<string, any> }): Promise<any> => {
+    return provider.send(method, params ?? []);
+  }
+}
+const browserProvider = new BrowserProvider(eip1173Wrapper);
 
 const createSafe = async () => {
   const safeFactory = await SafeFactory.create({
@@ -44,6 +51,17 @@ const createSafe = async () => {
 
 createSafe();
 
+const connectors = [injected({
+  target: {
+      // TODO What does this need to be?
+    id: "TODO",
+    name: 'Safe Burner Wallet',
+    // TODO This should be the correct construct to pass here,
+    // why still typing errors?
+    provider: browserProvider as any,
+  },
+})]
+
 // TODO Consider https://wagmi.sh/core/api/connectors/safe
 export const config = createConfig(
     getDefaultConfig({
@@ -53,8 +71,7 @@ export const config = createConfig(
       appDescription: "Safe Email Recovery Demo",
       appUrl: window.location.origin, 
       appIcon: "https://i.imgur.com/46VRTCF.png",
-      transports: {
-        [84532]: custom(ethAdapterOwner1.getProvider()) 
-      }
+      connectors,
     }),
   );
+  
