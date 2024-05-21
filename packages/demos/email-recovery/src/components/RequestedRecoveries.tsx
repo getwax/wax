@@ -1,4 +1,4 @@
-import { useCallback, useContext, useState } from "react";
+import { useCallback, useContext, useEffect, useState } from "react";
 import { Web3Provider } from "../providers/Web3Provider";
 import { ConnectKitButton } from "connectkit";
 import { Button } from "./Button";
@@ -42,6 +42,9 @@ const RequestedRecoveries = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [gurdianRequestId, setGuardianRequestId] = useState<number>();
 
+  const [isTriggerRecoveryLoading, setTriggerRecoveryLoading] =
+    useState<boolean>(false);
+
   const { data: recoveryRouterAddr } = useReadContract({
     abi: recoveryPluginAbi,
     address: safeZkSafeZkEmailRecoveryPlugin as `0x${string}`,
@@ -50,23 +53,27 @@ const RequestedRecoveries = () => {
   });
 
   const requestRecovery = useCallback(async () => {
-    setLoading(true);
     if (!safeWalletAddress) {
+      toast.error("Unable to get account address");
       throw new Error("unable to get account address");
     }
 
     if (!guardianEmailAddress) {
+      toast.error("Guardian email not set");
       throw new Error("guardian email not set");
     }
 
     if (!newOwner) {
+      toast.error("New owner address not set");
       throw new Error("new owner not set");
     }
 
     if (!recoveryRouterAddr) {
+      toast.error("Could not find recovery router for safe");
       throw new Error("could not find recovery router for safe");
     }
 
+    setLoading(true);
     const subject = getRequestsRecoverySubject(safeWalletAddress, newOwner);
 
     try {
@@ -76,12 +83,17 @@ const RequestedRecoveries = () => {
         templateIdx,
         subject
       );
+      setTriggerRecoveryLoading(true);
       setGuardianRequestId(requestId);
+
+      toast.success("Please check you email to trigger recovery process");
 
       setButtonState(BUTTON_STATES.COMPLETE_RECOVERY);
     } catch (error) {
       console.log(error);
-      toast.error("Something went wrong while requesting recovery")
+      toast.error(
+        `Something went wrong while requesting recovery: ${error.message}`
+      );
       setLoading(false);
     } finally {
       setLoading(false);
@@ -110,18 +122,49 @@ const RequestedRecoveries = () => {
     // }, 5000);
   }, [recoveryRouterAddr, safeWalletAddress, guardianEmailAddress, newOwner]);
 
-  const completeRecovery = useCallback(async () => {
-    setLoading(true);
-    if (!recoveryRouterAddr) {
-      throw new Error("could not find recovery router for safe");
+  useEffect(() => {
+    if (!gurdianRequestId) {
+      return;
     }
 
-    const res = relayer.completeRecovery(recoveryRouterAddr as string);
+    let checkRequestRecoveryStatusInterval = null;
 
-    console.debug("complete recovery res", res);
-    setLoading(false);
+    const checkGuardianAcceptance = async () => {
+      const resBody = await relayer.requestStatus(gurdianRequestId);
+      console.debug("guardian req res body", resBody);
 
-    setButtonState(BUTTON_STATES.RECOVERY_COMPLETED);
+      if (resBody?.is_success) {
+        setLoading(false);
+        setButtonState(BUTTON_STATES.COMPLETE_RECOVERY);
+        checkRequestRecoveryStatusInterval?.clearInterval();
+      }
+    };
+
+    checkRequestRecoveryStatusInterval = setInterval(async () => {
+      const res = await checkGuardianAcceptance();
+      console.log(res);
+    }, 5000);
+  }, [gurdianRequestId]);
+
+  const completeRecovery = useCallback(async () => {
+    setLoading(true);
+    try {
+      if (!recoveryRouterAddr) {
+        throw new Error("could not find recovery router for safe");
+      }
+
+      const res = await relayer.completeRecovery(recoveryRouterAddr as string);
+
+      console.debug("complete recovery res", res);
+
+      toast.success(`Recovery completed: ${res.data}`)
+
+      setButtonState(BUTTON_STATES.RECOVERY_COMPLETED);
+    } catch (error) {
+      toast.error(`Something went wrong: ${error}`)
+    } finally {
+      setLoading(false);
+    }
   }, [recoveryRouterAddr]);
 
   // const checkGuardianAcceptance = useCallback(async () => {
@@ -137,7 +180,11 @@ const RequestedRecoveries = () => {
     switch (buttonState) {
       case BUTTON_STATES.TRIGGER_RECOVERY:
         return (
-          <Button loading={loading} onClick={requestRecovery}>
+          <Button
+            loading={loading || isTriggerRecoveryLoading}
+            disabled={!(guardianEmailAddress && newOwner)}
+            onClick={requestRecovery}
+          >
             Trigger Recovery
           </Button>
         );
