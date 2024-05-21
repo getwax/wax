@@ -3,6 +3,7 @@ import { ConnectKitButton } from "connectkit";
 import { Button } from "./Button";
 import { useAccount, useReadContract, useWriteContract } from "wagmi";
 import { abi as safeAbi } from "../abi/Safe.json";
+import infoIcon from "../assets/infoIcon.svg";
 import { useAppContext } from "../context/AppContextHook";
 
 import { abi as recoveryPluginAbi } from "../abi/SafeZkEmailRecoveryPlugin.json";
@@ -18,8 +19,9 @@ import { pad } from "viem";
 import { relayer } from "../services/relayer";
 import { StepsContext } from "../App";
 import { STEPS } from "../constants";
+import toast from "react-hot-toast";
 
-const RequestGuardian = () => {
+const GuardianSetup = () => {
   const { address } = useAccount();
   const { writeContractAsync } = useWriteContract();
 
@@ -61,11 +63,20 @@ const RequestGuardian = () => {
 
     try {
       setLoading(true);
+      toast("Please check Safe Website to complete transaction", {
+        icon: <img src={infoIcon} />,
+        style: {
+          background: 'white'
+        }
+      });
 
       const acctCode = await genAccountCode();
       setAccountCode(accountCode);
-  
-      const guardianSalt = await relayer.getAccountSalt(acctCode, guardianEmail);
+
+      const guardianSalt = await relayer.getAccountSalt(
+        acctCode,
+        guardianEmail
+      );
       const guardianAddr = await readContract(config, {
         abi: recoveryPluginAbi,
         address: safeZkSafeZkEmailRecoveryPlugin as `0x${string}`,
@@ -76,7 +87,7 @@ const RequestGuardian = () => {
       const previousOwnerInLinkedList = pad("0x1", {
         size: 20,
       });
-  
+
       await writeContractAsync({
         abi: recoveryPluginAbi,
         address: safeZkSafeZkEmailRecoveryPlugin as `0x${string}`,
@@ -88,16 +99,16 @@ const RequestGuardian = () => {
           previousOwnerInLinkedList,
         ],
       });
-  
+
       console.debug("recovery configured");
-  
+
       const recoveryRouterAddr = (await readContract(config, {
         abi: recoveryPluginAbi,
         address: safeZkSafeZkEmailRecoveryPlugin as `0x${string}`,
         functionName: "getRouterForSafe",
         args: [address],
       })) as string;
-  
+
       const subject = getRequestGuardianSubject(address);
       const { requestId } = await relayer.acceptanceRequest(
         recoveryRouterAddr,
@@ -107,8 +118,8 @@ const RequestGuardian = () => {
         subject
       );
 
-      console.debug('accept req id', requestId);
-  
+      console.debug("accept req id", requestId);
+
       // TODO Use polling instead
       stepsContext?.setStep(STEPS.REQUESTED_RECOVERIES);
       // let checkGuardianAcceptanceInterval = null
@@ -129,7 +140,7 @@ const RequestGuardian = () => {
       //     console.log(res)
       // }, 5000);
     } catch (err) {
-      console.error(err);
+      toast.error(err.shortMessage);
     } finally {
       setLoading(false);
     }
@@ -209,7 +220,7 @@ const RequestGuardian = () => {
         </div>
       </div>
       <div style={{ margin: "auto" }}>
-        <Button loading={loading} onClick={configureRecoveryAndRequestGuardian}>
+        <Button disabled={!guardianEmail} loading={loading} onClick={configureRecoveryAndRequestGuardian}>
           Configure Recovery and Request Guardian
         </Button>
       </div>
@@ -217,4 +228,4 @@ const RequestGuardian = () => {
   );
 };
 
-export default RequestGuardian;
+export default GuardianSetup;

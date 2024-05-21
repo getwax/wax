@@ -11,6 +11,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@safe-global/protocol-kit": "git@github.com:safe-global/safe-core-sdk.git#df0dfc6f926128547b2a79d560fd7dd3f2e1fd61",
+    "@safe-global/safe-core-sdk-types": "git@github.com:safe-global/safe-core-sdk.git#df0dfc6f926128547b2a79d560fd7dd3f2e1fd61",
     "@tanstack/react-query": "^5.28.14",
     "@wagmi/cli": "^2.1.4",
     "axios": "^1.6.8",
@@ -19,6 +21,8 @@
     "ethers": "^6.11.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-hot-toast": "^2.4.1",
+    "react-router-dom": "^6.23.1",
     "viem": "2.x",
     "wagmi": "^2.5.18"
   },

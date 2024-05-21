@@ -14,6 +14,8 @@ import { getRequestsRecoverySubject, templateIdx } from "../utils/email";
 import { safeZkSafeZkEmailRecoveryPlugin } from "../../contracts.base-sepolia.json";
 import { StepsContext } from "../App";
 import { STEPS } from "../constants";
+import { FlowContext } from "./StepSelection";
+import toast from "react-hot-toast";
 
 const BUTTON_STATES = {
   TRIGGER_RECOVERY: "Trigger Recovery",
@@ -29,9 +31,14 @@ const RequestedRecoveries = () => {
   const stepsContext = useContext(StepsContext);
 
   const [newOwner, setNewOwner] = useState<string>();
+  const [safeWalletAddress, setSafeWalletAddress] = useState(address);
+  const [guardianEmailAddress, setGuardianEmailAddress] =
+    useState(guardianEmail);
   const [buttonState, setButtonState] = useState(
-    BUTTON_STATES.TRIGGER_RECOVERY,
+    BUTTON_STATES.TRIGGER_RECOVERY
   );
+  const flowContext = useContext(FlowContext);
+
   const [loading, setLoading] = useState<boolean>(false);
   const [gurdianRequestId, setGuardianRequestId] = useState<number>();
 
@@ -39,16 +46,16 @@ const RequestedRecoveries = () => {
     abi: recoveryPluginAbi,
     address: safeZkSafeZkEmailRecoveryPlugin as `0x${string}`,
     functionName: "getRouterForSafe",
-    args: [address],
+    args: [safeWalletAddress],
   });
 
   const requestRecovery = useCallback(async () => {
     setLoading(true);
-    if (!address) {
+    if (!safeWalletAddress) {
       throw new Error("unable to get account address");
     }
 
-    if (!guardianEmail) {
+    if (!guardianEmailAddress) {
       throw new Error("guardian email not set");
     }
 
@@ -60,19 +67,25 @@ const RequestedRecoveries = () => {
       throw new Error("could not find recovery router for safe");
     }
 
-    const subject = getRequestsRecoverySubject(address, newOwner);
+    const subject = getRequestsRecoverySubject(safeWalletAddress, newOwner);
 
-    const { requestId } = await relayer.recoveryRequest(
-      recoveryRouterAddr as string,
-      guardianEmail,
-      templateIdx,
-      subject,
-    );
+    try {
+      const { requestId } = await relayer.recoveryRequest(
+        recoveryRouterAddr as string,
+        guardianEmailAddress,
+        templateIdx,
+        subject
+      );
+      setGuardianRequestId(requestId);
 
-    setGuardianRequestId(requestId);
-
-    setLoading(false);
-    setButtonState(BUTTON_STATES.COMPLETE_RECOVERY);
+      setButtonState(BUTTON_STATES.COMPLETE_RECOVERY);
+    } catch (error) {
+      console.log(error);
+      toast.error("Something went wrong while requesting recovery")
+      setLoading(false);
+    } finally {
+      setLoading(false);
+    }
 
     // let checkRequestRecoveryStatusInterval = null
 
@@ -95,7 +108,7 @@ const RequestedRecoveries = () => {
     //     const res = await checkGuardianAcceptance();
     //     console.log(res)
     // }, 5000);
-  }, [recoveryRouterAddr, address, guardianEmail, newOwner]);
+  }, [recoveryRouterAddr, safeWalletAddress, guardianEmailAddress, newOwner]);
 
   const completeRecovery = useCallback(async () => {
     setLoading(true);
@@ -168,36 +181,38 @@ const RequestedRecoveries = () => {
         gap: "2rem",
       }}
     >
-      <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-        Connected wallet:
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "row",
-            justifyContent: "center",
-            alignItems: "center",
-            gap: "1rem",
-          }}
-        >
-          <ConnectKitButton />
-          {buttonState === BUTTON_STATES.RECOVERY_COMPLETED ? (
-            <div
-              style={{
-                background: "#4E1D09",
-                border: "1px solid #93370D",
-                color: "#FEC84B",
-                padding: "0.25rem 0.75rem",
-                borderRadius: "3.125rem",
-                width: "fit-content",
-                height: "fit-content",
-              }}
-            >
-              Recovered
-              <img src={recoveredIcon} style={{ marginRight: "0.5rem" }} />
-            </div>
-          ) : null}
+      {flowContext === "WALLET_RECOVERY" ? null : (
+        <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+          Connected wallet:
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "row",
+              justifyContent: "center",
+              alignItems: "center",
+              gap: "1rem",
+            }}
+          >
+            <ConnectKitButton />
+            {buttonState === BUTTON_STATES.RECOVERY_COMPLETED ? (
+              <div
+                style={{
+                  background: "#4E1D09",
+                  border: "1px solid #93370D",
+                  color: "#FEC84B",
+                  padding: "0.25rem 0.75rem",
+                  borderRadius: "3.125rem",
+                  width: "fit-content",
+                  height: "fit-content",
+                }}
+              >
+                Recovered
+                <img src={recoveredIcon} style={{ marginRight: "0.5rem" }} />
+              </div>
+            ) : null}
+          </div>
         </div>
-      </div>
+      )}
       {buttonState === BUTTON_STATES.RECOVERY_COMPLETED ? null : (
         <div
           style={{
@@ -230,10 +245,28 @@ const RequestedRecoveries = () => {
                 <input
                   style={{ width: "100%" }}
                   type="email"
-                  value={guardianEmail}
-                  readOnly={true}
+                  value={guardianEmailAddress}
+                  onChange={(e) => setGuardianEmailAddress(e.target.value)}
+                  readOnly={guardianEmail ? true : false}
                 />
               </div>
+              {address ? null : (
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    width: isMobile ? "90%" : "45%",
+                  }}
+                >
+                  <p>Safe Wallet Address</p>
+                  <input
+                    style={{ width: "100%" }}
+                    type="email"
+                    value={safeWalletAddress}
+                    onChange={(e) => setSafeWalletAddress(e.target.value)}
+                  />
+                </div>
+              )}
               <div
                 style={{
                   display: "flex",

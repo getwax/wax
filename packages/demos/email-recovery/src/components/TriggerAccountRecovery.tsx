@@ -18,7 +18,6 @@ const TriggerAccountRecovery = () => {
   const [buttonState, setButtonState] = useState(BUTTON_STATES.CANCEL_RECOVERY);
 
   return (
-    <Web3Provider>
       <div
         style={{
           maxWidth: isMobile ? "100%" : "50%",
@@ -76,7 +75,7 @@ const TriggerAccountRecovery = () => {
                   width: isMobile ? "90%" : "45%",
                 }}
               >
-                <p>Previous Wallet Address</p>
+                <p>Safe Address</p>
                 <input
                   style={{ width: "100%" }}
                   type="email"
@@ -119,7 +118,6 @@ const TriggerAccountRecovery = () => {
           </Button>
         </div>
       </div>
-    </Web3Provider>
   );
 };
 
