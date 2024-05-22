@@ -1485,6 +1485,11 @@
   resolved "https://registry.yarnpkg.com/@remix-run/router/-/router-1.16.1.tgz#73db3c48b975eeb06d0006481bde4f5f2d17d1cd"
   integrity sha512-es2g3dq6Nb07iFxGk5GuHN20RwBZOsuDQN7izWIisUcv9r+d2C5jQxqmgkdebXgReWfiyUabcki6Fg77mSNrig==
 
+"@rhinestone/module-sdk@^0.0.1-alpha.5":
+  version "0.0.1-alpha.5"
+  resolved "https://registry.npmjs.org/@rhinestone/module-sdk/-/module-sdk-0.0.1-alpha.5.tgz#c928d3ff81e56fca94429cdc2b7ef87f8fe56b71"
+  integrity sha512-yeMcbdU3mNJ6xfmO4WiOwHtTTzr6W+BKF5KrFNG1uVOnARTmhZhd87qiEiGkKb1OyKYfxIVgQhuuWSKc1mOFZg==
+
 "@rollup/plugin-inject@^5.0.5":
   version "5.0.5"
   resolved "https://registry.npmjs.org/@rollup/plugin-inject/-/plugin-inject-5.0.5.tgz#616f3a73fe075765f91c5bec90176608bed277a3"

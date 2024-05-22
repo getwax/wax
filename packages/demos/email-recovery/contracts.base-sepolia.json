@@ -3,5 +3,8 @@
     "dkimRegistry": "0xC83256CCf7B94d310e49edA05077899ca036eb78",
     "emailAuthImpl": "0x1C76Aa365c17B40c7E944DcCdE4dC6e6D2A7b748",
     "simpleWalletImpl": "0xabAA8B42d053a57DeC990906ebdF3efF6844A861",
-    "safeZkSafeZkEmailRecoveryPlugin": "0xFcfE6030952326c90fc615DDD15a3945f62AfCef"
+    "safeZkSafeZkEmailRecoveryPlugin": "0xFcfE6030952326c90fc615DDD15a3945f62AfCef",
+    "entryPoint": "0x0000000071727De22E5E9d8BAf0edAc6f37da032",
+    "safe7579": "0xaE6A0665F4289862b6089D9B1b6CAc5Da838Efec",
+    "safe7579Launchpad": "0x5d78a1B64f90FC569bfA807410B1987a32cEeD44"
 }

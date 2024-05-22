@@ -11,6 +11,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@rhinestone/module-sdk": "^0.0.1-alpha.5",
     "@safe-global/protocol-kit": "git@github.com:safe-global/safe-core-sdk.git#df0dfc6f926128547b2a79d560fd7dd3f2e1fd61",
     "@safe-global/safe-core-sdk-types": "git@github.com:safe-global/safe-core-sdk.git#df0dfc6f926128547b2a79d560fd7dd3f2e1fd61",
     "@tanstack/react-query": "^5.28.14",
