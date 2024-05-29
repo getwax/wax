@@ -2,7 +2,7 @@ import { createContext, useEffect, useState } from "react";
 import "./App.css";
 import { STEPS } from "./constants";
 import { AppContextProvider } from "./context/AppContextProvider";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { HashRouter, Route, Routes } from "react-router-dom";
 import LandingPage from "./pages/landingPage";
 import ErrorPage from "./pages/errorPage";
 import SafeWalletFlow from "./pages/safeWalletFlow";
@@ -35,7 +35,7 @@ function App() {
           setStep,
         }}
       >
-        <BrowserRouter>
+        <HashRouter>
           <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/safe-wallet" element={<SafeWalletFlow />} />
@@ -43,7 +43,7 @@ function App() {
             <Route path="/wallet-recovery" element={<RecoverWalletFlow />} />
             <Route path="*" element={<ErrorPage />} />
           </Routes>
-        </BrowserRouter>
+        </HashRouter>
       </StepsContext.Provider>
     </AppContextProvider>
   );

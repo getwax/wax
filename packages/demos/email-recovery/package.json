@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "homepage": "https://getwax.github.io/wax/",
   "scripts": {
     "setup": "cp .env.base-sepolia .env",
     "dev": "vite",
