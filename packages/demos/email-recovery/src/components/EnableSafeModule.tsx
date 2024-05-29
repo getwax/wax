@@ -101,26 +101,26 @@ const EnableSafeModule = () => {
 
     // TODO This step currently reverts as it needs to be run via ERC-4337 Entrypoint (UserOp)
     // Since this is likely the only UserOp we need to run, can directly submit to entrypoint
-    console.debug("4", "Install email recovery module");
+    // console.debug("4", "Install email recovery module");
 
-    // TODO Move to env
-    // const bundlerUrl = "https://public.stackup.sh/api/v1/node/base-sepolia";
+    // // TODO Move to env
+    // // const bundlerUrl = "https://public.stackup.sh/api/v1/node/base-sepolia";
 
-    // TODO Move to ConfigureSafeModule component?
-    // TODO Check this is not already installed, can just directly submit to entrypoint
-    const executorModuleTypeId = 2; // Executor
-    await writeContractAsync({
-      abi: safe7579Abi,
-      address: safe7579 as `0x{string}`,
-      functionName: "installModule",
-      args: [
-        executorModuleTypeId,
-        safeRecoveryModule,
-        "", // TODO Check this install data is no longer needed
-      ]
-    });
+    // // TODO Move to ConfigureSafeModule component?
+    // // TODO Check this is not already installed, can just directly submit to entrypoint
+    // const executorModuleTypeId = 2; // Executor
+    // await writeContractAsync({
+    //   abi: safe7579Abi,
+    //   address: safe7579 as `0x{string}`,
+    //   functionName: "installModule",
+    //   args: [
+    //     executorModuleTypeId,
+    //     safeRecoveryModule,
+    //     "", // TODO Check this install data is no longer needed
+    //   ]
+    // });
 
-    console.debug("Done!");
+    // console.debug("Done!");
 
   }, [address, writeContractAsync]);
 

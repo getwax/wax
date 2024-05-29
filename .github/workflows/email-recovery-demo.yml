@@ -3,7 +3,7 @@ name: packages/demos/email-recovery
 
 on:
   push:
-    branches: ['main']
+    branches: ['main', 'updated-ui']
     paths:
         - packages/demos/email-recovery/**
   
@@ -49,7 +49,8 @@ jobs:
       - name: Build
         env:
           VITE_WALLET_CONNECT_PROJECT_ID: ${{ secrets.VITE_WALLET_CONNECT_PROJECT_ID }}
-        run: VITE_WALLET_CONNECT_PROJECT_ID=${VITE_WALLET_CONNECT_PROJECT_ID} yarn build
+          VITE_OWNER_1_PRIVATE_KEY: ${{ secrets.VITE_OWNER_1_PRIVATE_KEY }}
+        run: VITE_WALLET_CONNECT_PROJECT_ID=${VITE_WALLET_CONNECT_PROJECT_ID} VITE_OWNER_1_PRIVATE_KEY=${VITE_OWNER_1_PRIVATE_KEY} yarn build
 
       - name: Setup Pages
         uses: actions/configure-pages@v3
