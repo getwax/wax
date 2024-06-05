@@ -65,27 +65,31 @@ const EnableSafeModule = () => {
 
     const rpcUrl = baseSepolia.rpcUrls.default.http[0];
 
-    // TODO Cache this value in local stroage
+    // TODO Cache this value in local storage
     // For now, create a new account on every run.
     const signerPrivKey = generatePrivateKey();
     const signer = privateKeyToAccount(signerPrivKey)
 
     const bundlerUrl = `https://api.pimlico.io/v2/${baseSepolia.id}/rpc?apikey=${import.meta.env.VITE_PIMLICO_API_KEY}`;
 
+    // Wagmi public client
     const publicClient = createPublicClient({
       transport: http(rpcUrl),
     })
 
+    // Paymaster to sponsor UserOps (pay for gas)
     const paymasterClient = createPimlicoPaymasterClient({
       transport: http(bundlerUrl),
       entryPoint: ENTRYPOINT_ADDRESS_V07,
     })
 
+    // Bundler (Submit UserOps)
     const bundlerClient = createPimlicoBundlerClient({
       transport: http(bundlerUrl),
       entryPoint: ENTRYPOINT_ADDRESS_V07,
     })
 
+    // Wagmi compatible Safe ERC-4337 account
     const safeAccount = await signerToSafeSmartAccount(publicClient, {
       entryPoint: ENTRYPOINT_ADDRESS_V07,
       signer: signer,
@@ -93,6 +97,7 @@ const EnableSafeModule = () => {
       safeVersion: "1.4.1",
     })
 
+    // Main object used to interact with Safe & originate UserOps
     const smartAccountClient = createSmartAccountClient({
       account: safeAccount,
       entryPoint: ENTRYPOINT_ADDRESS_V07,
@@ -125,6 +130,7 @@ const EnableSafeModule = () => {
       ]
     );
 
+    // This logic is using an embedded Safe account via Pimlico
     // TODO We may be able to use safe 7579 launchpad for all of this
     const userOpHash = await smartAccountClient.sendTransactions({
       transactions: [
@@ -220,8 +226,8 @@ const EnableSafeModule = () => {
 export default EnableSafeModule;
 
 /*
-  This code is the WalletConnect version of the logic in enableSafe7579Module w/o
-  ERC-4337/UserOp. May be helpful in the future so left here.
+  // This code is the WalletConnect version of the logic in enableSafe7579Module w/o
+  // ERC-4337/UserOp until email recovery module install. May be helpful in the future so left here.
 
   console.debug("1", "Enable 7579 Module");
 
@@ -270,8 +276,7 @@ export default EnableSafeModule;
   console.debug("4", "Install email recovery module");
 
   // TODO Move to env
-  const pimlicoApiKey = "c58c6c9c-67da-4a24-85b4-86815638e377";
-  const bundlerUrl = `https://api.pimlico.io/v2/${baseSepolia.id}/rpc?apikey=${pimlicoApiKey}`;
+  const bundlerUrl = `https://api.pimlico.io/v2/${baseSepolia.id}/rpc?apikey=${import.meta.env.VITE_PIMLICO_API_KEY}`;
   const bundler = createBundlerClient({
     chain: baseSepolia,
     transport: http(bundlerUrl),
@@ -349,11 +354,59 @@ export default EnableSafeModule;
     abi: entryPointAbi,
     address: entryPoint as `0x{string}`,
     functionName: "handleOps",
-    args: [
       [userOp],
       zeroAddress, // beneficiary
     ]
   });
 
   console.debug("Done!");
+*/
+
+/*
+  Psuedo-code for Safe7579 Launchpad, would be used to initialize a new Safe from scratch
+  This would not be usable on an exisiting Safe that has already been deployed, and likely needs some re-work.
+  Likely can be used with Pimlico Safe.
+
+  const setupData = encodeFunctionData({
+    abi: launchpadAbi,
+    functionName: "initSafe7579",
+    args: [
+      safe7579,
+      [], // executors TODO We may need a default
+      [], // fallbacks
+      [], // hooks
+      [], // attester addr
+      0, // threshold
+    ],
+  });
+
+  const initData = {
+    singleton: address,
+    owners: [signer.address],
+    threshold: 1, // Same here
+    setupTo: safe7579Launchpad,
+    setupData,
+    safe7579,
+    validators: [],
+    callData: "0x",
+    // TODO We might be able to use this to setup email recovery module in the same call
+    // Solidity example below,
+    // callData: abi.encodeCall(
+    //     IERC7579Account.execute,
+    //     (
+    //         ModeLib.encodeSimpleSingle(),
+    //         ExecutionLib.encodeSingle({
+    //             target: address(target),
+    //             value: 0,
+    //             callData: abi.encodeCall(MockTarget.set, (1337))
+    //         })
+    //     )
+    // )
+  };
+
+  const encodedSetupSafeCall = encodeFunctionData({
+    abi: launchpadAbi,
+    functionName: "setupSafe",
+    args: [initData],
+  });
 */
