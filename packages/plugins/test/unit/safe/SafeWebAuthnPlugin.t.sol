@@ -7,7 +7,7 @@ import {TestHelper} from "../utils/TestHelper.sol";
 import {SafeWebAuthnPluginHarness} from "../utils/SafeWebAuthnPluginHarness.sol";
 import {SafeWebAuthnPlugin} from "../../../src/safe/SafeWebAuthnPlugin.sol";
 import {Safe4337Base} from "../../../src/safe/utils/Safe4337Base.sol";
-import {UserOperation, UserOperationLib} from "account-abstraction/contracts/interfaces/IEntryPoint.sol";
+import {PackedUserOperation} from "account-abstraction/interfaces/IEntryPoint.sol";
 
 /* solhint-disable func-name-mixedcase */
 
@@ -26,7 +26,7 @@ contract SafeWebAuthnPluginTest is TestHelper {
 
     function test_validateSignature_ValidSignature() public {
         // Arrange
-        UserOperation memory userOp = buildUserOp();
+        PackedUserOperation memory userOp = buildUserOp();
         bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
         uint256 expectedValidationData = 0;
 
@@ -45,7 +45,7 @@ contract SafeWebAuthnPluginTest is TestHelper {
 
     function test_validateSignature_InvalidSignature() public {
         // Arrange
-        UserOperation memory userOp = buildUserOp();
+        PackedUserOperation memory userOp = buildUserOp();
         bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
         uint256 expectedValidationData = 1;
 

@@ -7,7 +7,6 @@ import DeterministicDeployer, {
 import {
   SimulateTxAccessor__factory,
   SafeProxyFactory__factory,
-  TokenCallbackHandler__factory,
   CompatibilityFallbackHandler__factory,
   CreateCall__factory,
   MultiSend__factory,
@@ -23,6 +22,8 @@ import {
   AddressRegistry__factory,
 } from "../typechain-types";
 import makeDevFaster from "../test/e2e/utils/makeDevFaster";
+import { TokenCallbackHandler__factory } from "../typechain-types/factories/lib/safe-contracts/contracts/handler/TokenCallbackHandler__factory";
+import bundlerConfig from "./../config/bundler.config.json";
 
 // 'test '.repeat(11) + 'absent'
 const testAbsentAddress = "0xe8250207B79D7396631bb3aE38a7b457261ae0B6";

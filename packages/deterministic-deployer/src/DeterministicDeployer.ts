@@ -111,7 +111,8 @@ export default class DeterministicDeployer {
       throw new Error("Missing details for deploying deployer contract");
     }
 
-    const requiredBalance = BigInt(deployment.gasPrice) * BigInt(deployment.gasLimit);
+    const requiredBalance =
+      BigInt(deployment.gasPrice) * BigInt(deployment.gasLimit);
     const currentBalance = await provider.getBalance(deployment.signerAddress);
     const balanceDeficit = requiredBalance - currentBalance;
 
@@ -163,10 +164,15 @@ export default class DeterministicDeployer {
     if (existingCode !== "0x") {
       const { chainId } = await provider.getNetwork();
 
-      return new DeterministicDeployer(signer, chainId, {
-        signerAddress,
-        address,
-      }, overrides);
+      return new DeterministicDeployer(
+        signer,
+        chainId,
+        {
+          signerAddress,
+          address,
+        },
+        overrides,
+      );
     }
 
     const { chainId } = await provider.getNetwork();

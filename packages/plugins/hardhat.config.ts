@@ -16,7 +16,7 @@ function getRemappings() {
 
 const config: HardhatUserConfig = {
   solidity: {
-    version: "0.8.21",
+    version: "0.8.23",
     settings: {
       optimizer: {
         enabled: true,
@@ -30,6 +30,12 @@ const config: HardhatUserConfig = {
       blockGasLimit: 100000000,
       gas: 100000000,
       url: "http://localhost:8545",
+    },
+    basesepolia: {
+      url: "https://sepolia.base.org",
+      accounts: {
+        mnemonic: process.env.MNEMONIC,
+      },
     },
   },
   mocha: {
@@ -79,3 +85,18 @@ task("sendEth", "Sends ETH to an address")
       await txnRes.wait();
     },
   );
+
+task("generateMnemonic", "Generates and displays a random mnemonic").setAction(
+  async (_params, hre) => {
+    const wallet = hre.ethers.Wallet.createRandom();
+    console.log(wallet.mnemonic?.phrase);
+  },
+);
+
+task("accounts", "Prints the list of accounts", async (_params, hre) => {
+  const accounts = await hre.ethers.getSigners();
+
+  for (const account of accounts) {
+    console.log(account.address);
+  }
+});

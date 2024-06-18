@@ -6,10 +6,14 @@ import {Safe} from "safe-contracts/contracts/Safe.sol";
 import {SafeProxyFactory} from "safe-contracts/contracts/proxies/SafeProxyFactory.sol";
 import {SafeProxy} from "safe-contracts/contracts/proxies/SafeProxy.sol";
 
-import {EntryPoint} from "account-abstraction/contracts/core/EntryPoint.sol";
+import {EntryPoint} from "account-abstraction/core/EntryPoint.sol";
 
 import {SafeZKPPasswordPlugin} from "./SafeZKPPasswordPlugin.sol";
 import {IGroth16Verifier} from "./interface/IGroth16Verifier.sol";
+
+/*//////////////////////////////////////////////////////////////////////////
+    THIS CONTRACT IS STILL IN ACTIVE DEVELOPMENT. NOT FOR PRODUCTION USE        
+//////////////////////////////////////////////////////////////////////////*/
 
 contract SafeZKPPasswordFactory {
     function create(

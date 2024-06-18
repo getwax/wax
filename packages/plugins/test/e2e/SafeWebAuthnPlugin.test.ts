@@ -4,7 +4,7 @@ import sendUserOpAndWait from "./utils/sendUserOpAndWait";
 import { setupTests } from "./utils/setupTests";
 import { SafeWebAuthnPlugin__factory } from "../../typechain-types";
 import {
-  generateInitCodeAndAddress,
+  generateFactoryParamsAndAddress,
   createUserOperation,
 } from "./utils/createUserOp";
 import { getSigners } from "./utils/getSigners";
@@ -91,14 +91,14 @@ describe.skip("SafeWebAuthnPlugin", () => {
       "execTransaction",
       [recipientAddress, transferAmount, "0x00"],
     );
-
-    const { initCode, deployedAddress } = await generateInitCodeAndAddress(
-      admin,
-      owner,
-      safeWebAuthnPlugin,
-      safeSingleton,
-      safeProxyFactory,
-    );
+    const { factoryParams, deployedAddress } =
+      await generateFactoryParamsAndAddress(
+        admin,
+        owner,
+        safeWebAuthnPlugin,
+        safeSingleton,
+        safeProxyFactory,
+      );
 
     const recipientBalanceBefore = await provider.getBalance(recipientAddress);
 
@@ -106,7 +106,7 @@ describe.skip("SafeWebAuthnPlugin", () => {
       provider,
       bundlerProvider,
       deployedAddress,
-      initCode,
+      factoryParams,
       userOpCallData,
       entryPointAddress,
       userOpSignature,
