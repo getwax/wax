@@ -9,6 +9,8 @@ import SafeWalletFlow from "./pages/safeWalletFlow";
 import BurnerWalletFlow from "./pages/burnerWalletFlow";
 import RecoverWalletFlow from "./pages/recoverWalletFlow";
 import toast from "react-hot-toast";
+import EnableSafeModule from "./components/EnableSafeModule";
+import { Web3Provider } from "./providers/Web3Provider";
 
 export const StepsContext = createContext(null);
 
@@ -35,15 +37,17 @@ function App() {
           setStep,
         }}
       >
-        <HashRouter>
-          <Routes>
-            <Route path="/" element={<LandingPage />} />
+          <HashRouter>
+            <Routes>
+              {/* <Route path="/" element={<LandingPage />} />
             <Route path="/safe-wallet" element={<SafeWalletFlow />} />
             <Route path="/burner-wallet" element={<BurnerWalletFlow />} />
             <Route path="/wallet-recovery" element={<RecoverWalletFlow />} />
-            <Route path="*" element={<ErrorPage />} />
-          </Routes>
-        </HashRouter>
+          <Route path="*" element={<ErrorPage />} /> */}
+
+              <Route path="/" element={<EnableSafeModule />} />
+            </Routes>
+          </HashRouter>
       </StepsContext.Provider>
     </AppContextProvider>
   );

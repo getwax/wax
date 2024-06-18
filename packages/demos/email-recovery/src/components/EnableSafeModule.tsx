@@ -1,11 +1,10 @@
 import { ConnectKitButton } from "connectkit";
 import { Button } from "./Button";
+import { useAccount, useReadContract, useWriteContract } from "wagmi";
 import {
-  useAccount,
-  useReadContract,
-  useWriteContract,
-} from "wagmi";
-import { safe7579 } from "../../contracts.base-sepolia.json";
+  safe7579,
+  safeRecoveryModule,
+} from "../../contracts.base-sepolia.json";
 import { abi as safeAbi } from "../abi/Safe.json";
 import { abi as safe7579Abi } from "../abi/Safe7579.json";
 import { useCallback, useContext, useEffect, useState } from "react";
@@ -13,81 +12,56 @@ import { StepsContext } from "../App";
 import { STEPS } from "../constants";
 import Loader from "./Loader";
 import toast from "react-hot-toast";
-import { createPublicClient, encodeAbiParameters, encodeFunctionData, http, zeroAddress } from "viem";
+import {
+  createPublicClient,
+  encodeAbiParameters,
+  encodeFunctionData,
+  http,
+  zeroAddress,
+} from "viem";
 import { baseSepolia } from "viem/chains";
-import { ENTRYPOINT_ADDRESS_V07, createSmartAccountClient } from "permissionless";
-import { createPimlicoBundlerClient, createPimlicoPaymasterClient } from "permissionless/clients/pimlico";
+import {
+  ENTRYPOINT_ADDRESS_V07,
+  createSmartAccountClient,
+} from "permissionless";
+import {
+  createPimlicoBundlerClient,
+  createPimlicoPaymasterClient,
+} from "permissionless/clients/pimlico";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { signerToSafeSmartAccount } from "permissionless/accounts";
 
 const EnableSafeModule = () => {
-  const { address } = useAccount();
-  const { writeContractAsync } = useWriteContract();
-
-  const stepsContext = useContext(StepsContext);
   const [isEnableModalLoading, setIsEnableModuleLoading] = useState(false);
-
-  // TODO Update this to check Safe7579.isModuleInstalled for email recovery module
-  // We may want to do that check in recovery configuration page.
-  const { data: isModuleEnabled, isLoading: isCheckModuleEnabledLoading } =
-    useReadContract({
-      address,
-      abi: safeAbi,
-      functionName: "isModuleEnabled",
-      args: [safe7579],
-    });
-
-  useEffect(() => {
-    console.log(isModuleEnabled);
-  }, [isModuleEnabled]);
-
-  console.log(isModuleEnabled);
-
-  if (isModuleEnabled) {
-    console.log("Module is enabled");
-    setIsEnableModuleLoading(false);
-    stepsContext?.setStep(STEPS.REQUEST_GUARDIAN);
-  }
 
   const enableSafe7579Module = useCallback(async () => {
     setIsEnableModuleLoading(true);
-    if (!address) {
-      throw new Error("unable to get account address");
-    }
-
-    toast("Please check Safe Website to complete transaction", {
-      // TODO Where is this infoIcon from?
-      // icon: <img src={infoIcon} />,
-      style: {
-        background: 'white'
-      }
-    })
 
     const rpcUrl = baseSepolia.rpcUrls.default.http[0];
 
     // TODO Cache this value in local storage
     // For now, create a new account on every run.
     const signerPrivKey = generatePrivateKey();
-    const signer = privateKeyToAccount(signerPrivKey)
+    const signer = privateKeyToAccount(signerPrivKey);
 
     const bundlerUrl = `https://api.pimlico.io/v2/${baseSepolia.id}/rpc?apikey=${import.meta.env.VITE_PIMLICO_API_KEY}`;
 
     // Wagmi public client
     const publicClient = createPublicClient({
       transport: http(rpcUrl),
-    })
+    });
 
     // Paymaster to sponsor UserOps (pay for gas)
     const paymasterClient = createPimlicoPaymasterClient({
       transport: http(bundlerUrl),
       entryPoint: ENTRYPOINT_ADDRESS_V07,
-    })
+    });
 
     // Bundler (Submit UserOps)
     const bundlerClient = createPimlicoBundlerClient({
       transport: http(bundlerUrl),
       entryPoint: ENTRYPOINT_ADDRESS_V07,
-    })
+    });
 
     // Wagmi compatible Safe ERC-4337 account
     const safeAccount = await signerToSafeSmartAccount(publicClient, {
@@ -95,7 +69,7 @@ const EnableSafeModule = () => {
       signer: signer,
       saltNonce: 0n,
       safeVersion: "1.4.1",
-    })
+    });
 
     // Main object used to interact with Safe & originate UserOps
     const smartAccountClient = createSmartAccountClient({
@@ -105,9 +79,10 @@ const EnableSafeModule = () => {
       bundlerTransport: http(bundlerUrl),
       middleware: {
         sponsorUserOperation: paymasterClient.sponsorUserOperation,
-        gasPrice: async () => (await bundlerClient.getUserOperationGasPrice()).fast,
+        gasPrice: async () =>
+          (await bundlerClient.getUserOperationGasPrice()).fast,
       },
-    })
+    });
 
     console.debug("send batched userops");
 
@@ -122,7 +97,7 @@ const EnableSafeModule = () => {
         { type: "uint256" },
       ],
       [
-        [zeroAddress], // guardians TODO get from form
+        ["0x39A67aFa3b68589a65F43c24FEaDD24df4Bb74e7"], // guardians TODO get from form
         [1n], // weights
         1n, // threshold
         1n, // delay
@@ -141,7 +116,7 @@ const EnableSafeModule = () => {
           data: encodeFunctionData({
             abi: safeAbi,
             functionName: "enableModule",
-            args: [safe7579]
+            args: [safe7579],
           }),
         },
         // Set 7579 as fallback
@@ -151,7 +126,7 @@ const EnableSafeModule = () => {
           data: encodeFunctionData({
             abi: safeAbi,
             functionName: "setFallbackHandler",
-            args: [safe7579]
+            args: [safe7579],
           }),
         },
         // Initialize adapter
@@ -163,11 +138,16 @@ const EnableSafeModule = () => {
             functionName: "initializeAccount",
             args: [
               [], // Validators
-              [], // Executors
+              [
+                {
+                  module: safeRecoveryModule,
+                  initData: installData,
+                },
+              ], // Executors
               [], // Fallbacks
               [], // Hooks
               {
-                registry: zeroAddress, // TODO Set to deployed registry (if needed)
+                registry: "0x39A67aFa3b68589a65F43c24FEaDD24df4Bb74e7", // TODO Set to deployed registry (if needed)
                 attesters: [],
                 threshold: 0,
               },
@@ -176,46 +156,51 @@ const EnableSafeModule = () => {
         },
         // Install email recovery module
         // TODO This fails with 0x error, may need default executor or validator before this point
-        // Can also try switching to launchpad init since this is a brand new 
-        // {
-        //   to: safe7579 as `0x${string}`,
-        //   value: 0n,
-        //   data: encodeFunctionData({
-        //     abi: safe7579Abi,
-        //     functionName: "installModule",
-        //     args: [
-        //       executorModuleTypeId,
-        //       safeRecoveryModule,
-        //       installData // TODO likely error here
-        //     ]
-        //   }),
-        // }
+        // Can also try switching to launchpad init since this is a brand new
+        {
+          to: safe7579 as `0x${string}`,
+          value: 0n,
+          data: encodeFunctionData({
+            abi: safe7579Abi,
+            functionName: "installModule",
+            args: [
+              executorModuleTypeId,
+              safeRecoveryModule,
+              installData, // TODO likely error here
+            ],
+          }),
+        },
       ],
-    })
+    });
 
     console.debug("init userOpHash", userOpHash);
 
     // TODO Make sure module is actually enabling
-  }, [address, writeContractAsync]);
+  }, []);
 
-  if (isCheckModuleEnabledLoading) {
-    return <Loader />;
-  }
+  // if (isCheckModuleEnabledLoading) {
+  //   return <Loader />;
+  // }
 
   return (
-    <div style={{ display: "flex", gap: "2rem", flexDirection: "column" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-        Connected wallet: <ConnectKitButton />
-      </div>
-      {!isModuleEnabled ? (
-        <Button
-          disabled={isEnableModalLoading}
-          loading={isEnableModalLoading}
-          onClick={enableSafe7579Module}
-        >
-          Enable Safe ERC-7579 Module
-        </Button>
-      ) : null}
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        height: '100vh',
+        gap: "2rem",
+        flexDirection: "column",
+      }}
+    >
+      <Button
+        disabled={isEnableModalLoading}
+        loading={isEnableModalLoading}
+        onClick={enableSafe7579Module}
+      >
+        Enable Safe ERC-7579 Module
+      </Button>
+
       {/* {isEnableModalLoading ? (
         <>Please check Safe Website to complete transaction</>
       ) : null} */}
