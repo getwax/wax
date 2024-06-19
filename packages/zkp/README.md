@@ -1,3 +1,5 @@
+TODO archive/keep, eval
+
 # WAX ZKP Circuits & Utils
 
 Based on https://github.com/privacy-scaling-explorations/zkp-app-boilerplate/tree/main/circuits

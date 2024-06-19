@@ -1,3 +1,11 @@
+TODO link to other module bootstrapping repos, mention this is mainly safe
+
+maybe ideas in here for cool new plugins to build?
+
+one pager in hackmd  or somewher else
+- AA libs
+- module bootstrapping
+
 # Plugins
 
 Please note, these plugins are in a pre-alpha state and are not ready for production use. In their current state, the plugins are meant for testing and experimentation.

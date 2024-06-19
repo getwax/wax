@@ -1,4 +1,4 @@
-name: packages/barebones
+name: archive/barebones
 
 on:
   push:
@@ -6,11 +6,11 @@ on:
       - main
   pull_request:
     paths:
-      - packages/barebones/**
+      - archive/barebones/**
 
 defaults:
   run:
-    working-directory: ./packages/barebones
+    working-directory: ./archive/barebones
 
 env:
   FOUNDRY_PROFILE: ci

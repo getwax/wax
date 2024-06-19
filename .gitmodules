@@ -19,11 +19,11 @@
 [submodule "packages/zkp/lib/circom"]
 	path = packages/zkp/lib/circom
 	url = https://github.com/iden3/circom.git
-[submodule "packages/barebones/lib/openzeppelin-contracts"]
-	path = packages/barebones/lib/openzeppelin-contracts
+[submodule "archive/barebones/lib/openzeppelin-contracts"]
+	path = archive/barebones/lib/openzeppelin-contracts
 	url = https://github.com/openzeppelin/openzeppelin-contracts
-[submodule "packages/barebones/lib/forge-std"]
-	path = packages/barebones/lib/forge-std
+[submodule "archive/barebones/lib/forge-std"]
+	path = archive/barebones/lib/forge-std
 	url = https://github.com/foundry-rs/forge-std
 [submodule "packages/plugins/lib/kernel"]
 	path = packages/plugins/lib/kernel

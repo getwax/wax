@@ -1,3 +1,5 @@
+// TODO point to new email recovery module, note outdated, update with newest later
+
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
