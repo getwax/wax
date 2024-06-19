@@ -11,18 +11,12 @@ const ConnectWallets = () => {
   const stepsContext = useContext(StepsContext);
 
   if (address) {
-    console.log(stepsContext);
+    console.log(stepsContext, address, "inside useeffect");
     stepsContext?.setStep(STEPS.SAFE_MODULE_RECOVERY);
   }
 
   return (
     <div className="connect-wallets-container">
-      {/* <Button endIcon={<img src={walletIcon} />}>Connect Genosis Safe</Button>
-
-      <p color="#CECFD2" style={{ display: "flex", gap: "0.5rem" }}>
-        <img src={infoIcon} alt="info" />
-        Copy the link and import into your safe wallet
-      </p> */}
       <ConnectKitButton.Custom>
         {({ show }) => {
           return (
@@ -32,9 +26,6 @@ const ConnectWallets = () => {
           );
         }}
       </ConnectKitButton.Custom>
-      {/* <p style={{ textDecoration: "underline" }}>
-        Or, recover existing wallet instead ➔
-      </p> */}
     </div>
   );
 };

@@ -1,23 +1,31 @@
 import { ConnectKitButton } from "connectkit";
-import { Button } from "./Button";
-import { useAccount, useReadContract, useWriteContract } from "wagmi";
-import { safeZkSafeZkEmailRecoveryPlugin } from "../../contracts.base-sepolia.json";
-import { abi as safeAbi } from "../abi/Safe.json";
+import { Button } from "../Button";
+import {
+  useAccount,
+  useReadContract,
+  useWalletClient,
+  useWriteContract,
+} from "wagmi";
+import { safeZkSafeZkEmailRecoveryPlugin } from "../../../contracts.base-sepolia.json";
+import { abi as safeAbi } from "../../abi/Safe.json";
 import { useCallback, useContext, useEffect, useState } from "react";
-import { StepsContext } from "../App";
-import { STEPS } from "../constants";
+import { StepsContext } from "../../App";
+import { STEPS } from "../../constants";
 
 const SafeModuleRecovery = () => {
   const { address } = useAccount();
+  const test = useWalletClient();
   const { writeContractAsync } = useWriteContract();
   const stepsContext = useContext(StepsContext);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (!address) {
-      stepsContext?.setStep(STEPS.CONNECT_WALLETS);
-    }
-  }, [address, stepsContext]);
+  console.log(test);
+
+  // useEffect(() => {
+  //   if (!address) {
+  //     stepsContext?.setStep(STEPS.CONNECT_WALLETS);
+  //   }
+  // }, [address, stepsContext]);
 
   const { data: isModuleEnabled } = useReadContract({
     address,
