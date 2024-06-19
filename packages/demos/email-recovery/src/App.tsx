@@ -15,7 +15,7 @@ import { AppContextProvider } from "./context/AppContextProvider";
 export const StepsContext = createContext(null);
 
 function App() {
-  const [step, setStep] = useState(STEPS.CONNECT_WALLETS);
+  const [step, setStep] = useState(STEPS.SAFE_MODULE_RECOVERY);
 
   const renderBody = () => {
     switch (step) {
