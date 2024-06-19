@@ -17,7 +17,6 @@ SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 set -meuo pipefail
 
 function cleanup {
-  docker stop $CONTAINER || true
   jobs -p | xargs kill
 }
 

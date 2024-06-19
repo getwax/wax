@@ -50,6 +50,7 @@ import measureCalldataGas from './measureCalldataGas';
 import DeterministicDeployer, {
   DeterministicDeploymentViewer,
 } from '../lib-ts/deterministic-deployer/DeterministicDeployer';
+import ConfigType from '../demo/config/ConfigType';
 
 type Config = {
   logRequests?: boolean;
@@ -58,6 +59,7 @@ type Config = {
   deployContractsIfNeeded: boolean;
   ethersPollingInterval?: number;
   useTopLevelCompression?: boolean;
+  externalContracts?: ConfigType['externalContracts'];
 };
 
 const defaultConfig: Config = {
@@ -71,6 +73,7 @@ let ethersDefaultPollingInterval = 4000;
 type ConstructorOptions = {
   rpcUrl: string;
   bundlerRpcUrl?: string;
+  externalContracts?: ConfigType['externalContracts'];
   storage?: WaxStorage;
 };
 
@@ -103,6 +106,7 @@ export default class WaxInPage {
   constructor({
     rpcUrl,
     bundlerRpcUrl,
+    externalContracts,
     storage = makeLocalWaxStorage(),
   }: ConstructorOptions) {
     let bundler: IBundler;
@@ -113,6 +117,8 @@ export default class WaxInPage {
       bundler = new NetworkBundler(bundlerRpcUrl);
     }
 
+    this.#config.externalContracts =
+      externalContracts ?? this.#config.externalContracts;
     this.ethereum = new EthereumApi(rpcUrl, this, bundler);
     this.storage = storage;
     this.ethersProvider = new ethers.BrowserProvider(this.ethereum);
@@ -194,14 +200,47 @@ export default class WaxInPage {
       chainId,
     );
 
-    const assumedEntryPoint = viewer.connectAssume(EntryPoint__factory, []);
-
-    const assumedAddressRegistry = viewer.connectAssume(
-      AddressRegistry__factory,
-      [],
-    );
+    const wallet = await this.requestAdminAccount('deploy-contracts');
 
     const assumedBlsOpen = viewer.connectAssume(BLSOpen__factory, []);
+
+    let assumedEntryPoint: EntryPoint;
+    let assumedAddressRegistry: AddressRegistry;
+    let assumedBlsSignatureAggregator: BLSSignatureAggregator;
+
+    if (this.#config.externalContracts) {
+      assumedEntryPoint = EntryPoint__factory.connect(
+        this.#config.externalContracts.entryPoint,
+        wallet,
+      );
+
+      assumedBlsSignatureAggregator = BLSSignatureAggregator__factory.connect(
+        this.#config.externalContracts.blsSignatureAggregator,
+        wallet,
+      );
+
+      assumedAddressRegistry = AddressRegistry__factory.connect(
+        this.#config.externalContracts.addressRegistry,
+        wallet,
+      );
+    } else {
+      assumedEntryPoint = viewer.connectAssume(EntryPoint__factory, []);
+
+      assumedAddressRegistry = viewer.connectAssume(
+        AddressRegistry__factory,
+        [],
+      );
+
+      assumedBlsSignatureAggregator = viewer.connectAssume(
+        DeterministicDeployer.link(BLSSignatureAggregator__factory, [
+          {
+            'account-abstraction/contracts/samples/bls/lib/BLSOpen.sol:BLSOpen':
+              await assumedBlsOpen.getAddress(),
+          },
+        ]),
+        [],
+      );
+    }
 
     const contracts: Contracts = {
       greeter: viewer.connectAssume(Greeter__factory, ['']).connect(runner),
@@ -226,15 +265,7 @@ export default class WaxInPage {
         [],
       ),
       testToken: viewer.connectAssume(ERC20Mock__factory, []),
-      blsSignatureAggregator: viewer.connectAssume(
-        DeterministicDeployer.link(BLSSignatureAggregator__factory, [
-          {
-            'account-abstraction/contracts/samples/bls/lib/BLSOpen.sol:BLSOpen':
-              await assumedBlsOpen.getAddress(),
-          },
-        ]),
-        [],
-      ),
+      blsSignatureAggregator: assumedBlsSignatureAggregator,
     };
 
     if (this.#contractsDeployed) {
@@ -250,18 +281,48 @@ export default class WaxInPage {
       throw new Error('Contracts not deployed');
     }
 
-    const wallet = await this.requestAdminAccount('deploy-contracts');
-
     const factory = await DeterministicDeployer.init(wallet);
 
-    const entryPoint = await factory.connectOrDeploy(EntryPoint__factory, []);
-
-    const addressRegistry = await factory.connectOrDeploy(
-      AddressRegistry__factory,
-      [],
-    );
-
     const blsOpen = await factory.connectOrDeploy(BLSOpen__factory, []);
+
+    let entryPoint: EntryPoint;
+    let blsSignatureAggregator: BLSSignatureAggregator;
+    let addressRegistry: AddressRegistry;
+
+    if (this.#config.externalContracts) {
+      entryPoint = assumedEntryPoint;
+      blsSignatureAggregator = assumedBlsSignatureAggregator;
+      addressRegistry = assumedAddressRegistry;
+
+      await Promise.all(
+        [entryPoint, blsSignatureAggregator, addressRegistry].map(
+          async (contract) => {
+            if (!(await this.#checkDeployed(await contract.getAddress()))) {
+              throw new Error(
+                `External contract not deployed: ${await contract.getAddress()}`,
+              );
+            }
+          },
+        ),
+      );
+    } else {
+      entryPoint = await factory.connectOrDeploy(EntryPoint__factory, []);
+
+      blsSignatureAggregator = await factory.connectOrDeploy(
+        DeterministicDeployer.link(BLSSignatureAggregator__factory, [
+          {
+            'account-abstraction/contracts/samples/bls/lib/BLSOpen.sol:BLSOpen':
+              await blsOpen.getAddress(),
+          },
+        ]),
+        [],
+      );
+
+      addressRegistry = await factory.connectOrDeploy(
+        AddressRegistry__factory,
+        [],
+      );
+    }
 
     const deployments: {
       [C in keyof Contracts]: () => Promise<Contracts[C]>;
@@ -285,16 +346,7 @@ export default class WaxInPage {
       safeECDSARecoveryPlugin: () =>
         factory.connectOrDeploy(SafeECDSARecoveryPlugin__factory, []),
       testToken: () => factory.connectOrDeploy(ERC20Mock__factory, []),
-      blsSignatureAggregator: async () =>
-        factory.connectOrDeploy(
-          DeterministicDeployer.link(BLSSignatureAggregator__factory, [
-            {
-              'account-abstraction/contracts/samples/bls/lib/BLSOpen.sol:BLSOpen':
-                await blsOpen.getAddress(),
-            },
-          ]),
-          [],
-        ),
+      blsSignatureAggregator: () => Promise.resolve(blsSignatureAggregator),
     };
 
     for (const deployment of Object.values(deployments)) {
@@ -306,16 +358,17 @@ export default class WaxInPage {
 
   async #checkDeployments(contracts: Contracts): Promise<boolean> {
     const deployFlags = await Promise.all(
-      Object.values(contracts).map(async (contract) => {
-        const existingCode = await this.ethersProvider.getCode(
-          contract.getAddress(),
-        );
-
-        return existingCode !== '0x';
-      }),
+      Object.values(contracts).map(
+        async (contract) =>
+          await this.#checkDeployed(await contract.getAddress()),
+      ),
     );
 
     return deployFlags.every((flag) => flag);
+  }
+
+  async #checkDeployed(address: string): Promise<boolean> {
+    return (await this.ethersProvider.getCode(address)) !== '0x';
   }
 
   async requestAdminAccount(purpose: AdminPurpose): Promise<ethers.Wallet> {
