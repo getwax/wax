@@ -151,7 +151,7 @@ contract SafeZkEmailRecoveryPlugin_Integration_Test is TestHelper {
         );
         emailProof.timestamp = block.timestamp;
         emailProof
-            .maskedSubject = "Accept guardian request for 0x78cA0A67bF6Cbe8Bf2429f0c7934eE5Dd687a32c";
+            .maskedSubject = "Accept guardian request for 0x5991A2dF15A8F6A256D3Ec51E99254Cd3fb576A9";
         emailProof.emailNullifier = keccak256(abi.encode("nullifier 1"));
         emailProof.accountSalt = accountSalt;
         emailProof.isCodeExist = true;
@@ -185,7 +185,7 @@ contract SafeZkEmailRecoveryPlugin_Integration_Test is TestHelper {
         );
         emailProof.timestamp = block.timestamp + 1;
         emailProof
-            .maskedSubject = "Update owner to 0xDdF4497d39b10cf50Af640942cc15233970dA0c2 on account 0x78cA0A67bF6Cbe8Bf2429f0c7934eE5Dd687a32c";
+            .maskedSubject = "Update owner to 0xDdF4497d39b10cf50Af640942cc15233970dA0c2 on account 0x5991A2dF15A8F6A256D3Ec51E99254Cd3fb576A9";
         emailProof.emailNullifier = keccak256(abi.encode("nullifier 2"));
         emailProof.accountSalt = accountSalt;
         require(
