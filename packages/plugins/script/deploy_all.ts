@@ -57,7 +57,8 @@ async function deploy() {
     ["MultiSendCallOnly", MultiSendCallOnly__factory],
     ["SignMessageLib", SignMessageLib__factory],
     ["BLSOpen", BLSOpen__factory],
-    ["BLSSignatureAggregator", linkedAggregator],
+    // TODO Uncomment w/ 0.6.0 AA submodule added
+    // ["BLSSignatureAggregator", linkedAggregator],
     ["AddressRegistry", AddressRegistry__factory],
   ] as const;
 
@@ -75,19 +76,20 @@ async function deploy() {
     ],
   );
 
-  const handleAggregatedOpsCaller = await recordingDeployer.deploy(
-    "HandleAggregatedOpsCaller",
-    HandleAggregatedOpsCaller__factory,
-    [
-      recordingDeployer.deployer.calculateAddress(EntryPoint__factory, []),
-      testAbsentAddress,
-      recordingDeployer.deployer.calculateAddress(linkedAggregator, []),
-      recordingDeployer.deployer.calculateAddress(AddressRegistry__factory, []),
-    ],
-  );
+  // TODO Uncomment w/ 0.6.0 AA submodule added
+  // const handleAggregatedOpsCaller = await recordingDeployer.deploy(
+  //   "HandleAggregatedOpsCaller",
+  //   HandleAggregatedOpsCaller__factory,
+  //   [
+  //     recordingDeployer.deployer.calculateAddress(EntryPoint__factory, []),
+  //     testAbsentAddress,
+  //     recordingDeployer.deployer.calculateAddress(linkedAggregator, []),
+  //     recordingDeployer.deployer.calculateAddress(AddressRegistry__factory, []),
+  //   ],
+  // );
 
   void handleOpsCaller;
-  void handleAggregatedOpsCaller;
+  // void handleAggregatedOpsCaller;
 
   const safeContractFactories = [
     ["SafeProxyFactory", SafeProxyFactory__factory],
