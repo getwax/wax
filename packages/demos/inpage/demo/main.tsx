@@ -13,6 +13,7 @@ WaxInPage.addStylesheet();
 const waxInPage = new WaxInPage({
   rpcUrl: config.rpcUrl,
   bundlerRpcUrl: config.bundlerRpcUrl,
+  externalContracts: config.externalContracts,
 });
 
 waxInPage.attachGlobals();

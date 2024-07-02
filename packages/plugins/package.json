@@ -1,11 +1,13 @@
 {
-  "name": "@getwax/safe",
+  "name": "@getwax/plugins",
   "private": true,
   "version": "0.1.0",
-  "description": "Safe plugins for 4337 accounts",
+  "description": "Plugins for 4337 & SCA accounts",
   "repository": "https://github.com/getwax/wax",
   "license": "MIT",
   "scripts": {
+    "postinstall": "cd ../deterministic-deployer && yarn && cd ../plugins",
+    "submodules": "git submodule update --init --recursive",
     "build": "hardhat compile",
     "lint": "eslint . --ext js,jsx,ts,tsx --report-unused-disable-directives --max-warnings 0"
   },

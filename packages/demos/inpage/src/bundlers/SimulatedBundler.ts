@@ -23,7 +23,6 @@ import {
   hexJoin,
   hexLen,
   lookupAddress,
-  roundUpPseudoFloat,
 } from '../helpers/encodeUtils';
 import windowDebug from '../../demo/windowDebug';
 import simulateValidation from '../helpers/simulateValidation';
@@ -148,19 +147,13 @@ export default class SimulatedBundler implements IBundler {
       ],
     });
 
-    let res = {
+    return {
       preVerificationGas: `0x${(basePreVerificationGas + calldataGas).toString(
         16,
       )}`,
       verificationGasLimit: `0x${verificationGasLimit.toString(16)}`,
       callGasLimit,
     };
-
-    if (this.#waxInPage.getConfig('useTopLevelCompression')) {
-      res = SimulatedBundler.roundUpGasEstimate(res);
-    }
-
-    return res;
   }
 
   async eth_getUserOperationReceipt(
@@ -512,21 +505,6 @@ export default class SimulatedBundler implements IBundler {
       bits.push(false);
       parts.push(encodeBytes(calldata));
     }
-  }
-
-  static roundUpGasEstimate({
-    preVerificationGas,
-    verificationGasLimit,
-    callGasLimit,
-  }: EthereumRpc.UserOperationGasEstimate): EthereumRpc.UserOperationGasEstimate {
-    const roundUp = (x: string) =>
-      `0x${roundUpPseudoFloat(BigInt(x)).toString(16)}`;
-
-    return {
-      preVerificationGas: roundUp(preVerificationGas),
-      verificationGasLimit: roundUp(verificationGasLimit),
-      callGasLimit: roundUp(callGasLimit),
-    };
   }
 }
 

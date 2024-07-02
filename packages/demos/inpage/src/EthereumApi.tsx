@@ -13,12 +13,14 @@ import { roundUpPseudoFloat } from './helpers/encodeUtils';
 
 // We need a UserOperation in order to estimate the gas fields of a
 // UserOperation, so we use these values as placeholders.
-const temporaryEstimationGas = '0x012345';
+const temporaryEstimationGas = '0x01234567';
 const temporarySignature = [
   '0x',
   '123456fe2807660c417ca1a38760342fa70135fcab89a8c7c879a77da8ce7a0b5a3805735e',
   '95170906b11c6f30dcc74e463e1e6990c68a3998a7271b728b123456',
 ].join('');
+const verificationGasLimitBuffer = 2000n;
+const preVerificationGasBuffer = 1000n;
 
 type StrictUserOperation = {
   sender: string;
@@ -183,9 +185,15 @@ export default class EthereumApi {
 
     return {
       ...userOp,
+      callGasLimit: roundUpPseudoFloat(userOp.callGasLimit),
+      verificationGasLimit: `0x${roundUpPseudoFloat(
+        BigInt(userOp.verificationGasLimit),
+      ).toString(16)}`,
+      preVerificationGas: `0x${roundUpPseudoFloat(
+        BigInt(userOp.preVerificationGas),
+      ).toString(16)}`,
       maxFeePerGas: roundUpPseudoFloat(userOp.maxFeePerGas),
       maxPriorityFeePerGas: roundUpPseudoFloat(userOp.maxPriorityFeePerGas),
-      callGasLimit: roundUpPseudoFloat(userOp.callGasLimit),
     };
   }
 
@@ -342,7 +350,7 @@ export default class EthereumApi {
         callData,
         callGasLimit: actions.map((a) => BigInt(a.gas)).reduce((a, b) => a + b),
         verificationGasLimit: temporaryEstimationGas,
-        preVerificationGas: temporaryEstimationGas,
+        preVerificationGas: '0x0',
         maxFeePerGas,
         maxPriorityFeePerGas,
         paymasterAndData: '0x',
@@ -360,8 +368,14 @@ export default class EthereumApi {
         params: [userOp, await contracts.entryPoint.getAddress()],
       });
 
-      userOp.verificationGasLimit = verificationGasLimit;
-      userOp.preVerificationGas = preVerificationGas;
+      userOp.verificationGasLimit = `0x${(
+        BigInt(verificationGasLimit) + verificationGasLimitBuffer
+      ).toString(16)}`;
+      userOp.preVerificationGas = `0x${(
+        BigInt(preVerificationGas) + preVerificationGasBuffer
+      ).toString(16)}`;
+
+      userOp = this.#maybeRoundUpPseudoFloats(userOp);
 
       userOpHash = await this.#calculateUserOpHash(userOp);
 

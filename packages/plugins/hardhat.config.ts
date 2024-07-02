@@ -20,7 +20,7 @@ const config: HardhatUserConfig = {
     settings: {
       optimizer: {
         enabled: true,
-        runs: 200,
+        runs: 1_000_000,
       },
     },
   },
@@ -30,6 +30,12 @@ const config: HardhatUserConfig = {
       blockGasLimit: 100000000,
       gas: 100000000,
       url: "http://localhost:8545",
+    },
+    basesepolia: {
+      url: "https://sepolia.base.org",
+      accounts: {
+        mnemonic: process.env.MNEMONIC,
+      },
     },
   },
   mocha: {
@@ -79,3 +85,18 @@ task("sendEth", "Sends ETH to an address")
       await txnRes.wait();
     },
   );
+
+task("generateMnemonic", "Generates and displays a random mnemonic").setAction(
+  async (_params, hre) => {
+    const wallet = hre.ethers.Wallet.createRandom();
+    console.log(wallet.mnemonic?.phrase);
+  },
+);
+
+task("accounts", "Prints the list of accounts", async (_params, hre) => {
+  const accounts = await hre.ethers.getSigners();
+
+  for (const account of accounts) {
+    console.log(account.address);
+  }
+});

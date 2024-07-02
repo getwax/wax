@@ -7,6 +7,11 @@ type ConfigType = {
   addFundsEthAmount?: string;
   deployerSeedPhrase: string;
   requirePermission?: boolean;
+  externalContracts?: {
+    entryPoint: string;
+    blsSignatureAggregator: string;
+    addressRegistry: string;
+  };
 };
 
 export default ConfigType;
