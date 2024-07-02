@@ -5,7 +5,7 @@ pragma abicoder v2;
 import {Safe4337Base, SIG_VALIDATION_FAILED} from "./utils/Safe4337Base.sol";
 import {IEntryPoint, PackedUserOperation} from "account-abstraction/interfaces/IEntryPoint.sol";
 import {PackedUserOperation} from "account-abstraction/interfaces/IEntryPoint.sol";
-import {IAnonAadhaar} from "./utils/anonAadhaar/interfaces/IAnonAadhaar.sol";
+import {IAnonAadhaar} from "@anon-aadhaar/contracts/interfaces/IAnonAadhaar.sol";
 
 interface ISafe {
     function enableModule(address module) external;
@@ -20,6 +20,7 @@ interface ISafe {
 
 struct AnonAadhaarOwnerStorage {
     address owner;
+    uint256 userDataHash; // the hash of unique and private user data extracted from Aadhaar QR code
 }
 
 /*//////////////////////////////////////////////////////////////////////////
@@ -27,6 +28,8 @@ struct AnonAadhaarOwnerStorage {
 //////////////////////////////////////////////////////////////////////////*/
 
 contract SafeAnonAadhaarPlugin is Safe4337Base {
+    // Should be made possible to enable this if not the last mapping
+    // mapping(address => mapping(uint => bool)) public signalNullifiers;
     mapping(address => AnonAadhaarOwnerStorage) public anonAadhaarOwnerStorage;
 
     address public immutable myAddress; // Module address
@@ -34,18 +37,12 @@ contract SafeAnonAadhaarPlugin is Safe4337Base {
 
     address internal constant _SENTINEL_MODULES = address(0x1);
 
-    // Note: the following state variables `anonAadhaarAddr` and `userDataHash` are set to immutable
-    // to immutable to bypass invalid storage access error and make it accessible via delegatecall.
-    // And `signalNullifiers` is currently unused as it can't be immutable.
-
     // external contract managed by Anon Aadhaar with verifyAnonAadhaarProof() method
+    // set to immutable to bypass invalid storage access error and make it accessible via delegatecall.
     address public immutable anonAadhaarAddr;
 
-    // the hash of unique and private user data extracted from Aadhaar QR code
-    uint public immutable userDataHash;
-
     // nullifier for each signal(userOpHash) to prevent on-chain front-running
-    mapping(uint => bool) public signalNullifiers;
+    // mapping(uint => bool) public signalNullifiers;
 
     event OWNER_UPDATED(
         address indexed safe,
@@ -56,16 +53,23 @@ contract SafeAnonAadhaarPlugin is Safe4337Base {
     constructor(
         address entryPointAddress,
         address _anonAadhaarAddr,
-        uint _userDataHash
+        address _safe,
+        uint256 _userDataHash
     ) {
         myAddress = address(this);
         _entryPoint = entryPointAddress;
         anonAadhaarAddr = _anonAadhaarAddr;
-        userDataHash = _userDataHash;
+        anonAadhaarOwnerStorage[_safe].userDataHash = _userDataHash;
     }
 
     function getOwner(address safe) external view returns (address owner) {
         owner = anonAadhaarOwnerStorage[safe].owner;
+    }
+
+    function getUserDataHash(
+        address safe
+    ) external view returns (uint userDataHash) {
+        userDataHash = anonAadhaarOwnerStorage[safe].userDataHash;
     }
 
     function execTransaction(
@@ -85,14 +89,14 @@ contract SafeAnonAadhaarPlugin is Safe4337Base {
         require(success, "tx failed");
     }
 
-    function enableMyself(address ownerKey) public {
+    function enableMyself(address ownerKey, uint256 userDataHash) public {
         // Called during safe setup as a delegatecall. This is why we use `this`
         // to refer to the safe instead of `msg.sender` / _currentSafe().
-
         ISafe(address(this)).enableModule(myAddress);
 
         // Enable the safe address with the defined key
-        bytes memory _data = abi.encodePacked(ownerKey);
+        // bytes memory _data = abi.encodePacked(ownerKey, userDataHash);
+        bytes memory _data = abi.encode(ownerKey, userDataHash);
         SafeAnonAadhaarPlugin(myAddress).enable(_data);
     }
 
@@ -101,9 +105,14 @@ contract SafeAnonAadhaarPlugin is Safe4337Base {
     }
 
     function enable(bytes calldata _data) external payable {
-        address newOwner = address(bytes20(_data[0:20]));
+        // address newOwner = address(bytes20(_data[0:20]));
+        (address newOwner, uint256 userDataHash) = abi.decode(
+            _data,
+            (address, uint)
+        );
         address oldOwner = anonAadhaarOwnerStorage[msg.sender].owner;
         anonAadhaarOwnerStorage[msg.sender].owner = newOwner;
+        anonAadhaarOwnerStorage[msg.sender].userDataHash = userDataHash;
         emit OWNER_UPDATED(msg.sender, oldOwner, newOwner);
     }
 
@@ -120,9 +129,9 @@ contract SafeAnonAadhaarPlugin is Safe4337Base {
     ) internal view override returns (uint256 validationData) {
         // decode proof verification params
         (
-            uint nullifierSeed,
-            uint timestamp,
-            uint signal,
+            uint256 nullifierSeed,
+            uint256 timestamp,
+            uint256 signal,
             uint[4] memory revealArray,
             uint[8] memory groth16Proof
         ) = abi.decode(userOp.signature, (uint, uint, uint, uint[4], uint[8]));
@@ -141,7 +150,7 @@ contract SafeAnonAadhaarPlugin is Safe4337Base {
         if (
             !IAnonAadhaar(anonAadhaarAddr).verifyAnonAadhaarProof(
                 nullifierSeed,
-                userDataHash,
+                anonAadhaarOwnerStorage[userOp.sender].userDataHash,
                 timestamp,
                 signal,
                 revealArray,
@@ -151,7 +160,7 @@ contract SafeAnonAadhaarPlugin is Safe4337Base {
             return SIG_VALIDATION_FAILED;
         }
 
-        // signalNullifiers[signal] = true; // store nullifier
+        // signalNullifiers[userOp.sender][signal] = true; // store nullifier
         return 0;
     }
 }

@@ -42,21 +42,21 @@
   resolved "https://registry.yarnpkg.com/@adraffy/ens-normalize/-/ens-normalize-1.10.1.tgz#63430d04bd8c5e74f8d7d049338f1cd9d4f02069"
   integrity sha512-96Z2IP3mYmF1Xg2cDm8f1gWGf/HUVedQ3FMifV4kG/PQ4yEP51xDtRAEfhVNt5f/uzpNkZHwWQuUcu6D6K+Ekw==
 
-"@anon-aadhaar/contracts@^2.0.3":
-  version "2.0.3"
-  resolved "https://registry.yarnpkg.com/@anon-aadhaar/contracts/-/contracts-2.0.3.tgz#ab7e2b5b2209d41465df7148f90c27224f46ffdb"
-  integrity sha512-7Eqq7vdEDWcMy0tn5GWKk3uMntrnGztVBgve+ppuRqgZ1m2hol5OnDo9GTPe3eGfwaDiPY+11iQW9Xu8GIerSA==
+"@anon-aadhaar/contracts@2.2.0":
+  version "2.2.0"
+  resolved "https://registry.yarnpkg.com/@anon-aadhaar/contracts/-/contracts-2.2.0.tgz#028c3257a7721152a0b90cdc73408dd4403bcdcb"
+  integrity sha512-sqrpK1KHPB/py1/3rE8dYDjTMMMhS4QwTk3S9aPd+iFeAeY0S7r9tu+StQK2x7UICKNzOV1TzIsWHLinrXEIRQ==
 
-"@anon-aadhaar/core@^2.0.3":
-  version "2.0.3"
-  resolved "https://registry.yarnpkg.com/@anon-aadhaar/core/-/core-2.0.3.tgz#23b17f6687c7712579cfb8052aea7995093659a4"
-  integrity sha512-8TLaRxuOiFoVf8Q6ipK2sduUlqpsWVfzWFsVz7Bai4XHnSUCF4rA0rksfQlB6bvugosE9OekzZA9BESE7NtDhQ==
+"@anon-aadhaar/core@2.2.0":
+  version "2.2.0"
+  resolved "https://registry.yarnpkg.com/@anon-aadhaar/core/-/core-2.2.0.tgz#d63ff8495f40f7418bced534c01fd2e650a8c2a3"
+  integrity sha512-3WhZxksWFE0xaPsd9sn2KHM8PLLEbkqJgdS2jXkkV5U4jKNUAHU3dY0xXJrr58E89gtAXMdfrcb1AR1DD1pKlA==
   dependencies:
     "@pcd/pcd-types" "^0.10.0"
     "@pcd/tsconfig" "^0.6.0"
     "@types/node-forge" "^1.3.8"
     "@types/snarkjs" "^0.7.6"
-    "@zk-email/helpers" "^3.1.3"
+    "@zk-email/helpers" "^6.1.1"
     buffer "^6.0.3"
     json-bigint "^1.0.0"
     localforage "^1.10.0"
@@ -1369,20 +1369,18 @@
     "@uniswap/v3-core" "^1.0.0"
     base64-sol "1.0.1"
 
-"@zk-email/helpers@^3.1.3":
-  version "3.2.3"
-  resolved "https://registry.yarnpkg.com/@zk-email/helpers/-/helpers-3.2.3.tgz#a31aa06f6fc97938cc6ae766233febb1f477298e"
-  integrity sha512-jhHqRqnCkwg6a2k3OkNRUd99sO7zkG/H/Pd/HL4PHhtS17Lqby/btOu0W3y7AX7wWn13xhNdonjuMEsISYRpQg==
+"@zk-email/helpers@^6.1.1":
+  version "6.1.3"
+  resolved "https://registry.yarnpkg.com/@zk-email/helpers/-/helpers-6.1.3.tgz#d763050757ff6a96c3973a00e0751a6710ca089f"
+  integrity sha512-UVnd33qJGO1seisIfhIo5m5gMalmU2y0S5wLCwAO8h2TZ6YBWJnmSKy2KeY5qVxPZn+WschnKEbW23Em7cj5QA==
   dependencies:
     addressparser "^1.0.1"
     atob "^2.1.2"
     circomlibjs "^0.1.7"
     libmime "^5.2.1"
     localforage "^1.10.0"
-    lodash "^4.17.21"
     node-forge "^1.3.1"
     pako "^2.1.0"
-    pki "^1.1.0"
     psl "^1.9.0"
     snarkjs "https://github.com/sampritipanda/snarkjs.git#fef81fc51d17a734637555c6edbd585ecda02d9e"
 
@@ -2145,16 +2143,6 @@ circomlib@2.0.5:
   version "2.0.5"
   resolved "https://registry.npmjs.org/circomlib/-/circomlib-2.0.5.tgz#183c703e53ed7d011811842dbeeeb9819f4cc1d6"
   integrity sha512-O7NQ8OS+J4eshBuoy36z/TwQU0YHw8W3zxZcs4hVwpEll3e4hDm3mgkIPqItN8FDeLEKZFK3YeT/+k8TiLF3/A==
-
-circomlibjs@0.1.1:
-  version "0.1.1"
-  resolved "https://registry.yarnpkg.com/circomlibjs/-/circomlibjs-0.1.1.tgz#00085017f6fa00072a13a2092f643cfd12b11f6b"
-  integrity sha512-Bl7Mylf/VERdI5bRTIQ4hpi2EgbfIvEyJrn/MPh2pEqScbCkatX44RF8fuNGigoiQGdhItaIikgHKLTdlPPLPQ==
-  dependencies:
-    blake-hash "^2.0.0"
-    blake2b "^2.1.3"
-    ethers "^5.5.1"
-    ffjavascript "^0.2.45"
 
 circomlibjs@0.1.7, circomlibjs@^0.1.7:
   version "0.1.7"
@@ -5414,11 +5402,6 @@ pify@^4.0.1:
   version "4.0.1"
   resolved "https://registry.yarnpkg.com/pify/-/pify-4.0.1.tgz#4b2cd25c50d598735c50292224fd8c6df41e3231"
   integrity sha512-uB80kBFb/tfd68bVleG9T5GGsGPjJrLAUpR5PZIrhBnIaRTQRjqdJSsIKkOP6OAIFbj7GOrcudc5pNjZ+geV2g==
-
-pki@^1.1.0:
-  version "1.1.0"
-  resolved "https://registry.yarnpkg.com/pki/-/pki-1.1.0.tgz#abd7c257816ceb2a0c0afef5642180227355d173"
-  integrity sha512-OzMMXAo8sI7X3+EW46eIfGfOnuM0d0Cef0iVp7UUCsh2VV7RvsUztLTc6xacBwgsz16Vp6qQuQA8Lep5bxeuOA==
 
 postcss-value-parser@^4.0.2:
   version "4.2.0"

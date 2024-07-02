@@ -1,16 +1,9 @@
-/* eslint-disable @typescript-eslint/no-unsafe-return */
-/* eslint-disable @typescript-eslint/comma-dangle */
-/* eslint-disable @typescript-eslint/prefer-for-of */
-/* eslint-disable prettier/prettier */
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/naming-convention */
 import {
 	convertBigIntToByteArray,
 	decompressByteArray,
 	extractPhoto,
 } from "@anon-aadhaar/core";
+import { sha256Pad } from "@zk-email/helpers/dist/sha-utils";
 import { buildPoseidon } from "circomlibjs";
 
 // Method to extract a nullifier specific to each Aadhaar ID owner from Aadhaar QR code
@@ -19,11 +12,15 @@ export async function copmuteUserNullifier(
 	nullifierSeed: number,
 	qrData: string
 ): Promise<bigint> {
-	const QRDataBytes = convertBigIntToByteArray(BigInt(qrData));
-	const QRDataDecode = decompressByteArray(QRDataBytes);
-	const signedData = QRDataDecode.slice(0, QRDataDecode.length - 256);
+	const qrDataBytes = convertBigIntToByteArray(BigInt(qrData));
+	const decodedData = decompressByteArray(qrDataBytes);
+	const signedData = decodedData.slice(0, decodedData.length - 256);
+	const [qrDataPadded, qrDataPaddedLen] = sha256Pad(signedData, 512 * 3);
 
-	const { bytes: photoBytes } = extractPhoto(Array.from(signedData));
+	const { bytes: photoBytes } = extractPhoto(
+		Array.from(qrDataPadded),
+		qrDataPaddedLen
+	);
 
 	const photoBytesPacked = padArrayWithZeros(
 		bytesToIntChunks(new Uint8Array(photoBytes), 31),

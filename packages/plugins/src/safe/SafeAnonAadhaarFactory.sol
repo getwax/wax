@@ -21,7 +21,7 @@ contract SafeAnonAadhaarFactory {
         address owner,
         uint256 saltNonce,
         address _anonAadhaarAddr,
-        uint _userDataHash
+        uint256 _userDataHash
     ) external returns (SafeAnonAadhaarPlugin) {
         bytes32 salt = keccak256(abi.encodePacked(owner, saltNonce));
 
@@ -35,6 +35,7 @@ contract SafeAnonAadhaarFactory {
         SafeAnonAadhaarPlugin plugin = new SafeAnonAadhaarPlugin{salt: salt}(
             address(entryPoint),
             _anonAadhaarAddr,
+            address(safe),
             _userDataHash
         );
 
@@ -42,7 +43,10 @@ contract SafeAnonAadhaarFactory {
             owners,
             1,
             address(plugin),
-            abi.encodeCall(SafeAnonAadhaarPlugin.enableMyself, (owner)),
+            abi.encodeCall(
+                SafeAnonAadhaarPlugin.enableMyself,
+                (owner, _userDataHash)
+            ),
             address(plugin),
             address(0),
             0,

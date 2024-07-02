@@ -1,12 +1,12 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.19;
 
-import "./interfaces/IAnonAadhaarGroth16Verifier.sol";
-import "./interfaces/IAnonAadhaar.sol";
+import "@anon-aadhaar/contracts/interfaces/IAnonAadhaarGroth16Verifier.sol";
+import "@anon-aadhaar/contracts/interfaces/IAnonAadhaar.sol";
 
+// Note: This is a AnonAadhaar contract with a modification that made`verifier` state variable immutable
+// so that verification doesn't fail due to invalid storage access.
 // https://github.com/anon-aadhaar/anon-aadhaar/blob/main/packages/contracts/src/AnonAadhaar.sol
-// Note: This is a AnonAadhaar contract with modifications, where `verifier` and `storedPublicKeyHash` are not mutable
-// so that verification doesn't fail due to invalid storage access
 
 contract AnonAadhaar is IAnonAadhaar {
     address public immutable verifier;
@@ -72,6 +72,6 @@ contract AnonAadhaar is IAnonAadhaar {
     /// @param message: Message to be hashed.
     /// @return Message digest.
     function _hash(uint256 message) private pure returns (uint256) {
-        return uint256(keccak256(abi.encodePacked(message))) >> 8;
+        return uint256(keccak256(abi.encodePacked(message))) >> 3;
     }
 }

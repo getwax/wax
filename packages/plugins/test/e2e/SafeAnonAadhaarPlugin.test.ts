@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/comma-dangle */
+/* eslint-disable prettier/prettier */
 import { expect } from "chai";
 import { JsonRpcProvider, NonceManager, Signer, ethers } from "ethers";
 import DeterministicDeployer from "../../lib-ts/deterministic-deployer/DeterministicDeployer";
@@ -7,6 +9,7 @@ import {
 	Verifier__factory,
 	AnonAadhaar__factory,
 	Safe,
+	AnonAadhaar,
 } from "../../typechain-types";
 import receiptOf from "./utils/receiptOf";
 import { setupTests } from "./utils/setupTests";
@@ -22,6 +25,7 @@ import {
 	artifactUrls,
 	packGroth16Proof,
 	ArtifactsOrigin,
+	verify,
 } from "@anon-aadhaar/core";
 import fs from "fs";
 import { getUserOpHash } from "./utils/userOpUtils";
@@ -54,6 +58,7 @@ describe("SafeAnonAadhaarPlugin", () => {
 
 	let certificate: string;
 	let anonAadhaarAddress: string;
+	let anonAadhaar: AnonAadhaar;
 
 	before(async () => {
 		const setup = await setupTests();
@@ -73,7 +78,7 @@ describe("SafeAnonAadhaarPlugin", () => {
 		const anonAadhaarVerifier = await new Verifier__factory(signer).deploy();
 
 		// Deploy AnonAadhaar contract
-		const anonAadhaar = await new AnonAadhaar__factory(signer).deploy(
+		anonAadhaar = await new AnonAadhaar__factory(signer).deploy(
 			await anonAadhaarVerifier.getAddress(),
 			BigInt(testPublicKeyHash).toString()
 		);
