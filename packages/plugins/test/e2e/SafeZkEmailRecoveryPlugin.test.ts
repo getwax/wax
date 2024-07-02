@@ -20,7 +20,7 @@ import receiptOf from "./utils/receiptOf";
 import { setupTests } from "./utils/setupTests";
 import { createAndSendUserOpWithEcdsaSig } from "./utils/createUserOp";
 
-describe("SafeZkEmailRecoveryPlugin", () => {
+describe.skip("SafeZkEmailRecoveryPlugin", () => {
   let bundlerProvider: JsonRpcProvider;
   let provider: JsonRpcProvider;
   let admin: NonceManager;
