@@ -32,10 +32,10 @@ describe("SafeSponsorEverythingPaymasterPlugin", () => {
     const paymasterAddress = await paymaster.getAddress();
     
     // Paymaster deposits.
-    await paymaster.deposit({ value: ethers.parseEther("1") })
+    await paymaster.deposit({ value: oneEther })
 
     const recipient = ethers.Wallet.createRandom();
-    const transferAmount = ethers.parseEther("1");
+    const transferAmount = oneEther;
     const dummySignature = await owner.signMessage("dummy sig");
 
     // Deploy ecdsa plugin
@@ -66,7 +66,7 @@ describe("SafeSponsorEverythingPaymasterPlugin", () => {
     await receiptOf(
       admin.sendTransaction({
         to: accountAddress,
-        value: ethers.parseEther("1"),
+        value: oneEther,
       }),
     );
 
