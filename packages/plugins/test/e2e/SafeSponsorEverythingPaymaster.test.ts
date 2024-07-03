@@ -12,7 +12,7 @@ import { createAndSendUserOpWithEcdsaSig } from "./utils/createUserOp";
 
 const oneEther = ethers.parseEther("1");
 
-describe("SafePaymasterPlugin", () => {
+describe("SafeSponsorEverythingPaymasterPlugin", () => {
   it("should pass the ERC4337 validation", async () => {
     const {
       bundlerProvider,
