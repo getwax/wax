@@ -1,5 +1,6 @@
 import { HardhatUserConfig, task, types } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
+import "hardhat-dependency-compiler";
 import "hardhat-preprocessor";
 import fs from "fs";
 import dotenv from "dotenv";
@@ -23,6 +24,9 @@ const config: HardhatUserConfig = {
         runs: 1_000_000,
       },
     },
+  },
+  dependencyCompiler: {
+    paths: ["@anon-aadhaar/contracts"],
   },
   networks: {
     localhost: {
