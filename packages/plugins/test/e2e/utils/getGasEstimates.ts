@@ -13,6 +13,7 @@ export const getGasEstimates = async (
   )) as {
     verificationGasLimit: string;
     preVerificationGas: string;
+    paymasterVerificationGasLimit: string;
     callGasLimit: string;
   };
 
@@ -30,6 +31,7 @@ export const getGasEstimates = async (
     callGasLimit: gasEstimate.callGasLimit,
     verificationGasLimit: ethers.toBeHex(safeVerificationGasLimit),
     preVerificationGas: ethers.toBeHex(safePreVerificationGas),
+    paymasterVerificationGasLimit: ethers.toBeHex(safeVerificationGasLimit),
     maxFeePerGas,
     maxPriorityFeePerGas,
   };
