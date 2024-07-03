@@ -1,6 +1,6 @@
 /* eslint-disable prettier/prettier */
 /* eslint-disable @typescript-eslint/comma-dangle */
-import { ethers, getBytes, NonceManager, Signer } from "ethers";
+import { BigNumberish, BytesLike, ethers, getBytes, NonceManager, Signer } from "ethers";
 import { AddressZero } from "@ethersproject/constants";
 
 import { SafeProxyFactory } from "../../../typechain-types/lib/safe-contracts/contracts/proxies/SafeProxyFactory";
@@ -79,13 +79,16 @@ export const generateFactoryParamsAndAddress = async (
 };
 
 export const createUserOperation = async (
-	provider: ethers.JsonRpcProvider,
-	bundlerProvider: ethers.JsonRpcProvider,
-	accountAddress: string,
-	factoryParams: FactoryParams,
-	userOpCallData: string,
-	entryPointAddress: string,
-	dummySignature: string
+  provider: ethers.JsonRpcProvider,
+  bundlerProvider: ethers.JsonRpcProvider,
+  accountAddress: string,
+  factoryParams: FactoryParams,
+  userOpCallData: string,
+  entryPointAddress: string,
+  dummySignature: string,
+  paymaster?: string,
+  paymasterPostOpGasLimit?: BigNumberish,
+  paymasterData?: BytesLike,
 ) => {
 	const entryPoint = EntryPoint__factory.connect(
 		entryPointAddress,
@@ -107,55 +110,66 @@ export const createUserOperation = async (
 		userOp.factoryData = factoryParams.factoryData;
 	}
 
-	const {
-		callGasLimit,
-		verificationGasLimit,
-		preVerificationGas,
-		maxFeePerGas,
-		maxPriorityFeePerGas,
-	} = await getGasEstimates(
-		provider,
-		bundlerProvider,
-		userOp,
-		entryPointAddress
-	);
+  const {
+    callGasLimit,
+    verificationGasLimit,
+    preVerificationGas,
+    paymasterVerificationGasLimit,
+    maxFeePerGas,
+    maxPriorityFeePerGas,
+  } = await getGasEstimates(
+    provider,
+    bundlerProvider,
+    userOp,
+    entryPointAddress,
+  );
 
-	const unsignedUserOperation = {
-		sender: accountAddress,
-		nonce: nonceHex,
-		factory: userOp.factory,
-		factoryData: userOp.factoryData,
-		callData: userOpCallData,
-		callGasLimit,
-		verificationGasLimit,
-		preVerificationGas,
-		maxFeePerGas,
-		maxPriorityFeePerGas,
-		signature: dummySignature,
-	} satisfies UserOperation;
+  const unsignedUserOperation = {
+    sender: accountAddress,
+    nonce: nonceHex,
+    factory: userOp.factory,
+    factoryData: userOp.factoryData,
+    callData: userOpCallData,
+    callGasLimit,
+    verificationGasLimit,
+    preVerificationGas,
+    maxFeePerGas,
+    maxPriorityFeePerGas,
+    paymaster: paymaster,
+    paymasterVerificationGasLimit: paymaster ? paymasterVerificationGasLimit : undefined,
+    paymasterPostOpGasLimit: paymasterPostOpGasLimit,
+    paymasterData: paymasterData,
+    signature: dummySignature,
+  } satisfies UserOperation;
 
 	return await ethers.resolveProperties(unsignedUserOperation);
 };
 
 export const createAndSendUserOpWithEcdsaSig = async (
-	provider: ethers.JsonRpcProvider,
-	bundlerProvider: ethers.JsonRpcProvider,
-	owner: Signer,
-	accountAddress: string,
-	factoryParams: FactoryParams,
-	userOpCallData: string,
-	entryPointAddress: string,
-	dummySignature: string
+  provider: ethers.JsonRpcProvider,
+  bundlerProvider: ethers.JsonRpcProvider,
+  owner: Signer,
+  accountAddress: string,
+  factoryParams: FactoryParams,
+  userOpCallData: string,
+  entryPointAddress: string,
+  dummySignature: string,
+  paymaster?: string,
+  paymasterPostOpGasLimit?: BigNumberish,
+  paymasterData?: BytesLike,
 ) => {
-	const unsignedUserOperation = await createUserOperation(
-		provider,
-		bundlerProvider,
-		accountAddress,
-		factoryParams,
-		userOpCallData,
-		entryPointAddress,
-		dummySignature
-	);
+  const unsignedUserOperation = await createUserOperation(
+    provider,
+    bundlerProvider,
+    accountAddress,
+    factoryParams,
+    userOpCallData,
+    entryPointAddress,
+    dummySignature,
+    paymaster,
+    paymasterPostOpGasLimit,
+    paymasterData,
+  );
 
 	const userOpHash = getUserOpHash(
 		unsignedUserOperation,
