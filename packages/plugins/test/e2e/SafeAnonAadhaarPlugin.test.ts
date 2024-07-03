@@ -25,7 +25,6 @@ import {
 	artifactUrls,
 	packGroth16Proof,
 	ArtifactsOrigin,
-	verify,
 } from "@anon-aadhaar/core";
 import fs from "fs";
 import { getUserOpHash } from "./utils/userOpUtils";
@@ -177,6 +176,22 @@ describe("SafeAnonAadhaarPlugin", () => {
 		const anonAadhaarCore = await prove(args);
 		const anonAadhaarProof = anonAadhaarCore.proof;
 		const packedGroth16Proof = packGroth16Proof(anonAadhaarProof.groth16Proof);
+
+		// view call to AnonAadhaar contract to see if verification returns true
+		const ret = await anonAadhaar.verifyAnonAadhaarProof(
+			nullifierSeed,
+			anonAadhaarProof.nullifier,
+			anonAadhaarProof.timestamp,
+			userOpHash,
+			[
+				anonAadhaarProof.ageAbove18,
+				anonAadhaarProof.gender,
+				anonAadhaarProof.pincode,
+				anonAadhaarProof.state,
+			],
+			packedGroth16Proof
+		);
+		console.log("ret: ", ret);
 
 		// encode proof data into userOpSignature
 		const encoder = ethers.AbiCoder.defaultAbiCoder();

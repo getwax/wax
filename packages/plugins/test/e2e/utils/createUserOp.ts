@@ -1,3 +1,5 @@
+/* eslint-disable prettier/prettier */
+/* eslint-disable @typescript-eslint/comma-dangle */
 import { ethers, getBytes, NonceManager, Signer } from "ethers";
 import { AddressZero } from "@ethersproject/constants";
 
@@ -211,10 +213,8 @@ export const createAnonAadhaarOperation = async (
 		factoryData: undefined,
 		callData: userOpCallData,
 		callGasLimit: ethers.toBeHex(150000n),
-		// verificationGasLimit: ethers.toBeHex(1000000n),
-		// preVerificationGas: ethers.toBeHex(200000n),
-		verificationGasLimit: ethers.toBeHex(1500000n),
-		preVerificationGas: ethers.toBeHex(500000n),
+		verificationGasLimit: ethers.toBeHex(1000000n),
+		preVerificationGas: ethers.toBeHex(200000n),
 		maxFeePerGas,
 		maxPriorityFeePerGas,
 		signature: "0x",
