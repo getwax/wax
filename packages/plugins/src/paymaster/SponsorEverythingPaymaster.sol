@@ -29,5 +29,7 @@ contract SponsorEverythingPaymaster is BasePaymaster {
         uint256 maxCost
     ) internal virtual override returns (bytes memory context, uint256 validationData) {
         // Validation logic comes here.
+        // Approve everything.
+        return ("", 0);
     }
 }
