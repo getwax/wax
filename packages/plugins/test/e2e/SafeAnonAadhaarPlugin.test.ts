@@ -6,7 +6,7 @@ import DeterministicDeployer from "../../lib-ts/deterministic-deployer/Determini
 import {
 	SafeAnonAadhaarFactory__factory,
 	SafeAnonAadhaarPlugin__factory,
-	Verifier__factory,
+	AnonAadhaarVerifier__factory,
 	AnonAadhaar__factory,
 	Safe,
 	AnonAadhaar,
@@ -74,13 +74,15 @@ describe("SafeAnonAadhaarPlugin", () => {
 		const signer = await provider.getSigner();
 
 		// Deploy AnonAadhaarGroth16Verifier contract
-		const anonAadhaarVerifier = await new Verifier__factory(signer).deploy();
+		const anonAadhaarVerifier = await new AnonAadhaarVerifier__factory(signer).deploy();
+		await anonAadhaarVerifier.waitForDeployment();
 
 		// Deploy AnonAadhaar contract
 		anonAadhaar = await new AnonAadhaar__factory(signer).deploy(
 			await anonAadhaarVerifier.getAddress(),
-			BigInt(testPublicKeyHash).toString()
+			BigInt(testPublicKeyHash).toString(),
 		);
+		await anonAadhaar.waitForDeployment();
 
 		anonAadhaarAddress = await anonAadhaar.getAddress();
 
@@ -173,12 +175,17 @@ describe("SafeAnonAadhaarPlugin", () => {
 		});
 
 		// proving
+		console.debug("Generating Anon Aadhaar proof. This could take some time...");
+		const proofTimingKey = "Anon Aadhaar proof generation time";
+		console.time(proofTimingKey);
 		const anonAadhaarCore = await prove(args);
+		console.timeEnd(proofTimingKey);
+
 		const anonAadhaarProof = anonAadhaarCore.proof;
 		const packedGroth16Proof = packGroth16Proof(anonAadhaarProof.groth16Proof);
 
 		// view call to AnonAadhaar contract to see if verification returns true
-		const ret = await anonAadhaar.verifyAnonAadhaarProof(
+		expect(await anonAadhaar.verifyAnonAadhaarProof(
 			nullifierSeed,
 			anonAadhaarProof.nullifier,
 			anonAadhaarProof.timestamp,
@@ -190,8 +197,7 @@ describe("SafeAnonAadhaarPlugin", () => {
 				anonAadhaarProof.state,
 			],
 			packedGroth16Proof
-		);
-		console.log("ret: ", ret);
+		)).to.equal(true);
 
 		// encode proof data into userOpSignature
 		const encoder = ethers.AbiCoder.defaultAbiCoder();
@@ -199,7 +205,7 @@ describe("SafeAnonAadhaarPlugin", () => {
 			["uint", "uint", "uint", "uint[4]", "uint[8]"],
 			[
 				BigInt(nullifierSeed),
-				Number(anonAadhaarCore?.proof.timestamp),
+				Number(anonAadhaarProof.timestamp),
 				BigInt(userOpHash), // insert userOpHash into signature
 				[
 					anonAadhaarProof.ageAbove18,

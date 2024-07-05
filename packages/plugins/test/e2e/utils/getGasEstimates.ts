@@ -9,14 +9,15 @@ export const getGasEstimates = async (
 	partialUserOperation: Partial<UserOperation>,
 	entryPointAddress: string
 ) => {
-	const gasEstimate = (await bundlerProvider.send(
-		"eth_estimateUserOperationGas",
-		[partialUserOperation, entryPointAddress]
-	)) as {
-		verificationGasLimit: string;
-		preVerificationGas: string;
-		callGasLimit: string;
-	};
+  const gasEstimate = (await bundlerProvider.send(
+    "eth_estimateUserOperationGas",
+    [partialUserOperation, entryPointAddress],
+  )) as {
+    verificationGasLimit: string;
+    preVerificationGas: string;
+    paymasterVerificationGasLimit: string;
+    callGasLimit: string;
+  };
 
 	const safeVerificationGasLimit =
 		BigInt(gasEstimate.verificationGasLimit) +
@@ -28,13 +29,14 @@ export const getGasEstimates = async (
 
 	const { maxFeePerGas, maxPriorityFeePerGas } = await getFeeData(provider);
 
-	return {
-		callGasLimit: gasEstimate.callGasLimit,
-		verificationGasLimit: ethers.toBeHex(safeVerificationGasLimit),
-		preVerificationGas: ethers.toBeHex(safePreVerificationGas),
-		maxFeePerGas,
-		maxPriorityFeePerGas,
-	};
+  return {
+    callGasLimit: gasEstimate.callGasLimit,
+    verificationGasLimit: ethers.toBeHex(safeVerificationGasLimit),
+    preVerificationGas: ethers.toBeHex(safePreVerificationGas),
+    paymasterVerificationGasLimit: ethers.toBeHex(safeVerificationGasLimit),
+    maxFeePerGas,
+    maxPriorityFeePerGas,
+  };
 };
 
 export async function getFeeData(provider: ethers.Provider) {
