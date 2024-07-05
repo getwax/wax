@@ -25,14 +25,12 @@ describe("SafeSponsorEverythingPaymasterPlugin", () => {
     } = await setupTests();
 
     // Deploy paymaster.
-    const paymaster = await deployer.connectOrDeploy(
-      SponsorEverythingPaymaster__factory,
-      [entryPointAddress],
-    );
+    const paymaster = await new SponsorEverythingPaymaster__factory(admin).deploy(entryPointAddress);
+    await paymaster.waitForDeployment();
     const paymasterAddress = await paymaster.getAddress();
     
     // Paymaster deposits.
-    await paymaster.deposit({ value: oneEther })
+    await paymaster.connect(admin).deposit({ value: oneEther })
 
     const recipient = ethers.Wallet.createRandom();
     const transferAmount = oneEther;

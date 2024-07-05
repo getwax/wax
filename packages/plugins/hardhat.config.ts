@@ -25,9 +25,6 @@ const config: HardhatUserConfig = {
       },
     },
   },
-  dependencyCompiler: {
-    paths: ["@anon-aadhaar/contracts"],
-  },
   networks: {
     localhost: {
       allowUnlimitedContractSize: true,

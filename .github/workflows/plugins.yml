@@ -24,15 +24,6 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Install NodeJS
-        uses: actions/setup-node@v3
-        with:
-          node-version: "18.x"
-          cache: "yarn"
-
-      - name: Install yarn dependencies
-        run: yarn install --frozen-lockfile
-
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:

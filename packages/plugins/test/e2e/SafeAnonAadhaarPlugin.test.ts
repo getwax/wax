@@ -174,11 +174,13 @@ describe("SafeAnonAadhaarPlugin", () => {
 			signal: userOpHash, // user op hash
 		});
 
-		console.debug("Generating Anon Aadhaar proof. This could take some time");
-		console.time("proof");
 		// proving
+		console.debug("Generating Anon Aadhaar proof. This could take some time...");
+		const proofTimingKey = "Anon Aadhaar proof generation time";
+		console.time(proofTimingKey);
 		const anonAadhaarCore = await prove(args);
-		console.timeEnd("proof")
+		console.timeEnd(proofTimingKey);
+
 		const anonAadhaarProof = anonAadhaarCore.proof;
 		const packedGroth16Proof = packGroth16Proof(anonAadhaarProof.groth16Proof);
 

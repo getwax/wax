@@ -17,3 +17,8 @@ import {Safe} from "safe-contracts/contracts/Safe.sol";
 import {EntryPoint} from "account-abstraction/core/EntryPoint.sol";
 import {SimpleAccountFactory} from "account-abstraction/samples/SimpleAccountFactory.sol";
 import {BLSSignatureAggregator} from "account-abstraction/samples/bls/BLSSignatureAggregator.sol";
+
+// Anon-Aadhaar
+import {AnonAadhaar} from "./anonAadhaar/AnonAadhaar.sol";
+import {AnonAadhaarVerifier} from "./anonAadhaar/AnonAadhaarVerifier.sol";
+

@@ -1,8 +1,8 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.19;
 
-import "@anon-aadhaar/contracts/interfaces/IAnonAadhaarGroth16Verifier.sol";
-import "@anon-aadhaar/contracts/interfaces/IAnonAadhaar.sol";
+import "./interfaces/IAnonAadhaarGroth16Verifier.sol";
+import "./interfaces/IAnonAadhaar.sol";
 
 // Note: This is a AnonAadhaar contract with a modification that made`verifier` state variable immutable
 // so that verification doesn't fail due to invalid storage access.

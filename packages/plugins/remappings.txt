@@ -13,4 +13,3 @@ erc7579-implementation/=lib/erc7579-implementation/
 erc6900-reference-implementation/=lib/reference-implementation/src/
 ether-email-auth/=lib/ether-email-auth/
 @zk-email/contracts/=lib/zk-email-verify/packages/contracts/
-@anon-aadhaar/contracts/=node_modules/@anon-aadhaar/contracts/
