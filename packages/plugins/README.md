@@ -32,7 +32,7 @@ forge test --no-match-path test/unit/safe/SafeZkEmailRecoveryPlugin.t.sol -vvv
 
 ## Hardhat tests
 
-To run the hardhat tests, you'll need to run a node and a bundler as some of them are integration tests:
+To run the hardhat tests, you'll need to run a geth node & bundler as some of them are integration tests:
 
 1. Start a geth node, fund accounts, deploy Safe contracts, and start a bundler:
 

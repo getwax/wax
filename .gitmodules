@@ -16,9 +16,6 @@
 [submodule "packages/plugins/lib/account-abstraction"]
 	path = packages/plugins/lib/account-abstraction
 	url = https://github.com/eth-infinitism/account-abstraction
-[submodule "packages/zkp/lib/circom"]
-	path = packages/zkp/lib/circom
-	url = https://github.com/iden3/circom.git
 [submodule "archive/barebones/lib/openzeppelin-contracts"]
 	path = archive/barebones/lib/openzeppelin-contracts
 	url = https://github.com/openzeppelin/openzeppelin-contracts

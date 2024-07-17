@@ -1,6 +1,7 @@
 #!/bin/bash
 
 RPC_URL="${RPC_URL:=localhost:8545}"
+SLEEP_DURATION_SECONDS="${SLEEP_DURATION:=0.1}"
 
 max_tries=100
 counter=0
@@ -14,7 +15,7 @@ function check_rpc() {
 }
 
 while ! check_rpc; do
-  sleep 0.1
+  sleep $SLEEP_DURATION_SECONDS
   counter=$((counter + 1))
   if (( counter >= max_tries )); then
     echo "Error: Reached max_tries waiting for $RPC_URL to be available" >&2

@@ -846,14 +846,6 @@
   resolved "https://registry.yarnpkg.com/@fastify/busboy/-/busboy-2.1.1.tgz#b9da6a878a371829a0502c9b6c1c143ef6663f4d"
   integrity sha512-vBZP4NlzfOlerQTnba4aqZoMhE/a9HY7HRqoOPaETQcSQuWEIyZMHGfVu6w9wGtGK5fED5qRs2DteVCjOH60sA==
 
-"@getwax/circuits@../zkp":
-  version "0.0.1"
-  dependencies:
-    circomlib "2.0.5"
-    circomlibjs "0.1.7"
-    ethers "^6.11.1"
-    snarkjs "0.7.3"
-
 "@humanwhocodes/module-importer@^1.0.1":
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/@humanwhocodes/module-importer/-/module-importer-1.0.1.tgz#af5b2691a22b44be847b0ca81641c5fb6ad0172c"
@@ -2316,24 +2308,12 @@ circom_runtime@0.1.21:
   dependencies:
     ffjavascript "0.2.56"
 
-circom_runtime@0.1.24:
-  version "0.1.24"
-  resolved "https://registry.npmjs.org/circom_runtime/-/circom_runtime-0.1.24.tgz#60ca8a31c3675802fbab5a0bcdeb02556e510733"
-  integrity sha512-H7/7I2J/cBmRnZm9docOCGhfxzS61BEm4TMCWcrZGsWNBQhePNfQq88Oj2XpUfzmBTCd8pRvRb3Mvazt3TMrJw==
-  dependencies:
-    ffjavascript "0.2.60"
-
 circom_runtime@0.1.25:
   version "0.1.25"
   resolved "https://registry.yarnpkg.com/circom_runtime/-/circom_runtime-0.1.25.tgz#62a33b371f4633f30238db7a326c43d988e3a170"
   integrity sha512-xBGsBFF5Uv6AKvbpgExYqpHfmfawH2HKe+LyjfKSRevqEV8u63i9KGHVIILsbJNW+0c5bm/66f0PUYQ7qZSkJA==
   dependencies:
     ffjavascript "0.3.0"
-
-circomlib@2.0.5:
-  version "2.0.5"
-  resolved "https://registry.yarnpkg.com/circomlib/-/circomlib-2.0.5.tgz#183c703e53ed7d011811842dbeeeb9819f4cc1d6"
-  integrity sha512-O7NQ8OS+J4eshBuoy36z/TwQU0YHw8W3zxZcs4hVwpEll3e4hDm3mgkIPqItN8FDeLEKZFK3YeT/+k8TiLF3/A==
 
 circomlibjs@0.1.7, circomlibjs@^0.1.7:
   version "0.1.7"
@@ -3215,19 +3195,6 @@ ethers@^5.5.3, ethers@^5.7.0:
     "@ethersproject/web" "5.7.1"
     "@ethersproject/wordlists" "5.7.0"
 
-ethers@^6.11.1:
-  version "6.11.1"
-  resolved "https://registry.npmjs.org/ethers/-/ethers-6.11.1.tgz#96aae00b627c2e35f9b0a4d65c7ab658259ee6af"
-  integrity sha512-mxTAE6wqJQAbp5QAe/+o+rXOID7Nw91OZXvgpjDa1r4fAbq2Nu314oEZSbjoRLacuCzs7kUC3clEvkCQowffGg==
-  dependencies:
-    "@adraffy/ens-normalize" "1.10.1"
-    "@noble/curves" "1.2.0"
-    "@noble/hashes" "1.3.2"
-    "@types/node" "18.15.13"
-    aes-js "4.0.0-beta.5"
-    tslib "2.4.0"
-    ws "8.5.0"
-
 ethers@^6.4.0, ethers@^6.7.0:
   version "6.13.1"
   resolved "https://registry.yarnpkg.com/ethers/-/ethers-6.13.1.tgz#2b9f9c7455cde9d38b30fe6589972eb083652961"
@@ -3316,24 +3283,6 @@ ffjavascript@0.2.56:
     wasmbuilder "0.0.16"
     wasmcurves "0.2.0"
     web-worker "^1.2.0"
-
-ffjavascript@0.2.60:
-  version "0.2.60"
-  resolved "https://registry.npmjs.org/ffjavascript/-/ffjavascript-0.2.60.tgz#4d8ae613d6bf4e98b3cc29ba10c626f5853854cf"
-  integrity sha512-T/9bnEL5xAZRDbQoEMf+pM9nrhK+C3JyZNmqiWub26EQorW7Jt+jR54gpqDhceA4Nj0YctPQwYnl8xa52/A26A==
-  dependencies:
-    wasmbuilder "0.0.16"
-    wasmcurves "0.2.2"
-    web-worker "^1.2.0"
-
-ffjavascript@0.2.63:
-  version "0.2.63"
-  resolved "https://registry.npmjs.org/ffjavascript/-/ffjavascript-0.2.63.tgz#0c1216a1f123dc9181df69e144473704d2f115eb"
-  integrity sha512-dBgdsfGks58b66JnUZeZpGxdMIDQ4QsD3VYlRJyFVrKQHb2kJy4R2gufx5oetrTxXPT+aEjg0dOvOLg1N0on4A==
-  dependencies:
-    wasmbuilder "0.0.16"
-    wasmcurves "0.2.2"
-    web-worker "1.2.0"
 
 ffjavascript@0.3.0, ffjavascript@^0.3.0:
   version "0.3.0"
@@ -5165,16 +5114,6 @@ r1csfile@0.0.41:
     fastfile "0.0.20"
     ffjavascript "0.2.56"
 
-r1csfile@0.0.47:
-  version "0.0.47"
-  resolved "https://registry.npmjs.org/r1csfile/-/r1csfile-0.0.47.tgz#ed95a0dc8e910e9c070253906f7a31bd8c5333c8"
-  integrity sha512-oI4mAwuh1WwuFg95eJDNDDL8hCaZkwnPuNZrQdLBWvDoRU7EG+L/MOHL7SwPW2Y+ZuYcTLpj3rBkgllBQZN/JA==
-  dependencies:
-    "@iden3/bigarray" "0.0.2"
-    "@iden3/binfileutils" "0.0.11"
-    fastfile "0.0.20"
-    ffjavascript "0.2.60"
-
 r1csfile@0.0.48:
   version "0.0.48"
   resolved "https://registry.yarnpkg.com/r1csfile/-/r1csfile-0.0.48.tgz#a317fc75407a9da92631666c75bdfc13f0a7835a"
@@ -5583,22 +5522,6 @@ slice-ansi@^4.0.0:
     ansi-styles "^4.0.0"
     astral-regex "^2.0.0"
     is-fullwidth-code-point "^3.0.0"
-
-snarkjs@0.7.3:
-  version "0.7.3"
-  resolved "https://registry.npmjs.org/snarkjs/-/snarkjs-0.7.3.tgz#7f703d05b810235255f2d0a70d8a9b8b3ea916e5"
-  integrity sha512-cDLpWqdqEJSCQNc+cXYX1XTKdUZBtYEisuOsgmXf/HUsN5WmGN+FO7HfCS+cMQT1Nzbm1a9gAEpKH6KRtDtS1Q==
-  dependencies:
-    "@iden3/binfileutils" "0.0.11"
-    bfj "^7.0.2"
-    blake2b-wasm "^2.4.0"
-    circom_runtime "0.1.24"
-    ejs "^3.1.6"
-    fastfile "0.0.20"
-    ffjavascript "0.2.63"
-    js-sha3 "^0.8.0"
-    logplease "^1.2.15"
-    r1csfile "0.0.47"
 
 snarkjs@^0.7.3:
   version "0.7.4"
@@ -6442,11 +6365,6 @@ ws@8.17.1:
   version "8.17.1"
   resolved "https://registry.yarnpkg.com/ws/-/ws-8.17.1.tgz#9293da530bb548febc95371d90f9c878727d919b"
   integrity sha512-6XQFvXTkbfUOZOKKILFG1PDK2NDQs4azKQl26T0YS5CxqWLgXajbPZ+h4gZekJyRqFU8pvnbAbbs/3TgRPy+GQ==
-
-ws@8.5.0:
-  version "8.5.0"
-  resolved "https://registry.npmjs.org/ws/-/ws-8.5.0.tgz#bfb4be96600757fe5382de12c670dab984a1ed4f"
-  integrity sha512-BWX0SWVgLPzYwF8lTzEy1egjhS4S4OEAHfsO8o65WOVsrnSRGaSiUaa9e0ggGlkMTtBlmOpEXiie9RUcBO86qg==
 
 ws@^7.4.6:
   version "7.5.10"

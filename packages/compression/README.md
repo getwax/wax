@@ -1,6 +1,8 @@
-# Compression for 4337
+# Compression for ERC-4337
 
-Contracts implementing compression for 4337 wallets. This work is compatible with ERC-4337 v0.6.
+Contracts implementing compression for ERC-4337 accountss. This work is compatible with ERC-4337 v0.6.
+
+See https://hackmd.io/@voltrevo/Bkz8syuUp for more details & performance.
 
 ## Performance
 
