@@ -5,7 +5,7 @@ import "forge-std/Test.sol";
 import "forge-std/console2.sol";
 import {TestHelper} from "../utils/TestHelper.sol";
 import {SafeBlsPluginHarness} from "../utils/SafeBlsPluginHarness.sol";
-import {SafeBlsPlugin} from "../../../src/safe/SafeBlsPlugin.sol";
+import {SafeBlsPlugin} from "../../../src/safe/validators/SafeBlsPlugin.sol";
 import {Safe4337Base} from "../../../src/safe/utils/Safe4337Base.sol";
 import {BLSSignatureAggregator} from "account-abstraction/samples/bls/BLSSignatureAggregator.sol";
 

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.12;
 
-import {SafeBlsPlugin} from "../../../src/safe/SafeBlsPlugin.sol";
+import {SafeBlsPlugin} from "../../../src/safe/validators/SafeBlsPlugin.sol";
 
 /** Helper contract to expose internal functions for testing */
 contract SafeBlsPluginHarness is SafeBlsPlugin {

@@ -2,7 +2,7 @@
 pragma solidity ^0.8.12;
 
 import {PackedUserOperation} from "account-abstraction/interfaces/IEntryPoint.sol";
-import {SafeWebAuthnPlugin} from "../../../src/safe/SafeWebAuthnPlugin.sol";
+import {SafeWebAuthnPlugin} from "../../../src/safe/validators/SafeWebAuthnPlugin.sol";
 
 /** Helper contract to expose internal functions for testing */
 contract SafeWebAuthnPluginHarness is SafeWebAuthnPlugin {

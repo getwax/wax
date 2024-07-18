@@ -7,8 +7,11 @@ import {HandlerContext} from "safe-contracts/contracts/handler/HandlerContext.so
 import {IEntryPoint, PackedUserOperation} from "account-abstraction/interfaces/IEntryPoint.sol";
 import {BLS} from "account-abstraction/samples/bls/lib/hubble-contracts/contracts/libs/BLS.sol";
 import {IBLSAccount} from "account-abstraction/samples/bls/IBLSAccount.sol";
+import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
-import {Safe4337Base, ISafe} from "./utils/Safe4337Base.sol";
+import {Safe4337Base, ISafe, SIG_VALIDATION_FAILED} from "../utils/Safe4337Base.sol";
+import {WaxLib as W} from "../../compression/WaxLib.sol";
+import {IDecompressor} from "../../compression/decompressors/IDecompressor.sol";
 
 /*//////////////////////////////////////////////////////////////////////////
     THIS CONTRACT IS STILL IN ACTIVE DEVELOPMENT. NOT FOR PRODUCTION USE        
@@ -16,38 +19,50 @@ import {Safe4337Base, ISafe} from "./utils/Safe4337Base.sol";
 
 error IncorrectSignatureLength(uint256 length);
 
-contract SafeBlsPlugin is Safe4337Base, IBLSAccount {
+contract SafeCompressionPlugin is Safe4337Base, IBLSAccount {
     // TODO: Use EIP 712 for domain separation
     bytes32 public constant BLS_DOMAIN = keccak256("eip4337.bls.domain");
     address public immutable myAddress;
     uint256[4] private _blsPublicKey;
     address private immutable _entryPoint;
     address private immutable _aggregator;
+    IDecompressor public _decompressor;
 
     address internal constant _SENTINEL_MODULES = address(0x1);
 
     constructor(
         address entryPointAddress,
         address aggregatorAddress,
-        uint256[4] memory blsPublicKey
+        uint256[4] memory blsPublicKey,
+        IDecompressor decompressorParam
     ) {
         myAddress = address(this);
         _blsPublicKey = blsPublicKey;
         _entryPoint = entryPointAddress;
         _aggregator = aggregatorAddress;
+        _decompressor = decompressorParam;
     }
 
-    function execTransaction(
-        address to,
-        uint256 value,
-        bytes calldata data
-    ) external payable {
+    function decompressAndPerform(bytes calldata stream) public {
         _requireFromEntryPoint();
 
-        require(
-            _currentSafe().execTransactionFromModule(to, value, data, 0),
-            "tx failed"
-        );
+        (W.Action[] memory actions, ) = _decompressor.decompress(stream);
+
+        ISafe safe = _currentSafe();
+
+        for (uint256 i = 0; i < actions.length; i++) {
+            W.Action memory a = actions[i];
+
+            require(
+                safe.execTransactionFromModule(a.to, a.value, a.data, 0),
+                "tx failed"
+            );
+        }
+    }
+
+    function setDecompressor(IDecompressor decompressorParam) public {
+        _requireFromCurrentSafeOrEntryPoint();
+        _decompressor = decompressorParam;
     }
 
     function enableMyself() public {

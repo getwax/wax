@@ -1,7 +1,7 @@
 #!/bin/bash
 
 RPC_URL="${RPC_URL:=localhost:8545}"
-SLEEP_DURATION_SECONDS="${SLEEP_DURATION:=0.1}"
+SLEEP_DURATION_SECONDS="${SLEEP_DURATION_SECONDS:=0.1}"
 
 max_tries=100
 counter=0

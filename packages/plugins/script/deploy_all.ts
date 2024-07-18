@@ -1,5 +1,11 @@
 import fs from "fs/promises";
-import { ethers } from "ethers";
+import {
+  HDNodeWallet,
+  JsonRpcProvider,
+  NonceManager,
+  Signer,
+  Wallet,
+} from "ethers";
 import DeterministicDeployer, {
   ContractFactoryConstructor,
   DeployParams,
@@ -15,37 +21,38 @@ import {
   SafeL2__factory,
   Safe__factory,
   EntryPoint__factory,
-  BLSSignatureAggregator__factory,
+  // BLSSignatureAggregator__factory,
   BLSOpen__factory,
   HandleOpsCaller__factory,
-  HandleAggregatedOpsCaller__factory,
+  // HandleAggregatedOpsCaller__factory,
   AddressRegistry__factory,
 } from "../typechain-types";
 import makeDevFaster from "../test/e2e/utils/makeDevFaster";
 import { TokenCallbackHandler__factory } from "../typechain-types/factories/lib/safe-contracts/contracts/handler/TokenCallbackHandler__factory";
-import bundlerConfig from "./../config/bundler.config.json";
+// import bundlerConfig from "./../config/bundler.config.json";
 
 // 'test '.repeat(11) + 'absent'
 const testAbsentAddress = "0xe8250207B79D7396631bb3aE38a7b457261ae0B6";
 
 async function deploy() {
   const { NODE_URL, MNEMONIC } = process.env;
-  const provider = new ethers.JsonRpcProvider(NODE_URL);
+  const provider = new JsonRpcProvider(NODE_URL);
   await makeDevFaster(provider);
-  const hdNode = ethers.HDNodeWallet.fromPhrase(MNEMONIC!);
-  const wallet = new ethers.Wallet(hdNode.privateKey, provider);
+  const hdNode = HDNodeWallet.fromPhrase(MNEMONIC!);
+  const wallet = new Wallet(hdNode.privateKey, provider);
+  const nonceMgr = new NonceManager(wallet);
 
-  const recordingDeployer = await RecordingDeployer.init(wallet);
+  const recordingDeployer = await RecordingDeployer.init(nonceMgr);
 
-  const linkedAggregator = DeterministicDeployer.link(
-    BLSSignatureAggregator__factory,
-    [
-      {
-        "lib/account-abstraction/contracts/samples/bls/lib/BLSOpen.sol:BLSOpen":
-          recordingDeployer.deployer.calculateAddress(BLSOpen__factory, []),
-      },
-    ],
-  );
+  // const linkedAggregator = DeterministicDeployer.link(
+  //   BLSSignatureAggregator__factory,
+  //   [
+  //     {
+  //       "lib/account-abstraction/contracts/samples/bls/lib/BLSOpen.sol:BLSOpen":
+  //         recordingDeployer.deployer.calculateAddress(BLSOpen__factory, []),
+  //     },
+  //   ],
+  // );
 
   const deployments = [
     ["SimulateTxAccessor", SimulateTxAccessor__factory],
@@ -117,9 +124,9 @@ class RecordingDeployer {
     public safeDeployer: DeterministicDeployer,
   ) {}
 
-  static async init(wallet: ethers.Wallet): Promise<RecordingDeployer> {
-    const deployer = await DeterministicDeployer.init(wallet);
-    const safeDeployer = await DeterministicDeployer.initSafeVersion(wallet);
+  static async init(signer: Signer): Promise<RecordingDeployer> {
+    const deployer = await DeterministicDeployer.init(signer);
+    const safeDeployer = await DeterministicDeployer.initSafeVersion(signer);
 
     try {
       await fs.rename(

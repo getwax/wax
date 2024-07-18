@@ -72,7 +72,7 @@ jobs:
         run: ./script/start.sh &
 
       - name: Wait for bundler at port 3000
-        run: RPC_URL='localhost:3000' SLEEP_DURATION=1 ./script/wait-for-rpc.sh
+        run: RPC_URL='localhost:3000' SLEEP_DURATION_SECONDS=1 ./script/wait-for-rpc.sh
 
       - name: Run hardhat integration tests
         run: yarn hardhat test

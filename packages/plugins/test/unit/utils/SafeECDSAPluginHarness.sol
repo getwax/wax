@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.12;
 
-import {SafeECDSAPlugin} from "../../../src/safe/SafeECDSAPlugin.sol";
+import {SafeECDSAPlugin} from "../../../src/safe/validators/SafeECDSAPlugin.sol";
 
 /** Helper contract to expose internal functions for testing */
 contract SafeECDSAPluginHarness is SafeECDSAPlugin {
