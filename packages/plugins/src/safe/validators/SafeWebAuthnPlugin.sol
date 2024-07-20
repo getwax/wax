@@ -4,9 +4,9 @@ pragma solidity >=0.8.0 <0.9.0;
 import {HandlerContext} from "safe-contracts/contracts/handler/HandlerContext.sol";
 import {BaseAccount} from "account-abstraction/core/BaseAccount.sol";
 import {IEntryPoint, PackedUserOperation} from "account-abstraction/interfaces/IEntryPoint.sol";
-import {WebAuthn} from "../primitives/WebAuthn.sol";
+import {WebAuthn} from "../../primitives/WebAuthn.sol";
 
-import {Safe4337Base, SIG_VALIDATION_FAILED} from "./utils/Safe4337Base.sol";
+import {Safe4337Base, SIG_VALIDATION_FAILED} from "../utils/Safe4337Base.sol";
 
 /*//////////////////////////////////////////////////////////////////////////
     THIS CONTRACT IS STILL IN ACTIVE DEVELOPMENT. NOT FOR PRODUCTION USE        

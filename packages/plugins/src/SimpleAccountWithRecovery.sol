@@ -13,7 +13,8 @@ import {MockDKIMRegsitry} from "./safe/utils/MockDKIMRegsitry.sol";
 import {IDKIMRegsitry} from "./safe/interface/IDKIMRegsitry.sol";
 
 /*//////////////////////////////////////////////////////////////////////////
-    THIS CONTRACT IS STILL IN ACTIVE DEVELOPMENT. NOT FOR PRODUCTION USE        
+    THIS CONTRACT IS OUTDATED. NOT FOR PRODUCTION USE
+    It is recomended you use https://github.com/zkemail/email-recovery instead.   
 //////////////////////////////////////////////////////////////////////////*/
 
 struct RecoveryRequest {

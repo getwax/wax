@@ -4,7 +4,7 @@ pragma solidity ^0.8.12;
 import "forge-std/Test.sol";
 import "forge-std/console2.sol";
 import {TestHelper} from "../utils/TestHelper.sol";
-import {SafeZkEmailRecoveryPlugin, RecoveryRequest} from "../../../src/safe/SafeZkEmailRecoveryPlugin.sol";
+import {SafeZkEmailRecoveryPlugin, RecoveryRequest} from "../../../src/safe/recovery/SafeZkEmailRecoveryPlugin.sol";
 import {SafeZkEmailRecoveryPluginHarness} from "../utils/SafeZkEmailRecoveryPluginHarness.sol";
 import {Safe} from "safe-contracts/contracts/Safe.sol";
 import {SafeProxy} from "safe-contracts/contracts/proxies/SafeProxy.sol";

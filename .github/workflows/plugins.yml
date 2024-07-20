@@ -29,28 +29,6 @@ jobs:
         with:
           version: nightly
 
-      # Uncomment the lines below to install & generate zk assets
-      # - working-directory: ./packages/zkp/lib/circom
-      #   run: cargo build --release
-
-      # - working-directory: ./packages/zkp/lib/circom
-      #   run: cargo install --path circom
-
-      # - uses: actions/setup-node@v3
-      #   with:
-      #     node-version: "18.x"
-      #     cache: "yarn"
-      #     cache-dependency-path: packages/zkp/yarn.lock
-
-      # - working-directory: ./packages/zkp
-      #   run: yarn install --frozen-lockfile
-
-      # - working-directory: ./packages/zkp
-      #   run: yarn build
-
-      # - working-directory: ./packages/plugins
-      #   run: yarn install --frozen-lockfile
-
       - name: Run Forge build
         run: |
           forge --version
@@ -81,24 +59,20 @@ jobs:
           cache: "yarn"
           cache-dependency-path: packages/plugins/yarn.lock
 
-      # Uncommment the lines below to install & generate zk assets
-      # - working-directory: ./packages/zkp/lib/circom
-      #   run: cargo build --release
-
-      # - working-directory: ./packages/zkp/lib/circom
-      #   run: cargo install --path circom
-
-      # - working-directory: ./packages/zkp
-      #   run: yarn install --frozen-lockfile
-
-      # - working-directory: ./packages/zkp
-      #   run: yarn build
-
       - name: Install Yarn dependencies
         run: yarn install --frozen-lockfile
 
       - name: Copy env file
         run: cp .env.example .env
 
-      - name: Run hardhat compile
-        run: yarn hardhat compile
+      - name: Run hardhat build
+        run: yarn build
+
+      - name: Start geth node & bundler in background
+        run: ./script/start.sh &
+
+      - name: Wait for bundler at port 3000
+        run: RPC_URL='localhost:3000' SLEEP_DURATION_SECONDS=1 ./script/wait-for-rpc.sh
+
+      - name: Run hardhat integration tests
+        run: yarn hardhat test

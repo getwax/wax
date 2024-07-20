@@ -5,7 +5,7 @@ import "forge-std/Test.sol";
 import "forge-std/console2.sol";
 import {TestHelper} from "../utils/TestHelper.sol";
 import {SafeWebAuthnPluginHarness} from "../utils/SafeWebAuthnPluginHarness.sol";
-import {SafeWebAuthnPlugin} from "../../../src/safe/SafeWebAuthnPlugin.sol";
+import {SafeWebAuthnPlugin} from "../../../src/safe/validators/SafeWebAuthnPlugin.sol";
 import {Safe4337Base} from "../../../src/safe/utils/Safe4337Base.sol";
 import {PackedUserOperation} from "account-abstraction/interfaces/IEntryPoint.sol";
 

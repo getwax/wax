@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {ISafe} from "./utils/Safe4337Base.sol";
+import {ISafe} from "../utils/Safe4337Base.sol";
 import {EmailAccountRecoveryRouter} from "./EmailAccountRecoveryRouter.sol";
 import {EmailAccountRecovery} from "ether-email-auth/packages/contracts/src/EmailAccountRecovery.sol";
 
 /*//////////////////////////////////////////////////////////////////////////
-    THIS CONTRACT IS STILL IN ACTIVE DEVELOPMENT. NOT FOR PRODUCTION USE        
+    THIS CONTRACT IS OUTDATED. NOT FOR PRODUCTION USE    
+    It is recomended you use https://github.com/zkemail/email-recovery instead.    
 //////////////////////////////////////////////////////////////////////////*/
 
 struct RecoveryRequest {
@@ -28,7 +29,7 @@ struct SafeAccountInfo {
 
 /**
  * A safe plugin that recovers a safe owner via a zkp of an email.
- * NOT FOR PRODUCTION USE
+ * NOT FOR PRODUCTION USE, use https://github.com/zkemail/email-recovery instead
  */
 contract SafeZkEmailRecoveryPlugin is EmailAccountRecovery {
     /** Default delay has been set to a large timeframe on purpose. Please use a default delay suited to your specific context */

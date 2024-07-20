@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.12;
 
-import {SafeZkEmailRecoveryPlugin} from "../../../src/safe/SafeZkEmailRecoveryPlugin.sol";
+import {SafeZkEmailRecoveryPlugin} from "../../../src/safe/recovery/SafeZkEmailRecoveryPlugin.sol";
 
 /** Helper contract to expose internal functions for testing */
 contract SafeZkEmailRecoveryPluginHarness is SafeZkEmailRecoveryPlugin {

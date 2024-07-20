@@ -2,25 +2,39 @@
 pragma solidity >=0.7.0 <0.9.0;
 pragma abicoder v2;
 
-import {IGroth16Verifier} from "./interface/IGroth16Verifier.sol";
-import {ISafe} from "./interface/ISafe.sol";
-import {Safe4337Base, SIG_VALIDATION_FAILED} from "./utils/Safe4337Base.sol";
+import {Safe4337Base, SIG_VALIDATION_FAILED} from "../utils/Safe4337Base.sol";
 import {IEntryPoint, PackedUserOperation} from "account-abstraction/interfaces/IEntryPoint.sol";
+import {PackedUserOperation} from "account-abstraction/interfaces/IEntryPoint.sol";
+
+import {ECDSA} from "openzeppelin-contracts/contracts/utils/cryptography/ECDSA.sol";
+import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
 /*//////////////////////////////////////////////////////////////////////////
     THIS CONTRACT IS STILL IN ACTIVE DEVELOPMENT. NOT FOR PRODUCTION USE        
 //////////////////////////////////////////////////////////////////////////*/
 
-struct ZKPPasswordOwnerStorage {
+interface ISafe {
+    function enableModule(address module) external;
+
+    function execTransactionFromModule(
+        address to,
+        uint256 value,
+        bytes memory data,
+        uint8 operation
+    ) external returns (bool success);
+}
+
+struct ECDSAOwnerStorage {
     address owner;
 }
 
-contract SafeZKPPasswordPlugin is Safe4337Base {
-    mapping(address => ZKPPasswordOwnerStorage) public zkpPasswordOwnerStorage;
+contract SafeECDSAPlugin is Safe4337Base {
+    using ECDSA for bytes32;
+
+    mapping(address => ECDSAOwnerStorage) public ecdsaOwnerStorage;
 
     address public immutable myAddress; // Module address
     address private immutable _entryPoint;
-    IGroth16Verifier private immutable _verifier;
 
     address internal constant _SENTINEL_MODULES = address(0x1);
 
@@ -30,14 +44,13 @@ contract SafeZKPPasswordPlugin is Safe4337Base {
         address indexed newOwner
     );
 
-    constructor(address entryPointAddress, IGroth16Verifier verifier) {
+    constructor(address entryPointAddress) {
         myAddress = address(this);
         _entryPoint = entryPointAddress;
-        _verifier = verifier;
     }
 
     function getOwner(address safe) external view returns (address owner) {
-        owner = zkpPasswordOwnerStorage[safe].owner;
+        owner = ecdsaOwnerStorage[safe].owner;
     }
 
     function execTransaction(
@@ -65,7 +78,7 @@ contract SafeZKPPasswordPlugin is Safe4337Base {
 
         // Enable the safe address with the defined key
         bytes memory _data = abi.encodePacked(ownerKey);
-        SafeZKPPasswordPlugin(myAddress).enable(_data);
+        SafeECDSAPlugin(myAddress).enable(_data);
     }
 
     function entryPoint() public view override returns (IEntryPoint) {
@@ -74,8 +87,8 @@ contract SafeZKPPasswordPlugin is Safe4337Base {
 
     function enable(bytes calldata _data) external payable {
         address newOwner = address(bytes20(_data[0:20]));
-        address oldOwner = zkpPasswordOwnerStorage[msg.sender].owner;
-        zkpPasswordOwnerStorage[msg.sender].owner = newOwner;
+        address oldOwner = ecdsaOwnerStorage[msg.sender].owner;
+        ecdsaOwnerStorage[msg.sender].owner = newOwner;
         emit OWNER_UPDATED(msg.sender, oldOwner, newOwner);
     }
 
@@ -83,32 +96,13 @@ contract SafeZKPPasswordPlugin is Safe4337Base {
         PackedUserOperation calldata userOp,
         bytes32 userOpHash
     ) internal view override returns (uint256 validationData) {
-        // TODO (merge-ok) There is likely a more efficient way to encode this
-        // to save on space, which would be especially desirable on rollups.
-        uint256[2] memory a;
-        uint256[2][2] memory b;
-        uint256[2] memory c;
-        (a, b, c) = abi.decode(
-            userOp.signature,
-            (uint256[2], uint256[2][2], uint256[2])
-        );
-        uint256[1] memory pubSignals = [bytesToUint(userOpHash)];
-        bool result = _verifier.verifyProof(a, b, c, pubSignals);
-        if (!result) {
+        address keyOwner = ecdsaOwnerStorage[msg.sender].owner;
+        bytes32 hash = MessageHashUtils.toEthSignedMessageHash(userOpHash);
+
+        if (keyOwner != hash.recover(userOp.signature)) {
             return SIG_VALIDATION_FAILED;
         }
-        return 0;
-    }
 
-    // From https://ethereum.stackexchange.com/a/51234
-    function bytesToUint(bytes32 b) internal pure returns (uint256) {
-        uint256 number;
-        for (uint i = 0; i < b.length; i++) {
-            number =
-                number +
-                uint(uint8(b[i])) *
-                (2 ** (8 * (b.length - (i + 1))));
-        }
-        return number;
+        return 0;
     }
 }

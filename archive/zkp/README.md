@@ -2,6 +2,8 @@
 
 Based on https://github.com/privacy-scaling-explorations/zkp-app-boilerplate/tree/main/circuits
 
+Includes a protoype [TypeScript ZKEmail relayer](./relayer/).
+
 WARNING: These circuits are unsafe and are currently not recommended for production use.
 
 ## Required
@@ -11,17 +13,11 @@ WARNING: These circuits are unsafe and are currently not recommended for product
 
 ## Setup
 
-**Step 1**: Download git submodules.
+Install circom following [these instructions](https://docs.circom.io/getting-started/installation/)
 
-```sh
-git submodule update --init
-```
+The last working version was `v2.1.8`, [commit](https://github.com/iden3/circom/commit/f0deda416abe91e5dd906c55507c737cd9986ab5)
 
-**Step 2**: Install circom.
-
-Follow [these instructions](https://docs.circom.io/getting-started/installation/) replacing the git clone with `cd lib/circom`.
-
-**Step 3**: Install NodeJS dependencies.
+**Step 2**: Install NodeJS dependencies.
 
 ```sh
 yarn

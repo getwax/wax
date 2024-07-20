@@ -1,36 +1,40 @@
 # Wallet Account eXperiments (WAX)
-WAX's goal is to deliver set of production-ready components that help developers easily utilise cryptographic primitives in smart accounts
 
-We seek to achieve this with a three pronged approach:
-1. Showcase, via examples, the benefits of cryptographic primitives in smart accounts
-   - including examples of novel use cases that compose smart account modules
-2. Develop an easy-to-use opinionated SDK that makes integrating these benefits easy for non-web3 devs
-3. Provide a focused dev environment for the integration of more primitives into smart accounts
+![WAX Logo](./waxGreenLogo.png)
 
-## Components **(diagram outdated)**
-The showcase dApps are comprised of application specific code (pink) that leverages the SDK (yellow).
-The SDK contains the off-chain companion of corresponding on-chain cryptographic primitives (grey).
-Existing smart accounts will be used to demonstrate integration of the primitives in 4337-compatible verification logic.
-
-**Diagram**: current explorations and proposed development
-
-![WAX Composition](./docs/images/wax-composition.svg)
-
-- The green areas are WAX's focus.
-- Within the SDK there will be additions that enable projects to readily adopt novel features. 
-- On-chain, between smart contracts and primitives, the verification data+logic will be designed to be composable. Smart accounts can then dynamically benefit from more than one primitive, and this will be developed in sync with broader smart account modularisation.
+Primary monorepo for the Wallet Account eXperiments (WAX) project, which focuses on integrating novel & useful cryptographic technologies into the Ethereum Account Abstraction (AA) ecosytem to improve the experience of using accounts. We build on top of [ERC-4337](https://eips.ethereum.org/EIPS/eip-4337) & related specs.
 
 # Using this monorepo
-## packages/demos
-You're a web dev and want to bring the latest web3 capabilities to your product/users.
-Here you will not only find 'hello world' wrappers of base primitives, but also composite examples highlighting novel product features.
+Are you looking to build a plugin/module for the AA/ERC-4337 ecosystem and want examples & tooling? Check out [the plugins package](./packages/plugins/).
 
-## packages/sdk
-The sdk is useful for:
-- non-web3 builders wanting to leverage the latest smart account capabiltiies
-- SDK devs who also want to support interaction with the bleeding edge of smart account verification capabilities
+Are you interested in compressing ERC-4337 data? Start with [the compression package](./packages/compression/)
 
-## packages/plugins
-You're a smart account dev and would like to integrate new primitives
-New verification schemes are integrated into existing open smart accounts here.
-This is where modularised byte verification is developed.
+## Compression
+[packages/compression](./packages//compression/)
+
+Contracts implementing compression for ERC-4337 accounts to reduce data being posted from rollups.
+
+## Demos
+[packages/demos](./packages/demos/)
+
+Demos showcasing WAX components.
+
+## Deterministic Deployer
+[packages/deterministic-deployer](./packages/deterministic-deployer/)
+
+Deploys contracts to deterministic addresses.
+
+## Plugins
+[packages/plugins](./packages/plugins/)
+
+Plugins/modules for smart contracts accounts, including test scaffolding.
+
+## SDK
+[packages/sdk](./packages/sdk/)
+
+SDK code to help with ERC-4337 interactions.
+
+## Archive
+[archive](./archive/)
+
+Work & projects that are no longer actively used but could be useful as references.

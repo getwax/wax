@@ -8,21 +8,23 @@ import {SafeProxy} from "safe-contracts/contracts/proxies/SafeProxy.sol";
 
 import {EntryPoint} from "account-abstraction/core/EntryPoint.sol";
 
-import {SafeZKPPasswordPlugin} from "./SafeZKPPasswordPlugin.sol";
-import {IGroth16Verifier} from "./interface/IGroth16Verifier.sol";
+import {SafeCompressionPlugin} from "../validators/SafeCompressionPlugin.sol";
+import {IDecompressor} from "../../compression/decompressors/IDecompressor.sol";
 
 /*//////////////////////////////////////////////////////////////////////////
     THIS CONTRACT IS STILL IN ACTIVE DEVELOPMENT. NOT FOR PRODUCTION USE        
 //////////////////////////////////////////////////////////////////////////*/
 
-contract SafeZKPPasswordFactory {
+contract SafeCompressionFactory {
     function create(
         Safe safeSingleton,
         EntryPoint entryPoint,
+        address aggregatorAddress,
+        uint256[4] memory blsPublicKey,
+        IDecompressor defaultDecompressor,
         address owner,
-        uint256 saltNonce,
-        IGroth16Verifier verifier
-    ) external returns (SafeZKPPasswordPlugin) {
+        uint256 saltNonce
+    ) external returns (SafeCompressionPlugin) {
         bytes32 salt = keccak256(abi.encodePacked(owner, saltNonce));
 
         Safe safe = Safe(
@@ -32,22 +34,24 @@ contract SafeZKPPasswordFactory {
         address[] memory owners = new address[](1);
         owners[0] = owner;
 
-        SafeZKPPasswordPlugin plugin = new SafeZKPPasswordPlugin{salt: salt}(
+        SafeCompressionPlugin plugin = new SafeCompressionPlugin{salt: salt}(
             address(entryPoint),
-            verifier
+            aggregatorAddress,
+            blsPublicKey,
+            defaultDecompressor
         );
 
         safe.setup(
             owners,
             1,
             address(plugin),
-            abi.encodeCall(SafeZKPPasswordPlugin.enableMyself, (owner)),
+            abi.encodeCall(SafeCompressionPlugin.enableMyself, ()),
             address(plugin),
             address(0),
             0,
             payable(address(0))
         );
 
-        return SafeZKPPasswordPlugin(address(safe));
+        return SafeCompressionPlugin(address(safe));
     }
 }

@@ -8,23 +8,21 @@ import {SafeProxy} from "safe-contracts/contracts/proxies/SafeProxy.sol";
 
 import {EntryPoint} from "account-abstraction/core/EntryPoint.sol";
 
-import {SafeCompressionPlugin} from "./SafeCompressionPlugin.sol";
-import {IDecompressor} from "../compression/decompressors/IDecompressor.sol";
+import {SafeAnonAadhaarPlugin} from "../validators/SafeAnonAadhaarPlugin.sol";
 
 /*//////////////////////////////////////////////////////////////////////////
     THIS CONTRACT IS STILL IN ACTIVE DEVELOPMENT. NOT FOR PRODUCTION USE        
 //////////////////////////////////////////////////////////////////////////*/
 
-contract SafeCompressionFactory {
+contract SafeAnonAadhaarFactory {
     function create(
         Safe safeSingleton,
         EntryPoint entryPoint,
-        address aggregatorAddress,
-        uint256[4] memory blsPublicKey,
-        IDecompressor defaultDecompressor,
         address owner,
-        uint256 saltNonce
-    ) external returns (SafeCompressionPlugin) {
+        uint256 saltNonce,
+        address _anonAadhaarAddr,
+        uint256 _userDataHash
+    ) external returns (SafeAnonAadhaarPlugin) {
         bytes32 salt = keccak256(abi.encodePacked(owner, saltNonce));
 
         Safe safe = Safe(
@@ -34,24 +32,27 @@ contract SafeCompressionFactory {
         address[] memory owners = new address[](1);
         owners[0] = owner;
 
-        SafeCompressionPlugin plugin = new SafeCompressionPlugin{salt: salt}(
+        SafeAnonAadhaarPlugin plugin = new SafeAnonAadhaarPlugin{salt: salt}(
             address(entryPoint),
-            aggregatorAddress,
-            blsPublicKey,
-            defaultDecompressor
+            _anonAadhaarAddr,
+            address(safe),
+            _userDataHash
         );
 
         safe.setup(
             owners,
             1,
             address(plugin),
-            abi.encodeCall(SafeCompressionPlugin.enableMyself, ()),
+            abi.encodeCall(
+                SafeAnonAadhaarPlugin.enableMyself,
+                (owner, _userDataHash)
+            ),
             address(plugin),
             address(0),
             0,
             payable(address(0))
         );
 
-        return SafeCompressionPlugin(address(safe));
+        return SafeAnonAadhaarPlugin(address(safe));
     }
 }
